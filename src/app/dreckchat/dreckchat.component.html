@@ -1,0 +1,18 @@
+<div class="chat" style="max-height: inherit;">
+    <ul class="liststyle" id="messagebox" style="font-size: 0.75em; max-height: inherit;">
+        <li>Hello <span class="username">{{Username}}</span>. You connected <span class="text-success">@{{CurrentDate | date: 'HH:mm:ss'}}</span></li>
+        <li *ngFor="let Message of Messages; let i=index;" tabindex="{{i}}">{{Message.time | date: 'HH:mm:ss'}} <span class="username" [class.other-user]="Message.username!=Username">{{Message.username}}</span>: {{Message.message}}</li>
+    </ul>
+    <div class="d-flex">
+        <div class="smileyBox" [class.fade-out]="!showSmileys" id="smileyId"><span *ngFor="let smiley of smileys" class="pointer" (click)="AddSmiley(smiley)">{{smiley}}</span></div>
+        <div class="input-group input-group-sm">
+            <input type="text" tabindex="-1" placeholder="Chatmessage..." style="z-index: 1000;" (keyup.enter)="SendMessage()" class="form-control" id="textmessage">
+            <div class="input-group-append">
+                <button type="button" class="btn btn-light" (click)="showSmileys=!showSmileys"><i class="fa fa-smile-o" aria-hidden="true"></i></button>
+            </div>
+            <div class="input-group-append">
+                <button type="button" class="btn btn-primary px-3" (click)="SendMessage()"><i class="fa fa-paper-plane" aria-hidden="true"></i></button>
+            </div>
+        </div>
+    </div>
+</div>

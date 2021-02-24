@@ -1,0 +1,5 @@
+<div style="height: 100vh; width: 100vw;">
+    <div class="btn btn-primary" (click)="IsDrawing=!IsDrawing">Toggle Drawing {{IsDrawing}}</div>
+    <canvas-whiteboard #canvasWhiteboard [options]="canvasOptions" (onBatchUpdate)="sendBatchUpdate($event)" (onClear)="onCanvasClear()" (onUndo)="onCanvasUndo($event)" (onRedo)="onCanvasRedo($event)">
+    </canvas-whiteboard>
+</div>

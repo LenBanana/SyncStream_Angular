@@ -1,0 +1,272 @@
+.header {
+    width: 100%;
+    height: 10vw;
+    background: linear-gradient(to bottom, #00395d, #333962);
+    font-size: 5vw;
+    font-weight: bold;
+    border-bottom: 1px solid #3e4570;
+}
+
+.globe-icon {
+    color: #232734;
+    font-size: 14vw;
+}
+
+.icon-text {
+    position: absolute;
+    width: 100%;
+}
+
+.center-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.blur-background {
+    background-size: cover;
+    -webkit-filter: blur(13px);
+    -moz-filter: blur(13px);
+    -o-filter: blur(13px);
+    -ms-filter: blur(13px);
+    filter: blur(13px);
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.blur-background:hover {
+    -webkit-filter: blur(25px);
+    -moz-filter: blur(25px);
+    -o-filter: blur(25px);
+    -ms-filter: blur(25px);
+    filter: blur(25px);
+}
+
+#RoomView {
+    overflow: hidden;
+}
+
+.fade {
+    transition: opacity 0.3s ease;
+    opacity: 1;
+}
+
+.fade-out {
+    opacity: 0;
+}
+
+.click-through {
+    pointer-events: none;
+}
+
+.header span {
+    font-style: italic;
+}
+
+.username-container {
+    font-size: 2.5rem;
+}
+
+.username-container>.user {
+    color: #3369e7;
+    font-weight: bold;
+    cursor: pointer;
+    border-bottom: 1px solid #3369e7;
+}
+
+.user-input-group {
+    position: absolute;
+}
+
+.username-container>.user-input-group {
+    display: inline-block;
+}
+
+.user-input-group>.input-group>.user-input {
+    color: #fafafa;
+    border: 1px solid #3369e7;
+}
+
+.yt-bg {
+    background: white;
+    width: 10px;
+    height: 10px;
+    position: absolute;
+    top: 43%;
+    left: 40%;
+    z-index: -1;
+}
+
+.shadow {
+    box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.1), 0 6px 20px 0 rgba(0, 0, 0, 0.1);
+    transition: all .5s ease;
+}
+
+.short-text {
+    display: block;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 15.5rem;
+}
+
+.hide {
+    display: none;
+}
+
+.pointer {
+    cursor: pointer;
+}
+
+.room-container {
+    min-width: 18rem;
+    min-height: 10rem;
+}
+
+.add-col {
+    border-radius: 5px;
+    border: 2px solid #3369e7;
+    transition: background-color 0.3s ease-in-out;
+    height: 100%;
+}
+
+.add-col:hover {
+    background-color: rgba($color: #000000, $alpha: 0.4);
+}
+
+.center-block {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.room-info>.center-block {
+    width: 80%;
+}
+
+.room-bubble {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    border-radius: 5px;
+}
+
+.room-bubble img,
+.room-bubble .room-info {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.room-bubble>.hide-btn {
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.room-bubble:hover>.hide-btn {
+    opacity: 1;
+}
+
+.play-info {
+    z-index: 20;
+    position: absolute;
+    right: 15px;
+    bottom: 5px;
+    font-size: 30px;
+}
+
+@media (min-width: 2000px) {
+    .col-2k-2 {
+        flex: 0 0 16.666667%;
+        max-width: 16.666667%;
+    }
+}
+
+.border-main {
+    border: 1px solid #3369e7;
+    border-radius: 5px;
+    width: 100%;
+    height: 100%;
+}
+
+.room-info {
+    z-index: 10;
+    background-color: rgba($color: #000000, $alpha: 0.5);
+    cursor: pointer;
+}
+
+.room-bubble img {
+    border-radius: 5px;
+}
+
+.room-bubble .room-info p {
+    margin: 5px;
+    font-size: 11px;
+    position: relative;
+}
+
+.info-bubble {
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: bold;
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-radius: 100px;
+    z-index: 20;
+}
+
+.usercount-bubble {
+    top: 6px;
+    left: 6px;
+    width: 50px;
+    height: 22px;
+    border-radius: 0px;
+}
+
+.playlistcount-bubble {
+    top: 6px;
+    right: 6px;
+    width: 50px;
+    height: 22px;
+    border-radius: 0px;
+}
+
+.delete-bubble {
+    background-color: #ce181e;
+    right: -10px;
+    bottom: -6px;
+    font-size: 13px;
+}
+
+.add-bubble {
+    width: 50px;
+    height: 50px;
+    border-radius: 50px;
+    text-align: center;
+    line-height: 50px;
+    background-color: #3369e7;
+}
+
+.footer {
+    height: 5%;
+    position: fixed;
+    bottom: 0px;
+    width: 100%;
+    background: linear-gradient(to top, #182E45, #1C1F2C);
+    font-size: .6em;
+    font-weight: bold;
+    border-top: 1px solid #0c0c3866;
+    margin: 0;
+    z-index: 100;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    line-height: 20%;
+}

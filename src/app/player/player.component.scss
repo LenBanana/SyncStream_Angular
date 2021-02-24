@@ -1,0 +1,33 @@
+.vh-big {
+    height: 100vh;
+    width: 100%;
+}
+
+.vh-semi {
+    height: 80vh;
+    width: 100%;
+}
+
+.no-margin {
+    margin: 0 !important;
+}
+
+.none {
+    display: none !important;
+}
+
+.nothing-playing {
+    border-left: 1px solid #3369e7;
+    border-right: 1px solid #3369e7;
+    text-align: center;
+    display: table;
+    width: 100%;
+    height: 100%;
+    background-color: rgba($color: #000000, $alpha: 0.5);
+}
+
+.nothing-playing>span {
+    display: table-cell;
+    vertical-align: middle;
+    font-size: 50px;
+}

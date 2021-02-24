@@ -1,0 +1,18 @@
+<div class="dark-floatbox text-light mb-3" *ngIf="nav">
+    <h3 class="text-center pb-3 transition" [class.text-success]="dropped" [class.text-danger]="failed"><i class="fa fa-play" style="font-size: 25px;"></i> Playlist</h3>
+    <div cdkDropList (cdkDropListDropped)="drop($event)">
+        <div class="row playlist-element border-bottom-muted" [class.border-top-muted]="first" *ngFor="let video of Playlist; let first=first; let i=index;" cdkDrag [cdkDragDisabled]="first">
+            <div class="custom-placeholder" *cdkDragPlaceholder></div>
+            <div class="col-1">
+                <i class="fa fa-pause text-primary fa-2x" *ngIf="first" aria-hidden="true"></i><i class="fa fa-play text-success fa-2x pointer" *ngIf="!first" (click)="play(video.url)" aria-hidden="true"></i>
+            </div>
+            <div class="col-10">
+                <span [innerHTML]="video.title" id="{{i===1 ? 'nextVid': ''}}"></span>
+            </div>
+            <div class="col-1">
+                <i (click)="delete(video.url)" class="fa fa-trash-o fa-2x pointer text-danger" aria-hidden="true" *ngIf="!first"></i>
+            </div>
+        </div>
+    </div>
+    <span *ngIf="Playlist && Playlist.length===0">No videos yet</span>
+</div>

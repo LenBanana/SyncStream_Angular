@@ -1,0 +1,55 @@
+<div class="status-box" [class.fade-out]="nav||fullscreen" (mouseenter)="enterMenu()" (mouseleave)="exitMenu()">
+    <i class="fa statusbtn pt-2 dreck-tooltip" [class.fa-user]="!IsHost" [class.fa-user-circle-o]="IsHost" (click)="!IsHost && SetHost()" [class.pointer]="!IsHost" [class.text-warning]="IsHost" [class.text-light]="!IsHost"></i>
+    <span class="badge badge-dreck my-2 block add-video-btn pointer" (click)="ToggleInput()"><i class="fa fa-plus" ></i></span>
+    <span class="badge badge-dreck my-2 block pointer" title="Adds video from clipboard" (click)="quickPlay()"><i class="fa fa-plus-circle" ></i></span>
+    <div class="add-video-fade" [class.fade-out]="!showInput" style="width: 200px;">
+        <div class="form-group">
+            <div class="input-group input-group-md">
+                <input type="text" tabindex="-1" (keyup.enter)="PlayURL()" placeholder="https://..." class="form-control" id="video-tooltip-input">
+                <div class="input-group-append">
+                    <button type="button" class="btn px-2" [class.btn-primary]="!isPlaying" [class.btn-success]="isPlaying" (click)="PlayFile()"><i class="fa fa-file" aria-hidden="true"></i></button>
+                    <button type="button" class="btn px-1" [class.btn-primary]="!isPlaying" [class.btn-success]="isPlaying" (click)="PlayURL()"><i class="fa fa-play" aria-hidden="true"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <span class="badge badge-dreck mt-1 block pointer playlist-btn" (click)="TogglePlaylist()">
+        <i class="fa fa-video-camera" [class.text-primary]="!isPlaying" [class.text-success]="isPlaying"></i><br><span *ngIf="Playlist">{{Playlist.length}}</span>
+    </span>
+    <div style="width: 500px; max-height: 500px; overflow-x: hidden; overflow-y: auto; z-index: 200;" class="add-playlist-fade playlist-preview" [class.fade-out]="!showPlaylist" cdkDropList (cdkDropListDropped)="drop($event)">
+        <div *ngIf="Playlist&&Playlist.length==0">
+            <h4 class="text-center">Nothing here...</h4>
+        </div>
+        <div class="row playlist-element pr-3" *ngFor="let video of Playlist; let first=first; let i=index;" cdkDrag [cdkDragDisabled]="first">
+            <div class="custom-placeholder" *cdkDragPlaceholder></div>
+            <div class="col-1">
+                <i class="fa fa-pause text-primary" *ngIf="first" aria-hidden="true"></i><i class="fa fa-play text-success pointer" *ngIf="!first" (click)="play(video.url)" aria-hidden="true"></i>
+            </div>
+            <div class="col-10">
+                <span class="cut-text" [innerHTML]="video.title" id="{{i===1 ? 'nextVid': ''}}"></span>
+            </div>
+            <div class="col-1">
+                <i (click)="delete(video.url)" class="fa fa-trash-o pointer text-danger" aria-hidden="true" *ngIf="!first"></i>
+            </div>
+        </div>
+    </div>
+    <span class="badge badge-dreck my-2 block pointer" (click)="nextVideo()"><i class="fa fa-forward" ></i></span>
+    <span class="badge badge-dreck my-2 block dreck-tooltip"><span class="dreck-tooltiptext"><p *ngFor="let member of Members" style="position: relative; display: block;">{{member.username}}</p></span><i class="fa fa-user"></i><br>{{Members.length}}</span>
+
+    <span class="badge badge-dreck my-2 block pointer" title="Toggles the twitch chat" (click)="toggleTwitchChat()"><i class="fa fa-comment"></i></span>
+    <span class="badge badge-dreck my-2 block pointer" title="Leave room" (click)="refresh()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>
+    <hr>
+
+    <!--<span class="badge badge-dreck mt-5 block pointer" (click)="ToggleThreshhold()">
+        <i class="fa fa-clock-o"></i><br><span>{{ThreshholdNumber}}</span>
+    </span>
+    <div style="width: 200px;" class="add-playlist-fade" [class.fade-out]="!Threshhold" style="z-index: 200; min-width: 100px;">
+        <input type="number" tabindex="-1" (keyup.enter)="SetThreshhold()" placeholder="0.5" class="form-control" id="threshhold-input">
+    </div>-->
+    <!--<span class="badge badge-dreck mt-2 block pointer" *ngIf="false" (click)="ToggleUsername()">
+        <i class="fa fa-clock-o"></i><br><span>{{Username.substring(0, 1)}}</span>
+    </span>
+    <div style="width: 300px;" class="add-playlist-fade" [class.fade-out]="!showUsername" style="z-index: 200; min-width: 100px;">
+        <input type="text" tabindex="-1" (keyup.enter)="SetUsername()" placeholder="0.5" class="form-control" id="username-input">
+    </div>-->
+</div>

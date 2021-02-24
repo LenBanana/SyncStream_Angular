@@ -1,0 +1,39 @@
+.left-24 {
+    left: 25.3%;
+}
+
+.fade-out {
+    opacity: 0 !important;
+}
+
+.fade {
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+.menu-btn {
+    transition: all 0.5s ease;
+    position: fixed;
+    font-size: 25px;
+    z-index: 100;
+}
+
+.resetbtn {
+    top: 30px;
+    right: 5px;
+}
+
+.navbtn {
+    top: 50px;
+    left: 5px;
+}
+
+.navbtn-left {
+    top: 20px;
+    left: 22%;
+}
+
+.resetbtn-left {
+    top: 20px;
+    left: 0px;
+}

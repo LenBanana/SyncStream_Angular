@@ -1,0 +1,43 @@
+<h5 class="text-center">
+    Userlist</h5>
+<div class="ml-5">
+    <ul class="liststyle" style="max-height: 200px;">
+        <li *ngFor="let member of Members" class="pointer" [class.text-warning]="member.ishost" (click)="ChangeHost(member.username)">
+            <i *ngIf="Privileges>2&&member.username !== Username" class="fa fa-ban text-danger mr-5" (click)="BanUser(member.username)"></i>
+            <span [class.text-info]="member.username === Username" class="text-left">
+                        <span *ngIf="member.username === Username">You: </span></span>{{member.username}}
+            <!--<i *ngIf="member.ishost && IsPlaying" class="fa fa-pause-circle-o pl-3 text-left" aria-hidden="true"></i><i *ngIf="member.ishost && !IsPlaying" class="fa fa-play-circle-o pl-3 text-left" aria-hidden="true"></i>-->
+        </li>
+    </ul>
+</div>
+
+<div class="modal fade in" id="roomPwModal" data-keyboard="false" data-backdrop="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h4>Please enter the <span class="text-main-color font-weight-bold">Sync</span>Room password</h4>
+            </div>
+            <div class="modal-body explain-text mb-4">
+                <label style="font-size: 1rem;">Room password</label>
+                <input [(ngModel)]="RoomPassword" type="password" class="form-control user-input bg-dark text-light" (keypress)="alphaKeys($event)" placeholder="(optional) password" />
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success px-3" (click)="AddUser()">Submit <i class="fa fa-check" aria-hidden="true"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade in" id="bannedModal" data-keyboard="false" data-backdrop="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h4>You are banned from this <span class="text-main-color font-weight-bold">Sync</span>Room</h4>
+            </div>
+            <div class="modal-body explain-text mb-4">
+                <h3>Guess you pissed the wrong person off</h3>
+            </div>
+        </div>
+    </div>
+</div>
+<div (window:beforeunload)="userService.removeUser(Username, UniqueId);"></div>

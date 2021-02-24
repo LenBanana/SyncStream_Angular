@@ -1,0 +1,20 @@
+<div class="modal hide fade in" id="dialogModal" data-keyboard="false" data-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h5>{{Header}}</h5>
+            </div>
+            <div class="modal-body">
+                <p>{{Question}}</p>
+                <div [class.hide-me]="!AddInput">
+                    <br>
+                    <input #Title class="form-control" placeholder="(optional) Add a title" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button *ngIf="Answer1" type="button" class="btn btn-success mr-auto font-weight-bold" data-dismiss="modal" (click)="Yes.emit(title.nativeElement.value);">{{Answer1}} <i class="fa ml-1 fa-check-circle" aria-hidden="true"></i></button>
+                <button *ngIf="Answer2" type="button" class="btn btn-danger font-weight-bold" data-dismiss="modal" (click)="No.emit(title.nativeElement.value);">{{Answer2}} <i class="fa ml-1 fa-times-circle" aria-hidden="true"></i></button>
+            </div>
+        </div>
+    </div>
+</div>

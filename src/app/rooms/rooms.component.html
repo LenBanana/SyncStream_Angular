@@ -1,0 +1,69 @@
+<app-text-dialog *ngIf="AskLogout" [Question]="'Are you sure you want to logout?'" [AddInput]="false" [Header]="'Logout'" [Answer1]="'Yes'" [Answer2]="'No'" (Yes)="Logout();AskLogout=false;" (No)="AskLogout=false;">
+</app-text-dialog>
+<div *ngIf="!SignalR" class="username-container text-center mb-2">
+    <span>Please wait until connected to our servers...</span>
+</div>
+<div id="RoomView" *ngIf="!currentRoom && SignalR">
+    <div class="mb-4 header text-center">
+        <div class="center-content">
+            <span class="globe-icon"><i class="fa fa-globe mr-3" aria-hidden="true"></i></span>
+            <span class="icon-text"><span style="color: #3369e7;">Sync</span>Stream</span>
+        </div>
+    </div>
+    <div class="container-fluid mt-3" style="padding-left: 10vw; padding-right: 10vw;">
+        <div class="username-container text-center mb-2">
+            <span *ngIf="user.username">Welcome <span *ngIf="logout">back </span></span>
+            <span *ngIf="user.username&&!logout" data-toggle="modal" data-target="#loginModal" class="user fade">{{user.username.split('#')[0]}}</span>
+            <span *ngIf="user.username&&logout" class="user fade" (click)="AskLogout=true;">{{user.username}}</span>
+        </div>
+        <div class="row">
+            <div class="col-md-3 col-2k-2 col-sm-12 mt-4 mb-4 room-container" *ngIf="rooms">
+                <div class="add-col pointer" (click)="AddRoom()">
+                    <div class="add-bubble center-block">
+                        <i class="fa fa-plus"></i>
+                    </div>
+                </div>
+            </div>
+            <ng-container *ngFor="let room of rooms; let i=index; let last = last;trackBy: trackByFn; let first = first;">
+                <div class="col-md-3 col-2k-2 col-sm-12 room-container mt-4 mb-4">
+                    <div class="room-bubble shadow" [style]="getStyle(room)">
+                        <div class="click-through">
+                            <div class="usercount-bubble info-bubble top-bubble">
+                                <p>{{room.server.members.length}} <i class="fa fa-user"></i></p>
+                            </div>
+                            <div class="playlistcount-bubble info-bubble top-bubble">
+                                <p>{{room.server.ytURLs.length}} <i class="fa " [ngClass]="{ 'text-success fa-play-circle': room.server.isplaying&&room.server.members.length>0, 'text-info fa-pause-circle':  !room.server.isplaying||room.server.members.length==0}"></i></p>
+                            </div>
+                            <div class="play-info">
+                                <i class="fa fa-youtube-play" aria-hidden="true" style="color: #ff0000;" *ngIf="(room.server.ytURLs.length>0||room.server.ytURL.title.toLocaleLowerCase().includes('youtube'))&&room.server.ytURL.url.toLocaleLowerCase().includes('youtube')"><div class="yt-bg"></div></i>
+                                <i class="fa fa-twitch" aria-hidden="true" style="color: #9146ff;" *ngIf="room.server.ytURLs.length>0&&room.server.ytURL.url.toLocaleLowerCase().includes('twitch')"></i>
+                                <i class="fa fa-pause" aria-hidden="true" style="color: #3369e7;" *ngIf="room.server.ytURLs.length==0&&!room.server.isplaying&&room.server.ytURL.title=='Nothing playing'"></i>
+                                <i class="fa fa-film" aria-hidden="true" style="color: #9d74b1;" *ngIf="room.server.ytURLs.length>0&&!room.server.ytURL.url.toLocaleLowerCase().includes('twitch')&&!room.server.ytURL.url.toLocaleLowerCase().includes('youtube')"></i>
+                            </div>
+                        </div>
+                        <div *ngIf="user.userprivileges>1" class="delete-bubble info-bubble hide-btn pointer" (click)="room.server.members.length==0 && DeleteRoom(room.uniqueId, room.server.members.length)"><i class="fa fa-times"></i></div>
+                        <div class="border-main" (click)="JoinRoom(room.uniqueId, room.server.currenttime)">
+                            <div class="blur-background room-info"></div>
+                            <div class="center-block click-through" style="z-index: 20;">
+                                <p class="short-text text-center font-weight-bold" style="font-size: 1.75rem;" title="{{room.name}}">{{room.name}}</p>
+                                <p *ngIf="room.server.ytURL.url.length>0; else Title" style="font-size: 1rem;" class="short-text mt-3 text-center" [innerHTML]="room.server.ytURL.title" [title]="room.server.ytURL.title"></p>
+                                <ng-template #Title>
+                                    <p class="short-text mt-3 text-center" title="{{room.server.title}}" style="font-size: 1rem;">{{room.server.title}}</p>
+                                </ng-template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </ng-container>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p class="mt-1"><span class="pointer" data-toggle="modal" data-target="#howToModal">How to?</span><span class="pointer ml-4" data-toggle="modal" data-target="#contactModal">Contact</span></p>
+    </div>
+    <app-help-modal (AddRoom)="AddRoom()"></app-help-modal>
+    <app-add-room-modal [user]="user" [logout]="logout" (JoinRoom)="JoinRoom($event, 0)"></app-add-room-modal>
+    <app-login-modal (SaveLogin)="SaveLogin($event, false)" [user]="user" [logout]="logout"></app-login-modal>
+    <div style="margin-top: 5%;"></div>
+</div>
+<app-home *ngIf="currentRoom" [UniqueId]="currentRoom" [currentTime]="currentTime" [Username]="user.username" [DelInterval]="delInterval" (IntervalOff)="currentRoom=undefined; currentTime=undefined"></app-home>
