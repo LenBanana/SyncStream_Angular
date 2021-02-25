@@ -125,6 +125,86 @@
     min-height: 10rem;
 }
 
+.room-container2 {
+    min-height: 15vh;
+    margin-bottom: 25px;
+    position: relative;
+    cursor: pointer;
+}
+
+.add-container {
+    border-radius: 5px;
+    border-color: #4C5471;
+}
+
+.room-container2:hover>.room-card>.room-info-container>.room-playlist-info {
+    display: none;
+}
+
+.room-container2:hover>.room-card>.room-info-container>.room-user-info {
+    display: block;
+}
+
+.room-user-info {
+    display: none;
+}
+
+.room-card {
+    background-color: #383e53;
+    width: 100%;
+    height: 100%;
+}
+
+.room-icon {
+    font-size: 6vh;
+}
+
+.room-info-bubbles {
+    position: absolute;
+    bottom: -10%;
+    left: 2%;
+}
+
+.room-user-bubble {
+    width: 2.5vw;
+    height: 3.5vh;
+    max-height: 30px;
+    min-height: 25px;
+    min-width: 40px;
+    border-radius: 5px;
+}
+
+.room-info-container {
+    background-color: #4C5471;
+    display: flex;
+    flex-direction: column;
+}
+
+.room-playlist-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.room-liststyle {
+    list-style-type: circle;
+    font-size: 12px;
+    padding: 0;
+    width: 100%;
+    height: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-grow: 1;
+    flex-basis: 0;
+}
+
+.room-user-bubble>p {
+    font-weight: bold;
+    padding-top: 5%;
+    text-align: center;
+}
+
 .add-col {
     border-radius: 5px;
     border: 2px solid #3369e7;
