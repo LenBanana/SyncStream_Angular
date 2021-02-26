@@ -32,7 +32,7 @@ export class RoomsComponent implements OnInit {
   user: User = { username: "", password: "", id: 0, approved: 0, userprivileges: 0 };
   logout = false;
   AskLogout = false;
-  NewDesign = false;
+  NewDesign = true;
 
   constructor(private http: HttpClient, private router: Router, public signalRService: SignalRService, public roomService: RoomService, private cdRef:ChangeDetectorRef, private loc: Location) {
   // this.GetRooms();

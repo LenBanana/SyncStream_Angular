@@ -36,9 +36,9 @@
     <span class="badge badge-dreck my-2 block pointer" (click)="nextVideo()"><i class="fa fa-forward" ></i></span>
     <span class="badge badge-dreck my-2 block dreck-tooltip"><span class="dreck-tooltiptext"><p *ngFor="let member of Members" style="position: relative; display: block;">{{member.username}}</p></span><i class="fa fa-user"></i><br>{{Members.length}}</span>
 
-    <span class="badge badge-dreck my-2 block pointer" title="Toggles the twitch chat" (click)="toggleTwitchChat()"><i class="fa fa-comment"></i></span>
-    <span class="badge badge-dreck my-2 block pointer" title="Leave room" (click)="refresh()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>
+    <span class="badge badge-dreck my-2 block pointer" title="Toggles the chat" (click)="toggleTwitchChat()"><i class="fa fa-comment"></i></span>
     <hr>
+    <span class="badge badge-dreck my-2 block pointer" title="Leave room" (click)="refresh()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>
 
     <!--<span class="badge badge-dreck mt-5 block pointer" (click)="ToggleThreshhold()">
         <i class="fa fa-clock-o"></i><br><span>{{ThreshholdNumber}}</span>
