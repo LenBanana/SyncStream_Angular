@@ -24,68 +24,59 @@ export class WhiteboardComponent implements OnInit, OnChanges {
     undoButtonText: 'Undo',
     undoButtonEnabled: true,
     colorPickerEnabled: true,
-    shapeSelectorEnabled: false,
+    shapeSelectorEnabled: true,
+    strokeColorPickerEnabled: true,
+    fillColorPickerEnabled: true,
+    drawingEnabled: true,
     lineWidth: 4,
     scaleFactor: 1
 };
 
   ngOnChanges() {
-    if (!this.IsDrawing) {
       this.canvasOptions = {
         ...this.canvasOptions,
-        drawButtonEnabled: false,
-        clearButtonEnabled: false,
-        undoButtonEnabled: false,
-        strokeColorPickerEnabled: false,
-        fillColorPickerEnabled: false,
-        colorPickerEnabled: false,
-        drawingEnabled: false
-      };
-    } else {
-      this.canvasOptions = {
-        ...this.canvasOptions,
-        drawButtonEnabled: true,
-        clearButtonEnabled: true,
-        undoButtonEnabled: true,
-        strokeColorPickerEnabled: true,
-        fillColorPickerEnabled: true,
-        colorPickerEnabled: true,
-        drawingEnabled: true
-      };
-    }
+      };    
   }
 
   ngOnInit(): void {
     this.whiteBoardSerive.addWhiteBoardListener();
+    this.whiteBoardSerive.addWhiteBoardJoinListener();
     this.whiteBoardSerive.addWhiteBoardClearListener();
     this.whiteBoardSerive.addWhiteBoardUnDoListener();
     this.whiteBoardSerive.addWhiteBoardReDoListener();
+    this.whiteBoardSerive.getWhiteBoard(this.UniqueId);    
+    this.whiteBoardSerive.whiteboardJoin.subscribe(update => {
+      if (update==null) {
+        return;
+      }
+      const parsedStorageUpdates: Array<CanvasWhiteboardUpdate> = update;
+      this._canvasWhiteboardService.drawCanvas(parsedStorageUpdates);
+    });
     this.whiteBoardSerive.whiteboardUpdate.subscribe(update => {
-      if (update==null||this.IsDrawing) {
+      if (update==null) {
         return;
       }
       const parsedStorageUpdates: Array<CanvasWhiteboardUpdate> = update;
       this._canvasWhiteboardService.drawCanvas(parsedStorageUpdates);
     });
     this.whiteBoardSerive.whiteboardClear.subscribe(clear => {
-      if (this.IsDrawing) {
+      if (clear==null) {
         return;
       }
       this._canvasWhiteboardService.clearCanvas();
     });
     this.whiteBoardSerive.whiteboardUndo.subscribe(undo => {
-      if (undo==null||this.IsDrawing) {
+      if (undo==null) {
         return;
       }
       this._canvasWhiteboardService.undoCanvas(undo);
     });
     this.whiteBoardSerive.whiteboardRedo.subscribe(redo => {
-      if (redo==null||this.IsDrawing) {
+      if (redo==null) {
         return;
       }
       this._canvasWhiteboardService.redoCanvas(redo);
     });
-    
   }
 
   sendBatchUpdate(event) {

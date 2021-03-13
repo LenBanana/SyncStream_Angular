@@ -46,7 +46,6 @@ export class TwitchPlayerComponent implements OnChanges, OnInit, OnDestroy {
         return;
       }
       const playerTime = this.player.getCurrentTime();      
-      console.log(time + " player " + playerTime + " minus " + (time - playerTime));
       if ((playerTime > (time + 2) || playerTime < (time - 2))) {
         this.player.seek(time);
       }
@@ -71,7 +70,6 @@ export class TwitchPlayerComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    console.log(this.channel);
     setTimeout(() => {      
       if (changes.channel !== undefined && changes.channel.currentValue.length !== 0) {
           this.LiveStream = true;
@@ -90,7 +88,7 @@ export class TwitchPlayerComponent implements OnChanges, OnInit, OnDestroy {
       }
     }, 10); 
     
-    if (changes.videoID !== undefined && changes.videoID.currentValue.length !== 0) {
+    if (changes.videoID !== undefined && changes.videoID.currentValue && changes.videoID.currentValue.length !== 0) {
       this.LiveStream = false;
       setTimeout(() => {       
       this.player = TwitchPlayer.FromOptions('twitchVODPlayer', {

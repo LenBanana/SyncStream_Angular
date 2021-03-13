@@ -439,16 +439,20 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   public DrawWhiteboard() {
-    if (this.CurrentPlayerType !== PlayerType.WhiteBoard) {
-      this.LastPlayerType = this.CurrentPlayerType;
-      this.CurrentPlayerType = PlayerType.WhiteBoard;
-      this.playerService.PlayPause(false, this.UniqueId);
-      setTimeout(() => {      
-        this.YTPlayer.pauseVideo();
-        player.pause();
-      }, 100);
-    } else {
-      this.CurrentPlayerType = this.LastPlayerType;
+    if (this.IsHost || !this.IsPlaying) {
+      if (this.CurrentPlayerType !== PlayerType.WhiteBoard) {
+        this.LastPlayerType = this.CurrentPlayerType;
+        this.CurrentPlayerType = PlayerType.WhiteBoard;
+        if (this.IsHost) {
+          this.playerService.PlayPause(false, this.UniqueId);
+          setTimeout(() => {      
+            this.YTPlayer.pauseVideo();
+            player.pause();
+          }, 100);
+        }
+      } else {
+        this.CurrentPlayerType = this.LastPlayerType;
+      }
     }
   }
 

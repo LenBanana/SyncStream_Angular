@@ -10,12 +10,17 @@ export class WhiteboardService {
 
   constructor() { }
   whiteboardUpdate: BehaviorSubject<any> = new BehaviorSubject(null);
-  whiteboardClear: BehaviorSubject<any> = new BehaviorSubject(null);
+  whiteboardJoin: BehaviorSubject<any> = new BehaviorSubject(null);
+  whiteboardClear: BehaviorSubject<boolean> = new BehaviorSubject(null);
   whiteboardUndo: BehaviorSubject<string> = new BehaviorSubject(null);
   whiteboardRedo: BehaviorSubject<string> = new BehaviorSubject(null);
 
+  public getWhiteBoard(UniqueId: string) {
+    hubConnection.invoke('WhiteBoardJoin', UniqueId);
+  }
+
   public updateWhiteBoard(update, UniqueId: string) {
-    hubConnection.invoke('SendWhiteBoardUpdate', update, UniqueId);
+    hubConnection.invoke('WhiteBoardUpdate', update, UniqueId);
   }
 
   public clearWhiteBoard(UniqueId: string) {
@@ -28,6 +33,16 @@ export class WhiteboardService {
 
   public redoWhiteBoard(UniqueId: string, uuid: string) {
     hubConnection.invoke('WhiteBoardUndo', UniqueId, uuid);
+  }
+
+  public addWhiteBoardJoinListener() {
+    hubConnection.on('whiteboardjoin', (data) => {
+      this.whiteboardJoin.next(data);
+    });
+  }
+
+  public removeWhiteBoardJoinListener() {
+    hubConnection.off('whiteboardjoin', (data) => {});
   }
 
   public addWhiteBoardListener() {
