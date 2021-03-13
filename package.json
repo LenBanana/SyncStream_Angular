@@ -37,6 +37,7 @@
         "rxjs": "~6.5.4",
         "sha.js": "^2.4.11",
         "tslib": "^1.10.0",
+        "twitch-player": "^2.0.2",
         "zone.js": "~0.10.2"
     },
     "devDependencies": {

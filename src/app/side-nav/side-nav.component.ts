@@ -25,12 +25,13 @@ export class SideNavComponent implements OnInit {
   @Input() Members: Member[];
   @Input() Playlist: VideoDTO[] = [];
   @Input() playerComp: PlayerComponent;
+  @Input() ThreshholdNumber: number = 0.5;
   @Output() threshholdChange = new EventEmitter();
   @Output() usernameChange = new EventEmitter();
   @Output() toggleTwitch = new EventEmitter();
   @Output() menuEnter = new EventEmitter();
   @Output() menuExit = new EventEmitter();
-  ThreshholdNumber: number = 0.5;
+  @Output() Draw = new EventEmitter();
   Threshhold = false;
   showInput = false;
   showPlaylist = false;
@@ -151,6 +152,10 @@ export class SideNavComponent implements OnInit {
   
   toggleTwitchChat() {
     this.toggleTwitch.emit()
+  }
+
+  DrawWhiteboard() {
+    this.Draw.emit();
   }
 
   play(url: string) {

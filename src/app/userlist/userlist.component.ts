@@ -89,6 +89,11 @@ export class UserlistComponent implements OnInit, OnDestroy {
     });
   }
 
+  refresh(): void {
+    this.loc.go("/");
+    window.location.reload();
+  }
+
   alphaKeys(event: KeyboardEvent) {    
     var key = event.key;
     if (key == "Enter" && this.RoomPassword.length>0) {

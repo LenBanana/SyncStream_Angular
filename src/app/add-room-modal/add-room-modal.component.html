@@ -6,6 +6,10 @@
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body explain-text mb-4">
+                <!-- Disable chrome autofill -->
+                <input type="text" class="form-control" autocomplete="off chrome-off" style="display: none;" />
+                <input type="password" class="form-control" autocomplete="off chrome-off" style="display: none;" />
+
                 <label style="font-size: 1rem;">Room name</label>
                 <input [(ngModel)]="NewRoomName" type="text" class="form-control user-input bg-dark text-light mb-4" (keypress)="alphaKeys($event)" placeholder="Any room name" autocomplete="off" />
                 <label style="font-size: 1rem;">Room password</label>

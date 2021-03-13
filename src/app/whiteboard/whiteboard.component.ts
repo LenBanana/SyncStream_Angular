@@ -13,7 +13,7 @@ export class WhiteboardComponent implements OnInit, OnChanges {
 
   constructor(private _canvasWhiteboardService: CanvasWhiteboardService, private whiteBoardSerive: WhiteboardService) { }
   @Input() UniqueId: string = "bla0";
-  IsDrawing = true;
+  @Input() IsDrawing = true;
   canvasOptions: CanvasWhiteboardOptions = {
     drawButtonEnabled: true,
     drawButtonClass: 'drawButtonClass',
@@ -31,15 +31,28 @@ export class WhiteboardComponent implements OnInit, OnChanges {
 
   ngOnChanges() {
     if (!this.IsDrawing) {
-      this.canvasOptions.drawButtonEnabled = false;
-      this.canvasOptions.clearButtonEnabled = false;
-      this.canvasOptions.undoButtonEnabled = false;
+      this.canvasOptions = {
+        ...this.canvasOptions,
+        drawButtonEnabled: false,
+        clearButtonEnabled: false,
+        undoButtonEnabled: false,
+        strokeColorPickerEnabled: false,
+        fillColorPickerEnabled: false,
+        colorPickerEnabled: false,
+        drawingEnabled: false
+      };
     } else {
-      this.canvasOptions.drawButtonEnabled = true;
-      this.canvasOptions.clearButtonEnabled = true;
-      this.canvasOptions.undoButtonEnabled = true;
+      this.canvasOptions = {
+        ...this.canvasOptions,
+        drawButtonEnabled: true,
+        clearButtonEnabled: true,
+        undoButtonEnabled: true,
+        strokeColorPickerEnabled: true,
+        fillColorPickerEnabled: true,
+        colorPickerEnabled: true,
+        drawingEnabled: true
+      };
     }
-    console.log(this.canvasOptions);
   }
 
   ngOnInit(): void {
@@ -64,14 +77,12 @@ export class WhiteboardComponent implements OnInit, OnChanges {
       if (undo==null||this.IsDrawing) {
         return;
       }
-      console.log(undo);
       this._canvasWhiteboardService.undoCanvas(undo);
     });
     this.whiteBoardSerive.whiteboardRedo.subscribe(redo => {
       if (redo==null||this.IsDrawing) {
         return;
       }
-      console.log(redo);
       this._canvasWhiteboardService.redoCanvas(redo);
     });
     

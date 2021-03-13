@@ -31,7 +31,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   @Input() DelInterval: boolean;
   @Input() currentTime: number;
   @Input() Username: string;
-  @Output() IntervalOff = new EventEmitter();
+  @Output() IntervalOff = new EventEmitter();  
   Members: Member[] = [];
   inMenu = false;
   IsHost: boolean = false;
@@ -65,6 +65,10 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
     }
   }
 
+  DrawWhiteboard() {
+    this.playerComp.DrawWhiteboard();
+  }
+
   userIntervalOff() {
     this.IntervalOff.emit();
   }
@@ -88,6 +92,15 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
       });  
       this.InitSignalR();
     }    
+  }
+
+  ChangeHost(isHost: boolean) {
+    this.IsHost = isHost;
+    if (this.IsHost) {
+      this.Threshhold = 2;
+    } else {
+      this.Threshhold = .5;
+    }
   }
 
   async InitSignalR() {
