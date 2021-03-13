@@ -1,5 +1,5 @@
 import { ThrowStmt } from '@angular/compiler';
-import { Component, Input, OnChanges, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
 import { CanvasWhiteboardComponent, CanvasWhiteboardOptions, CanvasWhiteboardService, CanvasWhiteboardUpdate } from 'ng2-canvas-whiteboard';
 import { WhiteboardService } from './whiteboard-service/whiteboard-service.service';
 
@@ -13,7 +13,7 @@ export class WhiteboardComponent implements OnInit, OnChanges {
 
   constructor(private _canvasWhiteboardService: CanvasWhiteboardService, private whiteBoardSerive: WhiteboardService) { }
   @Input() UniqueId: string = "bla0";
-  @Input() IsDrawing = true;
+  @Input() IsDrawing = false;
   canvasOptions: CanvasWhiteboardOptions = {
     drawButtonEnabled: true,
     drawButtonClass: 'drawButtonClass',
@@ -23,6 +23,8 @@ export class WhiteboardComponent implements OnInit, OnChanges {
     clearButtonText: 'Clear',
     undoButtonText: 'Undo',
     undoButtonEnabled: true,
+    redoButtonText: 'Redo',
+    redoButtonEnabled: true,
     colorPickerEnabled: true,
     shapeSelectorEnabled: true,
     strokeColorPickerEnabled: true,
@@ -33,9 +35,9 @@ export class WhiteboardComponent implements OnInit, OnChanges {
 };
 
   ngOnChanges() {
-      this.canvasOptions = {
-        ...this.canvasOptions,
-      };    
+      if (this.IsDrawing === true) {        
+        this.whiteBoardSerive.getWhiteBoard(this.UniqueId);    
+      }
   }
 
   ngOnInit(): void {
@@ -44,12 +46,12 @@ export class WhiteboardComponent implements OnInit, OnChanges {
     this.whiteBoardSerive.addWhiteBoardClearListener();
     this.whiteBoardSerive.addWhiteBoardUnDoListener();
     this.whiteBoardSerive.addWhiteBoardReDoListener();
-    this.whiteBoardSerive.getWhiteBoard(this.UniqueId);    
     this.whiteBoardSerive.whiteboardJoin.subscribe(update => {
       if (update==null) {
         return;
       }
       const parsedStorageUpdates: Array<CanvasWhiteboardUpdate> = update;
+      console.log(parsedStorageUpdates);
       this._canvasWhiteboardService.drawCanvas(parsedStorageUpdates);
     });
     this.whiteBoardSerive.whiteboardUpdate.subscribe(update => {
