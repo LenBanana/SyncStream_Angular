@@ -101,11 +101,14 @@ export class RoomsComponent implements OnInit {
   }
 
   public SaveLogin(user: User, logout: boolean) { 
-    if (user) {
+    if (user.approved == 0) {
+      $('#registerModal').modal('show');
+    }
+    if (user && user.approved>0) {
       this.user = user; 
       this.logout = true;
     }
-    if (!logout) {
+    if (!logout && user.approved>0) {
       this.roomService.GenerateRememberToken(user, navigator.appVersion);
     } else {
       this.user.username = 'Anon' + "#" + randomIntFromInterval(100, 10000);
