@@ -31,6 +31,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   @Input() DelInterval: boolean;
   @Input() currentTime: number;
   @Input() Username: string;
+  @Input() logout: boolean;
   @Output() IntervalOff = new EventEmitter();  
   Members: Member[] = [];
   inMenu = false;

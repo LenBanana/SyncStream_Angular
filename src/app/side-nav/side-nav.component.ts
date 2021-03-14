@@ -16,6 +16,7 @@ export class SideNavComponent implements OnInit {
 
   constructor(public playlistService: PlaylistService, public userService: UserlistService, private location: Location) { }
 
+  @Input() logout: boolean;
   @Input() nav: boolean;
   @Input() fullscreen: boolean;
   @Input() IsHost: boolean;

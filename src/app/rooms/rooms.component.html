@@ -130,4 +130,4 @@
     <app-login-modal (SaveLogin)="SaveLogin($event, false)" [user]="user" [logout]="logout"></app-login-modal>
     <div style="margin-top: 75px;"></div>
 </div>
-<app-home *ngIf="currentRoom" [UniqueId]="currentRoom" [currentTime]="currentTime" [Username]="user.username" [DelInterval]="delInterval" (IntervalOff)="currentRoom=undefined; currentTime=undefined"></app-home>
+<app-home *ngIf="currentRoom" [UniqueId]="currentRoom" [currentTime]="currentTime" [Username]="user.username" [DelInterval]="delInterval" [logout]="logout" (IntervalOff)="currentRoom=undefined; currentTime=undefined"></app-home>
