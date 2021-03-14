@@ -12,24 +12,25 @@ import { WhiteboardService } from './whiteboard-service/whiteboard-service.servi
 export class WhiteboardComponent implements OnInit, OnChanges {
 
   constructor(private _canvasWhiteboardService: CanvasWhiteboardService, private whiteBoardSerive: WhiteboardService) { }
-  @Input() UniqueId: string = "bla0";
+  @Input() UniqueId: string = "";
   @Input() IsDrawing = false;
   canvasOptions: CanvasWhiteboardOptions = {
     drawButtonEnabled: true,
-    drawButtonClass: 'drawButtonClass',
-    drawButtonText: 'Draw',
+    drawButtonClass: 'fa fa-pencil fa-2x p-2',
+    drawButtonText: '',
     clearButtonEnabled: true,
-    clearButtonClass: 'clearButtonClass',
-    clearButtonText: 'Clear',
+    clearButtonClass: 'fa fa-trash fa-2x p-2',
+    clearButtonText: '',
     undoButtonText: 'Undo',
-    undoButtonEnabled: true,
+    undoButtonEnabled: false,
     redoButtonText: 'Redo',
-    redoButtonEnabled: true,
+    redoButtonEnabled: false,
     colorPickerEnabled: true,
     shapeSelectorEnabled: true,
     strokeColorPickerEnabled: true,
     fillColorPickerEnabled: true,
     drawingEnabled: true,
+    batchUpdateTimeoutDuration: 50,
     lineWidth: 4,
     scaleFactor: 1
 };
@@ -51,7 +52,6 @@ export class WhiteboardComponent implements OnInit, OnChanges {
         return;
       }
       const parsedStorageUpdates: Array<CanvasWhiteboardUpdate> = update;
-      console.log(parsedStorageUpdates);
       this._canvasWhiteboardService.drawCanvas(parsedStorageUpdates);
     });
     this.whiteBoardSerive.whiteboardUpdate.subscribe(update => {
@@ -81,7 +81,20 @@ export class WhiteboardComponent implements OnInit, OnChanges {
     });
   }
 
-  sendBatchUpdate(event) {
+  delay(ms: number) {
+    return new Promise( resolve => setTimeout(resolve, ms) );
+  }
+
+  async sendBatchUpdate(event) {
+    if (event.length > 25) {
+      var i,j,temparray,chunk = 25;
+      for (i=0,j=event.length; i<j; i+=chunk) {
+          temparray = event.slice(i,i+chunk);
+          this.whiteBoardSerive.updateWhiteBoard(temparray, this.UniqueId);
+          await this.delay(1);
+      }
+      return;
+    }
     this.whiteBoardSerive.updateWhiteBoard(event, this.UniqueId);
   }
 

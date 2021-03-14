@@ -9,8 +9,11 @@
 
 .fade-out {
     opacity: 0 !important;
-    pointer-events: none;
     //display: none !important;
+}
+
+.nopointer {
+    pointer-events: none;
 }
 
 .add-video-btn:hover {
