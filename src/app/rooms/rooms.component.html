@@ -4,13 +4,13 @@
     <span>Please wait until connected to our servers...</span>
 </div>
 <div id="RoomView" *ngIf="!currentRoom && SignalR">
-    <div class="mb-4 header text-center">
+    <div class="header text-center">
         <div class="center-content">
             <span class="globe-icon"><i class="fa fa-globe mr-3" aria-hidden="true"></i></span>
             <span class="icon-text"><span style="color: #2980b9;">Sync</span>Stream</span>
         </div>
     </div>
-    <div class="container-fluid mt-3" style="padding-left: 10vw; padding-right: 10vw;">
+    <div class="container-fluid" style="padding-left: 5vw; padding-right: 5vw;">
         <!--<div class="username-container text-center font-weight-bold">
             <span *ngIf="user.username">Welcome <span *ngIf="logout">back </span></span>
             <span *ngIf="user.username&&!logout" data-toggle="modal" data-target="#loginModal" class="user fade">{{user.username.split('#')[0]}}</span>
@@ -62,7 +62,7 @@
                         <i class="fa fa-2x" [class.fa-sign-in]="user.username&&!logout" [class.fa-plus]="user.username&&logout"></i>
                     </div>
                 </div>
-                <div class="col-md-4 col-sm-12 room-container2 mt-4 btn-container" *ngFor="let room of rooms; let i=index; let last = last;trackBy: trackByFn; let first = first;">
+                <div class="col-md-4 col-sm-12 room-container2 mt-5 btn-container" *ngFor="let room of rooms; let i=index; let last = last;trackBy: trackByFn; let first = first;">
                     <div class="room-info-bubbles row skew10">
                         <div class="room-user-bubble" style="background-color: #27ae60;">
                             <p class="counterSkew10">{{room.server.members.length}} <i class="fa fa-user"></i></p>

@@ -1,15 +1,15 @@
 .header {
     width: 100%;
-    height: 10vw;
-    background: linear-gradient(to bottom, #1c2f43, #243b55);
-    font-size: 5vw;
+    height: calc(5vw + 5vh + 2vmin);
+    background: radial-gradient(ellipse at bottom, #3b608b, #1c2f43);
+    font-size: calc(3vw + 3vh + 2vmin);
     font-weight: bold;
     border-bottom: 1px solid #1c2f43;
 }
 
 .globe-icon {
     color: #232734;
-    font-size: 14vw;
+    font-size: calc(8vw + 8vh + 2vmin);
 }
 
 .icon-text {

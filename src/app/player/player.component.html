@@ -16,7 +16,7 @@
         <iframe [class.none]="CurrentPlayerType!=playerType.YouTube" id="YTPlayer" style="min-height: 80vh; width: 100%; border: none;" [class.vh-90]="!nav" src="https://www.youtube.com/embed/?iv_load_policy=3&amp;modestbranding=1&amp;playsinline=1&amp;showinfo=0&amp;rel=0&amp;enablejsapi=1"
             allowfullscreen allowtransparency allow="fullscreen" allowfullscreen></iframe>
 
-        <div style="height: 100%; width: 100%;">
+        <div style="height: 100%; width: 100%;" [class.none]="CurrentPlayerType!=playerType.WhiteBoard">
             <app-whiteboard [UniqueId]="UniqueId" [IsDrawing]="CurrentPlayerType==playerType.WhiteBoard" [class.vh-90]="!nav"></app-whiteboard>
         </div>
     </div>

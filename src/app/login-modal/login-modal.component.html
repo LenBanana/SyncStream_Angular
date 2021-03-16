@@ -21,7 +21,7 @@
                     <div class="form-group">
                         <input #pwLoginInput type="password" (keyup.enter)="LoginRequest()" class="form-control" [class.is-invalid]="loginError||userExist||wrongPw" id="userPw" placeholder="Password">
                         <small id="passwordHelp" class="text-danger" *ngIf="loginError">
-                                    Must be 6-20 characters long.
+                                    Must be at least 6 characters long.
                                 </small>
                         <small id="passwordHelp2" class="text-danger" *ngIf="wrongPw">
                                     This user does not exist.
