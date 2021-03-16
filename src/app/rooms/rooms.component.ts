@@ -13,6 +13,8 @@ import { User } from '../Interfaces/User';
 import { randomID, randomIntFromInterval } from '../helper/generic';
 import { Room } from '../Interfaces/Room';
 import { MainUser } from '../helper/Globals';
+import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
+import { Dialog } from '../Interfaces/Dialog';
 
 
 @Component({
@@ -24,6 +26,7 @@ export class RoomsComponent implements OnInit {
   @ViewChild('usernameInput') usernameElement: ElementRef;
   
   rooms: Room[];
+  logoutDialog: Dialog = { id: 'logout', header: 'Logout', question: 'Are you sure you want to logout?', answer1: 'Yes', answer2: 'No', yes: null, no: null }
   headers: HttpHeaders = new HttpHeaders().set("Content-Type", "application/json");
   currentRoom: string;
   currentTime: number;
@@ -31,10 +34,9 @@ export class RoomsComponent implements OnInit {
   SignalR: boolean = false;
   user: User = { username: "", password: "", id: 0, approved: 0, userprivileges: 0 };
   logout = false;
-  AskLogout = false;
   NewDesign = true;
 
-  constructor(private http: HttpClient, private router: Router, public signalRService: SignalRService, public roomService: RoomService, private cdRef:ChangeDetectorRef, private loc: Location) {
+  constructor(private http: HttpClient, private router: Router, public signalRService: SignalRService, public roomService: RoomService, public dialogService: DialogService, private cdRef:ChangeDetectorRef, private loc: Location) {
   // this.GetRooms();
   // this.setIntervals();
   }
@@ -78,6 +80,7 @@ export class RoomsComponent implements OnInit {
   private async signalR() {
     await this.signalRService.startConnection().finally(() => {
       this.signalRService.addRoomListener();     
+      this.dialogService.addDialogListener();
       this.SignalR = true;
       this.cdRef.detectChanges();
     });    
@@ -97,11 +100,16 @@ export class RoomsComponent implements OnInit {
   }
 
   public Logout() {
-    this.SaveLogin(null, true);
+    this.user.username = 'Anon' + "#" + randomIntFromInterval(100, 10000);
+    this.user.id = 0;
+    const curDate = new Date();
+    curDate.setDate(curDate.getDate() - 30);
+    document.cookie = "login-token=none; expires=" + curDate.toUTCString();
+    this.logout = false;
   }
 
   public SaveLogin(user: User, logout: boolean) { 
-    if (user.approved == 0) {
+    if (user && user.approved == 0) {
       $('#registerModal').modal('show');
     }
     if (user && user.approved>0) {
@@ -110,13 +118,6 @@ export class RoomsComponent implements OnInit {
     }
     if (!logout && user.approved>0) {
       this.roomService.GenerateRememberToken(user, navigator.appVersion);
-    } else {
-      this.user.username = 'Anon' + "#" + randomIntFromInterval(100, 10000);
-      this.user.id = 0;
-      const curDate = new Date();
-      curDate.setDate(curDate.getDate() - 30);
-      document.cookie = "login-token=none; expires=" + curDate.toUTCString();
-      this.logout = false;
     }
   }
 

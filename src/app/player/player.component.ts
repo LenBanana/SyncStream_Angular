@@ -19,11 +19,11 @@ import {
 import {
   VideoDTO
 } from '../Interfaces/VideoDTO';
-import $ from 'jquery';
 import {
   Subject
 } from 'rxjs';
 import { PingService } from '../services/pingservice.service';
+declare var $:any
 
 export var player: Plyr;
 
@@ -64,7 +64,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   currentKey = "";
   currentVimeoKey = "";
   LastAddedExternalSource = "";
-  SyncVideo = false;
   Init = false;
   PingInterval;
 
@@ -309,7 +308,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   setVideo(url: string) {
-    this.SyncVideo = false;    
+    $('#dialogModal-Sync').modal('hide');
     this.twitchChannel = undefined;
     if (url.includes(".m3u8")) {
       player.source = {
@@ -413,7 +412,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       this.playlistService.addVideo(ytVid, this.UniqueId);
     } else {
       this.LastAddedExternalSource = videourl.value;
-      this.SyncVideo = true;
+      $('#dialogModal-Sync').modal('show');
     }
     videourl.value = '';
     videourl.blur();
@@ -427,7 +426,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.playlistService.addVideo(ytVid, this.UniqueId);
     setTimeout(() => {
       this.LastAddedExternalSource = "";
-      this.SyncVideo = false;
+      $('#dialogModal-Sync').modal('hide');
     }, 10);
   }
 

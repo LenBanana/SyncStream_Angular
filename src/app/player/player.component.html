@@ -1,5 +1,4 @@
-<app-text-dialog *ngIf="SyncVideo" [Question]="'Do you want to synchronize the external video source with other viewers? Please click no if you are using an IP based streaming service and are not using a VPN, or if you didnt understand this sentence.'"
-    [AddInput]="true" [Header]="'Share URL'" [Answer1]="'Yes'" [Answer2]="'No'" (Yes)="PlayExternalVideo($event)" (No)="setVideo(LastAddedExternalSource)">
+<app-text-dialog [Id]="'Sync'" [Question]="'Do you want to share this URL with other viewers, or only sync the time?'" [AddInput]="true" [Header]="'Share URL'" [Answer1]="'Share URL'" [Answer2]="'Sync time'" (Yes)="PlayExternalVideo($event)" (No)="setVideo(LastAddedExternalSource)">
 </app-text-dialog>
 <div class="row" [class.no-margin]="(!nav&&!twitchChat)||(CurrentPlayerType==playerType.Twitch&&twitchChat)">
     <div class="transition" [class.vh-semi]="nav" [class.vh-big]="!nav" [class.col-10]="twitchChat&&CurrentPlayerType!=playerType.Twitch">

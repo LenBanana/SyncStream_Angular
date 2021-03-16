@@ -1,4 +1,4 @@
-<app-text-dialog *ngIf="AskLogout" [Question]="'Are you sure you want to logout?'" [AddInput]="false" [Header]="'Logout'" [Answer1]="'Yes'" [Answer2]="'No'" (Yes)="Logout();AskLogout=false;" (No)="AskLogout=false;">
+<app-text-dialog [Id]="logoutDialog.id" [Question]="logoutDialog.question" [AddInput]="false" [Header]="logoutDialog.header" [Answer1]="logoutDialog.answer1" [Answer2]="logoutDialog.answer2" (Yes)="Logout()">
 </app-text-dialog>
 <div *ngIf="!SignalR" class="username-container text-center mb-2">
     <span>Please wait until connected to our servers...</span>
@@ -122,7 +122,7 @@
             <span class="pointer mr-4" (click)="NewDesign=!NewDesign"><i class="fa fa-object-group text-info"></i></span>
             <span class="pointer" data-toggle="modal" data-target="#howToModal">How to?</span>
             <span class="pointer ml-4" data-toggle="modal" data-target="#contactModal">Contact</span>
-            <span class="pointer ml-4 text-info" (click)="AskLogout=true;" *ngIf="user.username&&logout">Logout</span>
+            <span class="pointer ml-4 text-info" data-toggle="modal" data-target="#dialogModal-logout" *ngIf="user.username&&logout">Logout</span>
         </p>
     </div>
     <app-help-modal (AddRoom)="AddRoom()"></app-help-modal>

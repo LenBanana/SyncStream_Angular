@@ -8,6 +8,7 @@ declare var $:any
 })
 export class TextDialogComponent implements OnInit {
   @ViewChild('Title') title: ElementRef;
+  @Input() Id: string;
   @Input() Question: string;
   @Input() Header: string;
   @Input() Answer1: string;
@@ -18,7 +19,7 @@ export class TextDialogComponent implements OnInit {
   constructor() { }
 
   ngOnInit(): void {
-    $('#dialogModal').modal('toggle');
+    
   }
 
 }

@@ -11,6 +11,7 @@ import { VideoDTO } from '../Interfaces/VideoDTO';
 import { ActivatedRoute, Router } from '@angular/router';
 import { randomIntFromInterval } from '../helper/generic';
 import { MainUser } from '../helper/Globals';
+import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
 
 @Component({
   selector: 'app-home',
@@ -21,7 +22,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
 
 
   @ViewChild(PlayerComponent) playerComp;
-  constructor(private route: ActivatedRoute, public datepipe: DatePipe, private router: Router, public signalRService: SignalRService, public playlistService: PlaylistService, public userService: UserlistService, private cdRef: ChangeDetectorRef, private location: Location) {
+  constructor(private route: ActivatedRoute, public datepipe: DatePipe, private router: Router, public signalRService: SignalRService, public dialogService: DialogService, public playlistService: PlaylistService, public userService: UserlistService, private cdRef: ChangeDetectorRef, private location: Location) {
     
     //this.http.post(this.baseUrl + 'api/Server/AddMember', member, { headers: this.headers }).toPromise();
   }
@@ -108,6 +109,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
     await this.signalRService.startConnection().finally(() => {
       this.signalRService.addRoomListener();     
       this.signalRService.AddLoginListener();
+      this.dialogService.addDialogListener();
     });          
     this.signalRService.loginRequest.subscribe(result => { 
       if (result == null) {
