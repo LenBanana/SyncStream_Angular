@@ -11,8 +11,8 @@ import { User } from '../Interfaces/User';
 import { Room } from '../Interfaces/Room';
 
 export var hubConnection: signalR.HubConnection;
-export var baseUrl: string = "https://sync.dreckbu.de/";
-//export var baseUrl: string = "https://localhost:5001/";
+//export var baseUrl: string = "https://sync.dreckbu.de/";
+export var baseUrl: string = "https://localhost:5001/";
 @Injectable({
   providedIn: 'root'
 })

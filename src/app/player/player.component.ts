@@ -94,9 +94,9 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
           const Ping = Number.parseFloat(ping.toFixed(2));
           if (this.Threshhold < Ping || (this.IsHost&&this.Threshhold>2&&Ping<2) || (!this.IsHost&&this.Threshhold>.5&&Ping<.5)) {
             if (!this.IsHost) {
-              this.Threshhold = Ping;
+              this.Threshhold = Ping < .5 ? .5 : Ping;
             } else {
-              this.Threshhold = Ping * 2;
+              this.Threshhold = (Ping < 2 ? 2 : Ping) * 2;
             }
             this.threshholdChange.emit(Ping);
           }
