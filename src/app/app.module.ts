@@ -27,6 +27,7 @@ import { WhiteboardComponent } from './whiteboard/whiteboard.component';
 import { CanvasWhiteboardModule } from 'ng2-canvas-whiteboard';
 import { UserAdminModalComponent } from './user-admin-modal/user-admin-modal.component';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { UserSettingModalComponent } from './user-setting-modal/user-setting-modal.component';
 
 @NgModule({
   declarations: [
@@ -48,7 +49,8 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
     HelpModalComponent,
     AddRoomModalComponent,
     WhiteboardComponent,
-    UserAdminModalComponent
+    UserAdminModalComponent,
+    UserSettingModalComponent
   ],
   imports: [
     BrowserModule,

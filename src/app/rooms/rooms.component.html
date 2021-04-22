@@ -123,6 +123,7 @@
             <span class="pointer" data-toggle="modal" data-target="#howToModal">How to?</span>
             <span class="pointer ml-4" data-toggle="modal" data-target="#contactModal">Contact</span>
             <span class="pointer ml-4 text-info" data-toggle="modal" data-target="#dialogModal-logout" *ngIf="user.username&&logout">Logout</span>
+            <span class="pointer ml-4 text-info" data-toggle="modal" data-target="#userSettingModal" *ngIf="user.username&&logout">User Settings</span>
             <span class="pointer ml-4 text-info" data-toggle="modal" data-target="#userAdminModal" *ngIf="user.username&&logout&&user.userprivileges>2">User Administration</span>
         </p>
     </div>
@@ -130,6 +131,7 @@
     <app-add-room-modal [user]="user" [logout]="logout" (JoinRoom)="JoinRoom($event, 0)"></app-add-room-modal>
     <app-login-modal (SaveLogin)="SaveLogin($event, false)" [user]="user" [logout]="logout"></app-login-modal>
     <app-user-admin-modal *ngIf="user.username&&logout&&user.userprivileges>2"></app-user-admin-modal>
+    <app-user-setting-modal *ngIf="user.username&&logout" [User]="user"></app-user-setting-modal>
     <div style="margin-top: 75px;"></div>
 </div>
 <app-home *ngIf="currentRoom" [UniqueId]="currentRoom" [currentTime]="currentTime" [Username]="user.username" [DelInterval]="delInterval" [logout]="logout" (IntervalOff)="currentRoom=undefined; currentTime=undefined"></app-home>
