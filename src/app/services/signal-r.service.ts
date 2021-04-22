@@ -9,6 +9,7 @@ import { RememberToken } from '../Interfaces/RememberToken';
 import { randomIntFromInterval } from '../helper/generic';
 import { User } from '../Interfaces/User';
 import { Room } from '../Interfaces/Room';
+import { Token } from '../helper/Globals';
 
 export var hubConnection: signalR.HubConnection;
 //export var baseUrl: string = "https://sync.dreckbu.de/";
@@ -145,6 +146,10 @@ export class SignalRService {
 
   public AddTokenListener() {
     hubConnection.on('rememberToken', (data) => {
+      var token = data as RememberToken;
+      Token.token = token.token;
+      Token.id = token.id;
+      Token.userID = token.userID;
       this.tokenUpdate.next(data);
     });
   }

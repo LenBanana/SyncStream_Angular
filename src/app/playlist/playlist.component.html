@@ -7,7 +7,7 @@
                 <i class="fa fa-pause text-primary fa-2x" *ngIf="first" aria-hidden="true"></i><i class="fa fa-play text-success fa-2x pointer" *ngIf="!first" (click)="play(video.url)" aria-hidden="true"></i>
             </div>
             <div class="col-10">
-                <span [innerHTML]="video.title" id="{{i===1 ? 'nextVid': ''}}"></span>
+                <a [attr.href]="video.url" target="_blank" style="text-decoration: none; color: #fff;"><span [innerHTML]="video.title" id="{{i===1 ? 'nextVid': ''}}"></span></a>
             </div>
             <div class="col-1">
                 <i (click)="delete(video.url)" class="fa fa-trash-o fa-2x pointer text-danger" aria-hidden="true" *ngIf="!first"></i>

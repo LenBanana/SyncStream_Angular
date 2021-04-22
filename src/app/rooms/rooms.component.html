@@ -48,7 +48,7 @@
                                 <p class="short-text text-center font-weight-bold" style="font-size: 1.75rem;" title="{{room.name}}">{{room.name}}</p>
                                 <p *ngIf="room.server.ytURL.url.length>0; else Title" style="font-size: 1rem;" class="short-text mt-3 text-center" [innerHTML]="room.server.ytURL.title" [title]="room.server.ytURL.title"></p>
                                 <ng-template #Title>
-                                    <p class="short-text mt-3 text-center" title="{{room.server.title}}" style="font-size: 1rem;">{{room.server.title}}</p>
+                                    <p class="short-text mt-3 text-center" title="Nothing playing" style="font-size: 1rem;">Nothing playing</p>
                                 </ng-template>
                             </div>
                         </div>
@@ -123,11 +123,13 @@
             <span class="pointer" data-toggle="modal" data-target="#howToModal">How to?</span>
             <span class="pointer ml-4" data-toggle="modal" data-target="#contactModal">Contact</span>
             <span class="pointer ml-4 text-info" data-toggle="modal" data-target="#dialogModal-logout" *ngIf="user.username&&logout">Logout</span>
+            <span class="pointer ml-4 text-info" data-toggle="modal" data-target="#userAdminModal" *ngIf="user.username&&logout&&user.userprivileges>2">User Administration</span>
         </p>
     </div>
     <app-help-modal (AddRoom)="AddRoom()"></app-help-modal>
     <app-add-room-modal [user]="user" [logout]="logout" (JoinRoom)="JoinRoom($event, 0)"></app-add-room-modal>
     <app-login-modal (SaveLogin)="SaveLogin($event, false)" [user]="user" [logout]="logout"></app-login-modal>
+    <app-user-admin-modal *ngIf="user.username&&logout&&user.userprivileges>2"></app-user-admin-modal>
     <div style="margin-top: 75px;"></div>
 </div>
 <app-home *ngIf="currentRoom" [UniqueId]="currentRoom" [currentTime]="currentTime" [Username]="user.username" [DelInterval]="delInterval" [logout]="logout" (IntervalOff)="currentRoom=undefined; currentTime=undefined"></app-home>

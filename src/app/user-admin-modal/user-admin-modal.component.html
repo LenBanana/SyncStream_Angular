@@ -1,0 +1,48 @@
+<div class="modal hide fade in" id="userAdminModal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h4><span class="text-main-color font-weight-bold">Sync</span>Stream User</h4>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body explain-text">
+                <table class="table table-dark table-striped"> <!-- [class.shake]="UserChangeError"-->
+                    <thead>
+                        <tr>
+                            <th>Username</th>
+                            <th>Privileges</th>
+                            <th>Approved</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let user of Users | slice: (page-1) * pageSize : page * pageSize">
+                            <td>{{user.username}}</td>                    
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-light dropdown-toggle" type="button" data-display="static" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                        {{user.userprivileges}}
+                                    </button>
+                                    <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                        <a *ngFor="let priv of Privileges; let i = index" class="dropdown-item pointer" (click)="SetUserPrivileges(user, i)">{{i}}</a>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{user.approved}}<i *ngIf="user.approved===0" (click)="ApproveUser(user, true)" class="fa fa-check text-success ml-3 pointer"></i><i *ngIf="user.approved>0" (click)="ApproveUser(user, false)" class="fa fa-times text-danger ml-3 pointer"></i></td>
+                            <td><button (click)="DeleteUserQuestion(user)" class="btn btn-danger"><i class="fa fa-trash-o"></i></button></td> <!-- -->
+                        </tr>
+                    </tbody>
+                </table>
+                <ngb-pagination
+                [(page)]="page"
+                [pageSize]="pageSize"
+                [collectionSize]="Users.length"></ngb-pagination>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger font-weight-bold" data-dismiss="modal">Close <i class="fa ml-1 fa-times-circle" aria-hidden="true"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+<app-text-dialog [Id]="'UserAdminQ'" [Question]="DialogQuestion" [AddInput]="false" [Header]="DialogHeader" [Answer1]="YesAnswer" [Answer2]="NoAnswer" (Yes)="DeleteUser()">
+</app-text-dialog>

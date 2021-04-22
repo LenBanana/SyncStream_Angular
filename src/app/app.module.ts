@@ -25,6 +25,8 @@ import { HelpModalComponent } from './help-modal/help-modal.component';
 import { AddRoomModalComponent } from './add-room-modal/add-room-modal.component';
 import { WhiteboardComponent } from './whiteboard/whiteboard.component';
 import { CanvasWhiteboardModule } from 'ng2-canvas-whiteboard';
+import { UserAdminModalComponent } from './user-admin-modal/user-admin-modal.component';
+import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
 @NgModule({
   declarations: [
@@ -45,7 +47,8 @@ import { CanvasWhiteboardModule } from 'ng2-canvas-whiteboard';
     VimeoPlayerComponent,
     HelpModalComponent,
     AddRoomModalComponent,
-    WhiteboardComponent
+    WhiteboardComponent,
+    UserAdminModalComponent
   ],
   imports: [
     BrowserModule,
@@ -53,7 +56,8 @@ import { CanvasWhiteboardModule } from 'ng2-canvas-whiteboard';
     FormsModule,
     AppRoutingModule,
     DragDropModule,
-    CanvasWhiteboardModule
+    CanvasWhiteboardModule,
+    NgbModule
   ],
   providers: [DatePipe],
   bootstrap: [AppComponent]
