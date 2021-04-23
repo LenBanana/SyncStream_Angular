@@ -19,7 +19,7 @@ export class UserSettingModalComponent implements OnInit {
   }
 
   Save() {
-    if (this.User.password !== this.RepeatPassword) {
+    if (this.User.password !== this.RepeatPassword || this.Password.length === 0 || this.RepeatPassword.length === 0 || this.User.password.length === 0  || this.User.username.length === 0 ) {
       return;
     }
     let dtoUser: User = {  

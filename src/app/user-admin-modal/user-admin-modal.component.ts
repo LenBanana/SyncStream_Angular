@@ -13,6 +13,7 @@ export class UserAdminModalComponent implements OnInit {
 
   constructor(public userAdminService: UserAdminService, public signalRService: SignalRService) { }
   Users: User[] = [];
+  FilteredUsers: User[] = [];
   Token: string;
   UserID: number;
   DialogQuestion: string;
@@ -23,14 +24,19 @@ export class UserAdminModalComponent implements OnInit {
   Privileges = new Array(4);
   page = 1;
   pageSize = 5;
+  FilterTerm = "";
+  Sort = 0;
+  Desc = true;
 
   ngOnInit(): void {
     this.userAdminService.addUserListener();
     this.userAdminService.Users.subscribe(users => {
       if (!users) {
         return;
-      }
+      }      
       this.Users = users;
+      this.FilteredUsers = users;
+      this.Filter();
     });    
     this.signalRService.tokenUpdate.subscribe(result => {
       if (!result) {
@@ -40,6 +46,25 @@ export class UserAdminModalComponent implements OnInit {
       this.UserID = result.userID;
       this.userAdminService.GetUsers(this.Token, this.UserID);
     })
+  }
+
+  Filter() {
+    if (this.FilterTerm) {
+      this.FilteredUsers = this.Users.filter(x => x.username.toLocaleLowerCase().includes(this.FilterTerm.toLocaleLowerCase()));
+    } else {
+      this.FilteredUsers = this.Users;
+    }
+    switch(this.Sort) {
+      case 0:
+          this.FilteredUsers.sort((x, y) => (x.username > y.username ? (this.Desc ? 1 : -1) : (this.Desc ? -1 : 1)));
+        break;
+      case 1:
+        this.FilteredUsers.sort((x, y) => (x.userprivileges > y.userprivileges ? (this.Desc ? 1 : -1) : (this.Desc ? -1 : 1)));
+        break;
+      case 2:
+        this.FilteredUsers.sort((x, y) => (x.approved > y.approved ? (this.Desc ? 1 : -1) : (this.Desc ? -1 : 1)));
+        break;
+    }
   }
 
   DeleteUser() {
