@@ -26,6 +26,8 @@ export class RoomsComponent implements OnInit {
   @ViewChild('usernameInput') usernameElement: ElementRef;
   
   rooms: Room[];
+  filterRooms: Room[];
+  FilterTerm = "";
   logoutDialog: Dialog = { id: 'logout', header: 'Logout', question: 'Are you sure you want to logout?', answer1: 'Yes', answer2: 'No', yes: null, no: null }
   headers: HttpHeaders = new HttpHeaders().set("Content-Type", "application/json");
   currentRoom: string;
@@ -34,11 +36,20 @@ export class RoomsComponent implements OnInit {
   SignalR: boolean = false;
   user: User = { username: "", password: "", id: 0, approved: 0, userprivileges: 0 };
   logout = false;
-  NewDesign = true;
+  page = 1;
+  pageSize = 9;
 
   constructor(private http: HttpClient, private router: Router, public signalRService: SignalRService, public roomService: RoomService, public dialogService: DialogService, private cdRef:ChangeDetectorRef, private loc: Location) {
   // this.GetRooms();
   // this.setIntervals();
+  }
+
+  Filter() {
+    if (this.FilterTerm) {
+      this.filterRooms = this.rooms.filter(x => x.name.toLocaleLowerCase().includes(this.FilterTerm.toLocaleLowerCase()));
+    } else {
+      this.filterRooms = this.rooms;
+    }
   }
 
   ngOnInit() {        
@@ -87,6 +98,8 @@ export class RoomsComponent implements OnInit {
 
     this.signalRService.room.subscribe(result => {      
       this.rooms = result;
+      this.filterRooms = result;
+      this.Filter();
       this.cdRef.detectChanges();
     });
     
@@ -131,6 +144,8 @@ export class RoomsComponent implements OnInit {
 
   public async GetRooms() {
     this.rooms = await this.http.get<Room[]>(baseUrl + 'api/Server/GetRooms').toPromise();    
+    this.filterRooms = this.rooms;
+    this.Filter();
   }
 
   public JoinRoom(uniqueId: string, time: number) {

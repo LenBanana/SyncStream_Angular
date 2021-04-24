@@ -7,6 +7,22 @@
     border-bottom: 1px solid #1c2f43;
 }
 
+ngb-pagination ::ng-deep a {
+    color: #fff !important;
+    border: none;
+}
+  
+ngb-pagination ::ng-deep .page-item.active .page-link {
+    border-color: #2980b9;
+    background-color: #3b608b;
+    box-shadow: none;
+}
+
+ngb-pagination ::ng-deep ul > li:not(.active) > a {
+    border-color: #444b65;
+    background-color: #424962 !important;
+}
+
 .globe-icon {
     color: #232734;
     font-size: calc(8vw + 8vh + 2vmin);
@@ -22,6 +38,12 @@
     display: flex;
     flex-direction: column;
     justify-content: center;
+}
+
+.center-absolute {    
+    position: absolute;
+    left: 50%;
+    transform: translate(0, -50%);
 }
 
 .blur-background {

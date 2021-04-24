@@ -7,7 +7,7 @@
             </div>
             <div class="modal-body explain-text">
                 <label>Filter</label>
-                <input class="form-control bg-dark text-light" [(ngModel)]="FilterTerm" placeholder="Username..." type="text" (keyup)="Filter()">
+                <input class="form-control bg-dark text-light border-secondary" [(ngModel)]="FilterTerm" (keyup)="Filter()" placeholder="Username..." type="text">
                 <hr>
                 <table class="table table-dark table-striped"> <!-- [class.shake]="UserChangeError"-->
                     <thead>

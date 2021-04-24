@@ -10,54 +10,33 @@
             <span class="icon-text"><span style="color: #2980b9;">Sync</span>Stream</span>
         </div>
     </div>
-    <div class="container-fluid" style="padding-left: 5vw; padding-right: 5vw;">
-        <div class="row" [class.mt-2]="NewDesign">
-            <ng-container *ngIf="!NewDesign">
-                <div class="col-md-3 col-2k-2 col-sm-12 mt-4 mb-4 room-container" *ngIf="rooms">
-                    <div class="add-col pointer" (click)="AddRoom()">
-                        <div class="add-bubble center-block ">
-                            <i class="fa fa-plus"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3 col-2k-2 col-sm-12 room-container mt-4 mb-4" *ngFor="let room of rooms; let i=index; let last = last;trackBy: trackByFn; let first = first;">
-                    <div class="room-bubble shadow btn-container" [style]="getStyle(room)">
-                        <div class="click-through">
-                            <div class="usercount-bubble info-bubble top-bubble">
-                                <p>{{room.server.members.length}} <i class="fa fa-user"></i></p>
-                            </div>
-                            <div class="playlistcount-bubble info-bubble top-bubble">
-                                <p>{{room.server.ytURLs.length}} <i class="fa " [ngClass]="{ 'text-success fa-play-circle': room.server.isplaying&&room.server.members.length>0, 'text-info fa-pause-circle':  !room.server.isplaying||room.server.members.length==0}"></i></p>
-                            </div>
-                            <div class="play-info">
-                                <i class="fa fa-youtube-play" aria-hidden="true" style="color: #ff0000;" *ngIf="(room.server.ytURLs.length>0||room.server.ytURL.title.toLocaleLowerCase().includes('youtube'))&&room.server.ytURL.url.toLocaleLowerCase().includes('youtube')"><div class="yt-bg"></div></i>
-                                <i class="fa fa-twitch" aria-hidden="true" style="color: #9146ff;" *ngIf="room.server.ytURLs.length>0&&room.server.ytURL.url.toLocaleLowerCase().includes('twitch')"></i>
-                                <i class="fa fa-pause" aria-hidden="true" style="color: #3369e7;" *ngIf="room.server.ytURLs.length==0&&!room.server.isplaying&&room.server.ytURL.title=='Nothing playing'"></i>
-                                <i class="fa fa-film" aria-hidden="true" style="color: #9d74b1;" *ngIf="room.server.ytURLs.length>0&&!room.server.ytURL.url.toLocaleLowerCase().includes('twitch')&&!room.server.ytURL.url.toLocaleLowerCase().includes('youtube')"></i>
-                            </div>
-                        </div>
-                        <div *ngIf="user.userprivileges>1" class="delete-bubble info-bubble hide-btn pointer" (click)="room.server.members.length==0 && DeleteRoom(room.uniqueId, room.server.members.length)"><i class="fa fa-times"></i></div>
-                        <div class="border-main" (click)="JoinRoom(room.uniqueId, room.server.currenttime)">
-                            <div class="blur-background room-info"></div>
-                            <div class="center-block click-through" style="z-index: 20;">
-                                <p class="short-text text-center font-weight-bold" style="font-size: 1.75rem;" title="{{room.name}}">{{room.name}}</p>
-                                <p *ngIf="room.server.ytURL.url.length>0; else Title" style="font-size: 1rem;" class="short-text mt-3 text-center" [innerHTML]="room.server.ytURL.title" [title]="room.server.ytURL.title"></p>
-                                <ng-template #Title>
-                                    <p class="short-text mt-3 text-center" title="Nothing playing" style="font-size: 1rem;">Nothing playing</p>
-                                </ng-template>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </ng-container>
-
-            <ng-container *ngIf="NewDesign">
+    <div *ngIf="filterRooms" class="container-fluid" style="padding-left: 5vw; padding-right: 5vw;">
+        <div class="mt-4 row">
+            <div class="col-4">
+                <form autocomplete="off">
+                    <!-- Disable chrome autofill -->
+                    <input type="text" class="form-control" autocomplete="off chrome-off" style="display: none;" />
+                    <!-- Disable chrome autofill -->
+                    <input class="form-control bg-dark text-light border-dark" autocomplete="off chrome-off" [(ngModel)]="FilterTerm" name="FilterInput" (keyup)="Filter()" placeholder="Room name..." type="text">
+                </form>
+            </div>
+            <div class="col-4">
+                <ngb-pagination
+                [(page)]="page"
+                [pageSize]="pageSize"
+                [collectionSize]="filterRooms.length"
+                [maxSize]="10"></ngb-pagination>
+            </div>
+        </div>
+        <hr>
+        <div class="row mt-4">
+            <ng-container>
                 <div class="add-room-bubble pointer" (click)="AddRoom()">
                     <div class="add-bubble-new center-block shadow" [class.bg-success]="user.username&&!logout" [class.bg-primary]="user.username&&logout">
                         <i class="fa fa-2x" [class.fa-sign-in]="user.username&&!logout" [class.fa-plus]="user.username&&logout"></i>
                     </div>
                 </div>
-                <div class="col-md-4 col-sm-12 room-container2 mt-5 btn-container" *ngFor="let room of rooms; let i=index; let last = last;trackBy: trackByFn; let first = first;">
+                <div class="col-md-4 col-sm-12 room-container2 mb-5 btn-container" *ngFor="let room of filterRooms | slice: (page-1) * pageSize : page * pageSize; let i=index; let last = last;trackBy: trackByFn; let first = first;">
                     <div class="room-info-bubbles row skew10">
                         <div class="room-user-bubble" style="background-color: #27ae60;">
                             <p class="counterSkew10">{{room.server.members.length}} <i class="fa fa-user"></i></p>
@@ -107,14 +86,14 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>                
             </ng-container>
         </div>
     </div>
+            
 
     <div class="footer">
         <p class="mt-1" style="padding-top: .5%;">
-            <span class="pointer mr-4" (click)="NewDesign=!NewDesign"><i class="fa fa-object-group text-info"></i></span>
             <span class="pointer" data-toggle="modal" data-target="#howToModal">How to?</span>
             <span class="pointer ml-4" data-toggle="modal" data-target="#contactModal">Contact</span>
             <span class="pointer ml-4 text-info" data-toggle="modal" data-target="#dialogModal-logout" *ngIf="user.username&&logout">Logout</span>
