@@ -4,7 +4,7 @@
         <li *ngFor="let Message of Messages; let i=index;" tabindex="{{i}}">{{Message.time | date: 'HH:mm:ss'}} <span class="username" [class.other-user]="Message.username!=Username">{{Message.username}}</span>: {{Message.message}}</li>
     </ul>
     <div class="d-flex">
-        <div class="smileyBox" [class.fade-out]="!showSmileys" id="smileyId"><span *ngFor="let smiley of smileys" class="pointer" (click)="AddSmiley(smiley)">{{smiley}}</span></div>
+        <div class="smileyBox" [class.fade-out]="!showSmileys" [class.nopointer]="!showSmileys" id="smileyId"><span *ngFor="let smiley of smileys" class="pointer" (click)="AddSmiley(smiley)">{{smiley}}</span></div>
         <div class="input-group input-group-sm">
             <input type="text" tabindex="-1" placeholder="Chatmessage..." style="z-index: 1000;" (keyup.enter)="SendMessage()" class="form-control" id="textmessage">
             <div class="input-group-append">

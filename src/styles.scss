@@ -12,6 +12,29 @@ body {
     padding-right: 0 !important
 }
 
+/* width */
+::-webkit-scrollbar {
+    width: 10px;
+  }
+  
+  /* Track */
+  ::-webkit-scrollbar-track {
+    background: transparent; 
+    border: 1px solid rgba(34, 34, 34, 0.25);
+    border-radius: 5px;
+  }
+   
+  /* Handle */
+  ::-webkit-scrollbar-thumb {
+    background: #333; 
+    border-radius: 5px;
+  }
+  
+  /* Handle on hover */
+  ::-webkit-scrollbar-thumb:hover {
+    background: #444; 
+  }
+
 .pointer {
     cursor: pointer;
 }

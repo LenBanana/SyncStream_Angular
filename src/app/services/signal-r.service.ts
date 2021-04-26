@@ -12,6 +12,7 @@ import { Room } from '../Interfaces/Room';
 import { Token } from '../helper/Globals';
 
 export var hubConnection: signalR.HubConnection;
+export var CurrentPing: number = 0.5;
 export var baseUrl: string = "https://sync.dreckbu.de/";
 //export var baseUrl: string = "https://localhost:5001/";
 @Injectable({
@@ -24,6 +25,7 @@ export class SignalRService {
   connectionClosed: BehaviorSubject < boolean > = new BehaviorSubject(false);
   loginRequest: BehaviorSubject<User> = new BehaviorSubject(null);
   registerRequest: BehaviorSubject<User> = new BehaviorSubject(null);
+  pingStream: BehaviorSubject<number> = new BehaviorSubject(CurrentPing);
   
   public AddLoginListener() {
     hubConnection.on('userlogin', (data) => {
@@ -88,6 +90,7 @@ export class SignalRService {
       .then(() => {
         console.log('Connection started');
         this.AddTokenListener();        
+        this.AddPingListener();
         var token = this.getCookie("login-token");
         var userId = this.getCookie("user-id");
         if (token==undefined) {
@@ -151,6 +154,14 @@ export class SignalRService {
       Token.id = token.id;
       Token.userID = token.userID;
       this.tokenUpdate.next(data);
+    });
+  }
+
+  public AddPingListener() {
+    hubConnection.on('PingTest', (date: Date) => {
+      let diff = new Date().getTime() - new Date(date).getTime();
+      CurrentPing = (diff / 1000);
+      this.pingStream.next(CurrentPing);
     });
   }
 

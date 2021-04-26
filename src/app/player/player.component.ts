@@ -23,6 +23,7 @@ import {
   Subject
 } from 'rxjs';
 import { PingService } from '../services/pingservice.service';
+import { SignalRService } from '../services/signal-r.service';
 declare var $:any
 
 export var player: Plyr;
@@ -34,7 +35,7 @@ export var player: Plyr;
 })
 export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
 
-  constructor(public playerService: PlayerService, public playlistService: PlaylistService, private _pingService: PingService) {}
+  constructor(public playerService: PlayerService, public playlistService: PlaylistService, public signalrService: SignalRService, private _pingService: PingService) {}
 
   @Input() nav: boolean;
   @Input() fullscreen: boolean;
@@ -90,7 +91,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.PingInterval = setInterval(() => {
       if (this.isPlaying) {      
         this._pingService.GetPing(); 
-        this._pingService.pingStream.subscribe(ping => {
+        this.signalrService.pingStream.subscribe(ping => {
           const Ping = Number.parseFloat(ping.toFixed(2));
           if (this.Threshhold < Ping || (this.IsHost&&this.Threshhold>2&&Ping<2) || (!this.IsHost&&this.Threshhold>.5&&Ping<.5)) {
             if (!this.IsHost) {
@@ -98,7 +99,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
             } else {
               this.Threshhold = (Ping < 2 ? 2 : Ping) * 2;
             }
-            this.threshholdChange.emit(Ping);
+            this.threshholdChange.emit(this.Threshhold);
           }
         });
       }

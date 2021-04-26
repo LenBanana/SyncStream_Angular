@@ -28,6 +28,7 @@ import { CanvasWhiteboardModule } from 'ng2-canvas-whiteboard';
 import { UserAdminModalComponent } from './user-admin-modal/user-admin-modal.component';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { UserSettingModalComponent } from './user-setting-modal/user-setting-modal.component';
+import { SpotifyPlayerComponent } from './spotify-player/spotify-player.component';
 
 @NgModule({
   declarations: [
@@ -50,7 +51,8 @@ import { UserSettingModalComponent } from './user-setting-modal/user-setting-mod
     AddRoomModalComponent,
     WhiteboardComponent,
     UserAdminModalComponent,
-    UserSettingModalComponent
+    UserSettingModalComponent,
+    SpotifyPlayerComponent
   ],
   imports: [
     BrowserModule,

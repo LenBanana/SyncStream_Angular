@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, Inject, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, HostListener, Inject, OnInit, ViewChild } from '@angular/core';
 import { Server } from '../Interfaces/server';
 import { Member } from '../Interfaces/Member';
 import { ChatMessage } from '../Interfaces/Chatmessage';
@@ -38,11 +38,30 @@ export class RoomsComponent implements OnInit {
   logout = false;
   page = 1;
   pageSize = 9;
+  
+  @HostListener('window:resize', ['$event'])
+  onResize(event?) {
+    console.log(window.innerHeight);
+    if (window.innerHeight > 1000) {
+      this.pageSize = 12;
+    }
+    if (window.innerHeight < 1000 && window.innerHeight > 800) {
+      this.pageSize = 9;
+    }
+    if (window.innerHeight < 800 && window.innerHeight > 600) {
+      this.pageSize = 6;
+    }
+    if (window.innerHeight < 600) {
+      this.pageSize = 3;
+    }
+  }
 
   constructor(private http: HttpClient, private router: Router, public signalRService: SignalRService, public roomService: RoomService, public dialogService: DialogService, private cdRef:ChangeDetectorRef, private loc: Location) {
   // this.GetRooms();
   // this.setIntervals();
+  this.onResize();
   }
+
 
   Filter() {
     if (this.FilterTerm) {
