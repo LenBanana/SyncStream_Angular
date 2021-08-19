@@ -11,6 +11,7 @@ export class WhiteboardService {
 
   constructor() { }
   gallowUser: BehaviorSubject<Member[]> = new BehaviorSubject(null);
+  gallowTimer: BehaviorSubject<number> = new BehaviorSubject(null);
   whiteboardUpdate: BehaviorSubject<any> = new BehaviorSubject(null);
   whiteboardJoin: BehaviorSubject<any> = new BehaviorSubject(null);
   whiteboardClear: BehaviorSubject<boolean> = new BehaviorSubject(null);
@@ -45,6 +46,16 @@ export class WhiteboardService {
 
   public removeGallowUserListener() {
     hubConnection.off('gallowusers', (data) => {});
+  }
+
+  public addGallowTimerListener() {
+    hubConnection.on('gallowtimerupdate', (data) => {
+      this.gallowTimer.next(data);
+    });
+  }
+
+  public removeGallowTimerListener() {
+    hubConnection.off('gallowtimerupdate', (data) => {});
   }
 
   public addWhiteBoardJoinListener() {

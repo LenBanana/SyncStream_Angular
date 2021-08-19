@@ -34,7 +34,10 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
   GallowMembers: Member[] = [];
   LastIsDrawing = null;
   Init = false;
+  reload = false;
+  RemainingGallowTime = 90;
   gallowGuess;
+  gallowTimer;
   whiteboardJoin;
   whiteboardUpdate;
   whiteboardClear;
@@ -78,16 +81,27 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
       this.canvasOptions.fillColorPickerText = this.IsDrawing ? 'Fill' : '';
       this.canvasOptions.strokeColorPickerText = this.IsDrawing ? 'Stroke' : '';
       this.canvasOptions.strokeColor = this.IsDrawing ? '#333333' : 'transparent';
+      this.reload = true;
+      setTimeout(() => {
+        this.reload = false;
+      }, 1);
     }
   }
 
   ngOnInit(): void {
     this.whiteBoardSerive.addGallowUserListener();
+    this.whiteBoardSerive.addGallowTimerListener();
     this.whiteBoardSerive.addWhiteBoardListener();
     this.whiteBoardSerive.addWhiteBoardJoinListener();
     this.whiteBoardSerive.addWhiteBoardClearListener();
     this.whiteBoardSerive.addWhiteBoardUnDoListener();
     this.whiteBoardSerive.addWhiteBoardReDoListener();
+    this.gallowTimer = this.whiteBoardSerive.gallowTimer.subscribe(time => {
+      if (time == null) {
+        return;
+      }
+      this.RemainingGallowTime = time;
+    });
     this.gallowGuess = this.whiteBoardSerive.gallowUser.subscribe(members => {
       if (members == null) {
         return;
@@ -129,12 +143,16 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.gallowGuess.unsubscribe();
+    this.gallowTimer.unsubscribe();
+    this.whiteboardRedo.unsubscribe();
     this.whiteboardJoin.unsubscribe();
     this.whiteboardUpdate.unsubscribe();
     this.whiteboardClear.unsubscribe();
     this.whiteboardUndo.unsubscribe();
     this.whiteboardRedo.unsubscribe();
     this.whiteBoardSerive.removeGallowUserListener();
+    this.whiteBoardSerive.removeGallowTimerListener();
     this.whiteBoardSerive.removeWhiteBoardListener();
     this.whiteBoardSerive.removeWhiteBoardJoinListener();
     this.whiteBoardSerive.removeWhiteBoardClearListener();

@@ -8,4 +8,6 @@ export interface Server {
     isplaying: boolean;
     title: string;
     members: Member[];
+    gallowWord: string,
+    playingGallows: boolean,
 }

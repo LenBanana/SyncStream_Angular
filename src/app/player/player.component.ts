@@ -501,6 +501,10 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       }, chat ? 0 : 510);
     } else {
+      if (this.LastPlayerType==PlayerType.WhiteBoard) {
+        this.CurrentPlayerType = PlayerType.Nothing;
+        return;
+      }
       this.CurrentPlayerType = this.LastPlayerType;
     }
   }
