@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { CanvasWhiteboardUpdate } from 'ng2-canvas-whiteboard';
 import { BehaviorSubject } from 'rxjs';
+import { Member } from 'src/app/Interfaces/Member';
 import { hubConnection } from 'src/app/services/signal-r.service';
 
 @Injectable({
@@ -9,6 +10,7 @@ import { hubConnection } from 'src/app/services/signal-r.service';
 export class WhiteboardService {
 
   constructor() { }
+  gallowUser: BehaviorSubject<Member[]> = new BehaviorSubject(null);
   whiteboardUpdate: BehaviorSubject<any> = new BehaviorSubject(null);
   whiteboardJoin: BehaviorSubject<any> = new BehaviorSubject(null);
   whiteboardClear: BehaviorSubject<boolean> = new BehaviorSubject(null);
@@ -33,6 +35,16 @@ export class WhiteboardService {
 
   public redoWhiteBoard(UniqueId: string, uuid: string) {
     hubConnection.invoke('WhiteBoardUndo', UniqueId, uuid);
+  }
+
+  public addGallowUserListener() {
+    hubConnection.on('gallowusers', (data) => {
+      this.gallowUser.next(data);
+    });
+  }
+
+  public removeGallowUserListener() {
+    hubConnection.off('gallowusers', (data) => {});
   }
 
   public addWhiteBoardJoinListener() {

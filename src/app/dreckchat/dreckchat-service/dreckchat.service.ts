@@ -11,11 +11,23 @@ import { HttpClient } from '@angular/common/http';
 export class DreckchatService {
 
   messages: BehaviorSubject<ChatMessage[]> = new BehaviorSubject([]);
+  message: BehaviorSubject<ChatMessage> = new BehaviorSubject(null);
   constructor(private http: HttpClient) { }
+
+  public addMessagesListener() {
+    hubConnection.on('sendmessages', (data) => {
+      this.messages.next(data);
+    })
+  }
+
+  public removeMessagesListener() {
+    hubConnection.off('sendmessages', (data) => {
+    });
+  }
 
   public addMessageListener() {
     hubConnection.on('sendmessage', (data) => {
-      this.messages.next(data);
+      this.message.next(data);
     })
   }
 
@@ -26,6 +38,18 @@ export class DreckchatService {
 
   public sendMessage(message: ChatMessage, UniqueId: string) {
     hubConnection.invoke('SendMessage', message, UniqueId);
+  }
+
+  public getMessages(UniqueId: string) {
+    hubConnection.invoke('GetMessages', UniqueId);
+  }
+
+  public clearChat(UniqueId: string) {
+    hubConnection.invoke('ClearChat', UniqueId);
+  }
+
+  public playGallows(UniqueId: string) {
+    hubConnection.invoke('PlayGallows', UniqueId);
   }
 
   public async HttpGetMessages(UniqueId: string) {

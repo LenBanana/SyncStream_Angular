@@ -41,7 +41,6 @@ export class RoomsComponent implements OnInit {
   
   @HostListener('window:resize', ['$event'])
   onResize(event?) {
-    console.log(window.innerHeight);
     if (window.innerHeight > 1000) {
       this.pageSize = 12;
     }
@@ -90,16 +89,16 @@ export class RoomsComponent implements OnInit {
 
   getStyle(room: Room) {
     const bg = "background: ";
-    if (room.server.ytURLs.length==0&&!room.server.isplaying&&room.server.ytURL.title=="Nothing playing") {
+    if (room.server.playlist.length==0&&!room.server.isplaying&&room.server.currentVideo.title=="Nothing playing") {
       return bg + "radial-gradient(ellipse at bottom, #565F8F 0%, #262A3F 100%);";
     }
-    else if (room.server.ytURLs.length>0&&!room.server.ytURL.url.toLocaleLowerCase().includes('twitch')&&!room.server.ytURL.url.toLocaleLowerCase().includes('youtube')) {
+    else if (room.server.playlist.length>0&&!room.server.currentVideo.url.toLocaleLowerCase().includes('twitch')&&!room.server.currentVideo.url.toLocaleLowerCase().includes('youtube')) {
       return bg + "radial-gradient(ellipse at bottom, #7f7fd5 0%, #3434A0 100%);";
     }
-    else if ((room.server.ytURLs.length>0||room.server.ytURL.title.toLocaleLowerCase().includes('youtube'))&&room.server.ytURL.url.toLocaleLowerCase().includes('youtube')) {
+    else if ((room.server.playlist.length>0||room.server.currentVideo.title.toLocaleLowerCase().includes('youtube'))&&room.server.currentVideo.url.toLocaleLowerCase().includes('youtube')) {
       return bg + "radial-gradient(ellipse at bottom, #D33B2B 0%, #93291e 100%);";
     }
-    else if (room.server.ytURLs.length>0&&room.server.ytURL.url.toLocaleLowerCase().includes('twitch')) {
+    else if (room.server.playlist.length>0&&room.server.currentVideo.url.toLocaleLowerCase().includes('twitch')) {
       return bg + "radial-gradient(ellipse at bottom, #811ED8 0%, #3E0F68 100%);";
     }
     else {

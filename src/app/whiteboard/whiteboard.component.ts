@@ -1,7 +1,23 @@
-import { ThrowStmt } from '@angular/compiler';
-import { Component, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
-import { CanvasWhiteboardComponent, CanvasWhiteboardOptions, CanvasWhiteboardService, CanvasWhiteboardUpdate } from 'ng2-canvas-whiteboard';
-import { WhiteboardService } from './whiteboard-service/whiteboard-service.service';
+import {
+  ThrowStmt
+} from '@angular/compiler';
+import {
+  Component,
+  Input,
+  OnChanges,
+  OnDestroy,
+  OnInit
+} from '@angular/core';
+import {
+  CanvasWhiteboardComponent,
+  CanvasWhiteboardOptions,
+  CanvasWhiteboardService,
+  CanvasWhiteboardUpdate
+} from 'ng2-canvas-whiteboard';
+import { Member } from '../Interfaces/Member';
+import {
+  WhiteboardService
+} from './whiteboard-service/whiteboard-service.service';
 
 @Component({
   selector: 'app-whiteboard',
@@ -9,11 +25,21 @@ import { WhiteboardService } from './whiteboard-service/whiteboard-service.servi
   styleUrls: ['./whiteboard.component.scss'],
   viewProviders: [CanvasWhiteboardComponent]
 })
-export class WhiteboardComponent implements OnInit, OnChanges {
+export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
 
-  constructor(private _canvasWhiteboardService: CanvasWhiteboardService, private whiteBoardSerive: WhiteboardService) { }
+  constructor(private _canvasWhiteboardService: CanvasWhiteboardService, private whiteBoardSerive: WhiteboardService) {}
   @Input() UniqueId: string = "";
   @Input() IsDrawing = false;
+  @Input() GallowWord = "";
+  GallowMembers: Member[] = [];
+  LastIsDrawing = null;
+  Init = false;
+  gallowGuess;
+  whiteboardJoin;
+  whiteboardUpdate;
+  whiteboardClear;
+  whiteboardUndo;
+  whiteboardRedo;
   canvasOptions: CanvasWhiteboardOptions = {
     drawButtonEnabled: true,
     drawButtonClass: 'fa fa-pencil fa-2x p-2',
@@ -29,69 +55,122 @@ export class WhiteboardComponent implements OnInit, OnChanges {
     shapeSelectorEnabled: true,
     strokeColorPickerEnabled: true,
     fillColorPickerEnabled: true,
-    drawingEnabled: true,
+    drawingEnabled: this.IsDrawing,
     batchUpdateTimeoutDuration: 50,
     lineWidth: 4,
-    scaleFactor: 1
-};
+    scaleFactor: 1,
+    startingColor: '#EEEEEE',
+    strokeColor: '#333333',    
+  };
 
   ngOnChanges() {
-      if (this.IsDrawing === true) {        
-        this.whiteBoardSerive.getWhiteBoard(this.UniqueId);    
-      }
+    if (!this.Init) {
+      this.Init = true;
+      this.whiteBoardSerive.getWhiteBoard(this.UniqueId);
+    }
+    if (this.LastIsDrawing!=this.IsDrawing) {
+      console.log(this.IsDrawing);
+      this.LastIsDrawing = this.IsDrawing;
+      this.canvasOptions.drawingEnabled = this.IsDrawing;
+      this.canvasOptions.drawButtonEnabled = this.IsDrawing;
+      this.canvasOptions.clearButtonEnabled = this.IsDrawing;
+      this.canvasOptions.shapeSelectorEnabled = this.IsDrawing;
+      this.canvasOptions.fillColorPickerText = this.IsDrawing ? 'Fill' : '';
+      this.canvasOptions.strokeColorPickerText = this.IsDrawing ? 'Stroke' : '';
+      this.canvasOptions.strokeColor = this.IsDrawing ? '#333333' : 'transparent';
+    }
   }
 
   ngOnInit(): void {
+    this.whiteBoardSerive.addGallowUserListener();
     this.whiteBoardSerive.addWhiteBoardListener();
     this.whiteBoardSerive.addWhiteBoardJoinListener();
     this.whiteBoardSerive.addWhiteBoardClearListener();
     this.whiteBoardSerive.addWhiteBoardUnDoListener();
     this.whiteBoardSerive.addWhiteBoardReDoListener();
-    this.whiteBoardSerive.whiteboardJoin.subscribe(update => {
-      if (update==null) {
+    this.gallowGuess = this.whiteBoardSerive.gallowUser.subscribe(members => {
+      if (members == null) {
         return;
       }
-      const parsedStorageUpdates: Array<CanvasWhiteboardUpdate> = update;
-      this._canvasWhiteboardService.drawCanvas(parsedStorageUpdates);
+      this.GallowMembers = members;
     });
-    this.whiteBoardSerive.whiteboardUpdate.subscribe(update => {
-      if (update==null) {
+    this.whiteboardJoin = this.whiteBoardSerive.whiteboardJoin.subscribe(update => {
+      if (update == null) {
         return;
       }
-      const parsedStorageUpdates: Array<CanvasWhiteboardUpdate> = update;
+      const parsedStorageUpdates: Array < CanvasWhiteboardUpdate > = update;
       this._canvasWhiteboardService.drawCanvas(parsedStorageUpdates);
     });
-    this.whiteBoardSerive.whiteboardClear.subscribe(clear => {
-      if (clear==null) {
+    this.whiteboardUpdate = this.whiteBoardSerive.whiteboardUpdate.subscribe(update => {
+      if (update == null) {
+        return;
+      }
+      const parsedStorageUpdates: Array < CanvasWhiteboardUpdate > = update;
+      this._canvasWhiteboardService.drawCanvas(parsedStorageUpdates);
+    });
+    this.whiteboardClear = this.whiteBoardSerive.whiteboardClear.subscribe(clear => {
+      if (clear == null) {
         return;
       }
       this._canvasWhiteboardService.clearCanvas();
     });
-    this.whiteBoardSerive.whiteboardUndo.subscribe(undo => {
-      if (undo==null) {
+    this.whiteboardUndo = this.whiteBoardSerive.whiteboardUndo.subscribe(undo => {
+      if (undo == null) {
         return;
       }
       this._canvasWhiteboardService.undoCanvas(undo);
     });
-    this.whiteBoardSerive.whiteboardRedo.subscribe(redo => {
-      if (redo==null) {
+    this.whiteboardRedo = this.whiteBoardSerive.whiteboardRedo.subscribe(redo => {
+      if (redo == null) {
         return;
       }
       this._canvasWhiteboardService.redoCanvas(redo);
     });
   }
 
+  ngOnDestroy() {
+    this.whiteboardJoin.unsubscribe();
+    this.whiteboardUpdate.unsubscribe();
+    this.whiteboardClear.unsubscribe();
+    this.whiteboardUndo.unsubscribe();
+    this.whiteboardRedo.unsubscribe();
+    this.whiteBoardSerive.removeGallowUserListener();
+    this.whiteBoardSerive.removeWhiteBoardListener();
+    this.whiteBoardSerive.removeWhiteBoardJoinListener();
+    this.whiteBoardSerive.removeWhiteBoardClearListener();
+    this.whiteBoardSerive.removeWhiteBoardUnDoListener();
+    this.whiteBoardSerive.removeWhiteBoardReDoListener();
+  }
+
+  getAnonWord() {
+    var AnonWord = "";
+    for (var i = 0; i < this.GallowWord.length; i++) {
+      const char = this.GallowWord.charAt(i);
+      const nextChar = this.GallowWord.charAt(i + 1);
+      const regex = new RegExp("[a-zA-ZäöüÄÖÜß]");
+      if (regex.test(char)) {
+        AnonWord += "_";
+        if (regex.test(nextChar)) {
+          AnonWord += " ";
+        }
+      } else {
+        AnonWord += char;
+      }
+    }
+    return AnonWord;
+  }
+
   delay(ms: number) {
-    return new Promise( resolve => setTimeout(resolve, ms) );
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   async sendBatchUpdate(event) {
     if (event.length > 25) {
-      var i,j,temparray,chunk = 25;
-      for (i=0,j=event.length; i<j; i+=chunk) {
-          temparray = event.slice(i,i+chunk);
-          this.whiteBoardSerive.updateWhiteBoard(temparray, this.UniqueId);
-          await this.delay(1);
+      var i, j, temparray, chunk = 25;
+      for (i = 0, j = event.length; i < j; i += chunk) {
+        temparray = event.slice(i, i + chunk);
+        this.whiteBoardSerive.updateWhiteBoard(temparray, this.UniqueId);
+        await this.delay(1);
       }
       return;
     }

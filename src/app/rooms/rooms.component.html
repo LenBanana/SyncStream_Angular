@@ -7,7 +7,7 @@
     <div class="header text-center">
         <div class="center-content">
             <span class="globe-icon"><i class="fa fa-globe mr-3" aria-hidden="true"></i></span>
-            <span class="icon-text"><span style="color: #2980b9;">Sync</span>Stream</span>
+            <span class="icon-text"><span style="color: #2980b9;">Dreck</span>Tube</span>
         </div>
     </div>
     <div *ngIf="filterRooms" class="container-fluid" style="padding-left: 5vw; padding-right: 5vw;">
@@ -27,45 +27,45 @@
                 [collectionSize]="filterRooms.length"
                 [maxSize]="10"></ngb-pagination>
             </div>
+           <!--<div class="col-4" *ngIf="user.username&&logout&&user.userprivileges>2">
+                <app-download-modal></app-download-modal>
+            </div>-->
         </div>
         <hr>
-        <div class="row mt-4">
+        <div class="row mt-4">            
             <ng-container>
                 <div class="add-room-bubble pointer" (click)="AddRoom()">
                     <div class="add-bubble-new center-block shadow" [class.bg-success]="user.username&&!logout" [class.bg-primary]="user.username&&logout">
                         <i class="fa fa-2x" [class.fa-sign-in]="user.username&&!logout" [class.fa-plus]="user.username&&logout"></i>
                     </div>
                 </div>
-                <div class="col-md-4 col-sm-12 room-container2 mb-5 btn-container" *ngFor="let room of filterRooms | slice: (page-1) * pageSize : page * pageSize; let i=index; let last = last;trackBy: trackByFn; let first = first;">
+                <div class="col-lg-6 col-xl-4 col-sm-12 room-container2 mb-5 btn-container" *ngFor="let room of filterRooms | slice: (page-1) * pageSize : page * pageSize; let i=index; let last = last;trackBy: trackByFn; let first = first;">
                     <div class="room-info-bubbles row skew10">
                         <div class="room-user-bubble" style="background-color: #27ae60;">
                             <p class="counterSkew10">{{room.server.members.length}} <i class="fa fa-user"></i></p>
                         </div>
                         <div class="room-user-bubble ml-2" style="background-color: #2980b9;">
-                            <p class="counterSkew10">{{room.server.ytURLs.length}} <i class="fa " [ngClass]="{ 'fa-play-circle': room.server.isplaying&&room.server.members.length>0, 'fa-pause-circle':  !room.server.isplaying||room.server.members.length==0}"></i></p>
+                            <p class="counterSkew10">{{room.server.playlist.length}} <i class="fa " [ngClass]="{ 'fa-play-circle': room.server.isplaying&&room.server.members.length>0, 'fa-pause-circle':  !room.server.isplaying||room.server.members.length==0}"></i></p>
                         </div>
                     </div>
                     <div *ngIf="user.userprivileges>1" class="delete-bubble info-bubble hide-btn pointer" (click)="room.server.members.length==0 && DeleteRoom(room.uniqueId, room.server.members.length)"><i class="fa fa-times"></i></div>
                     <div class="room-card row skew10 pointer" (click)="JoinRoom(room.uniqueId, room.server.currenttime)">
                         <div class="col-2 room-icon counterSkew10 pl-4 pt-2 text-shadow-default">
-                            <i class="fa fa-youtube-square" style="color: #ff4c4c;" aria-hidden="true" *ngIf="room.server.ytURLs.length!=0&&(room.server.ytURLs.length>0||room.server.ytURL.title.toLocaleLowerCase().includes('youtube'))&&room.server.ytURL.url.toLocaleLowerCase().includes('youtube')"></i>
-                            <i class="fa fa-twitch" aria-hidden="true" style="color: #9146ff;" *ngIf="room.server.ytURLs.length>0&&room.server.ytURL.url.toLocaleLowerCase().includes('twitch')"></i>
-                            <i class="fa fa-pause-circle text-light" aria-hidden="true" *ngIf="room.server.ytURLs.length==0"></i>
-                            <i class="fa fa-film text-light" aria-hidden="true" *ngIf="room.server.ytURLs.length>0&&!room.server.ytURL.url.toLocaleLowerCase().includes('twitch')&&!room.server.ytURL.url.toLocaleLowerCase().includes('youtube')"></i>
+                            <i class="fa fa-youtube-square" style="color: #ff4c4c;" aria-hidden="true" *ngIf="room.server.playlist.length!=0&&(room.server.playlist.length>0||room.server.currentVideo.title.toLocaleLowerCase().includes('youtube'))&&room.server.currentVideo.url.toLocaleLowerCase().includes('youtube')"></i>
+                            <i class="fa fa-twitch" aria-hidden="true" style="color: #9146ff;" *ngIf="room.server.playlist.length>0&&room.server.currentVideo.url.toLocaleLowerCase().includes('twitch')"></i>
+                            <i class="fa fa-pause-circle text-light" aria-hidden="true" *ngIf="room.server.playlist.length==0"></i>
+                            <i class="fa fa-film text-light" aria-hidden="true" *ngIf="room.server.playlist.length>0&&!room.server.currentVideo.url.toLocaleLowerCase().includes('twitch')&&!room.server.currentVideo.url.toLocaleLowerCase().includes('youtube')"></i>
                         </div>
                         <div class="col-6 pt-3 counterSkew10">
                             <p class="short-text font-weight-bold text-shadow-default" style="font-size: 1.75rem;" title="{{room.name}}">{{room.name}}</p>
-                            <p *ngIf="room.server.ytURL.url.length>0; else Title" style="font-size: .9rem;" class="short-text mt-3" [innerHTML]="room.server.ytURL.title" [title]="room.server.ytURL.title"></p>
-                            <ng-template #Title>
-                                <p class="short-text mt-3" title="{{room.server.title}}" style="font-size: .9rem;">{{room.server.title}}</p>
-                            </ng-template>
+                            <p style="font-size: .9rem;" class="short-text mt-3" [innerHTML]="room.server.title" [title]="room.server.title"></p>
                         </div>
                         <div class="col-4 room-info-container">
                             <div class="room-playlist-info counterSkew10">
                                 <p class="text-center font-weight-bold mt-2" style="margin: 0;">Playlist</p>
-                                <p *ngIf="room.server.ytURLs==0" style="font-size: 10px;" class="text-center">Nothing here yet</p>
+                                <p *ngIf="room.server.playlist==0" style="font-size: 10px;" class="text-center">Nothing here yet</p>
                                 <ul class="room-liststyle">
-                                    <li *ngFor="let video of room.server.ytURLs">
+                                    <li *ngFor="let video of room.server.playlist">
                                         <i class="fa fa-youtube-play" style="color: #ff4c4c;background-image: radial-gradient(at center, #fff 40%, transparent 40%);" aria-hidden="true" *ngIf="video.url.toLocaleLowerCase().includes('youtube')"></i>
                                         <i class="fa fa-twitch" aria-hidden="true" style="color: #9146ff;" *ngIf="video.url.toLocaleLowerCase().includes('twitch')"></i>
                                         <i class="fa fa-play text-light" aria-hidden="true" *ngIf="!video.url.toLocaleLowerCase().includes('twitch')&&!video.url.toLocaleLowerCase().includes('youtube')"></i>

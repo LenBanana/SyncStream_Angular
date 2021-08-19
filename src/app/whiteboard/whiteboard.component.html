@@ -1,2 +1,9 @@
-<canvas-whiteboard #canvasWhiteboard *ngIf="IsDrawing" [options]="canvasOptions" (onBatchUpdate)="sendBatchUpdate($event)" (onClear)="onCanvasClear()" (onUndo)="onCanvasUndo($event)" (onRedo)="onCanvasRedo($event)">
+<span class="DrawWord">{{IsDrawing ? GallowWord : getAnonWord()}}</span>
+<div class="GallowBoard">
+    <p class="text-center">Leaderboard</p>
+    <ul class="liststyle">
+        <li *ngFor="let member of GallowMembers">{{member.username}} - {{member.gallowPoints}}</li>
+    </ul>
+</div>
+<canvas-whiteboard #canvasWhiteboard class="canvas" [class.crosshair]="IsDrawing" [options]="canvasOptions" (onBatchUpdate)="sendBatchUpdate($event)" (onClear)="onCanvasClear()" (onUndo)="onCanvasUndo($event)" (onRedo)="onCanvasRedo($event)">
 </canvas-whiteboard>

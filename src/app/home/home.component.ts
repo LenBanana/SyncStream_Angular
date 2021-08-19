@@ -123,6 +123,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
       MainUser.approved = result.approved;
       MainUser.userprivileges = result.userprivileges;
       MainUser.username = result.username;
+      this.logout = true;
     });
   }
 

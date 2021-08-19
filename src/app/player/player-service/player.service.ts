@@ -3,6 +3,7 @@ import * as signalR from "@aspnet/signalr";
 import { VideoDTO } from '../../Interfaces/VideoDTO';
 import { hubConnection, baseUrl } from '../../services/signal-r.service';
 import { BehaviorSubject } from 'rxjs'; 
+import { HttpClient } from '@angular/common/http';
 
 @Injectable({
   providedIn: 'root'
@@ -11,8 +12,9 @@ export class PlayerService {
 
   player: BehaviorSubject<VideoDTO> = new BehaviorSubject(null);
   isplaying: BehaviorSubject<boolean> = new BehaviorSubject(null);
+  playingGallows: BehaviorSubject<string> = new BehaviorSubject(null);
   currentTime: BehaviorSubject<number> = new BehaviorSubject(null);
-  constructor() { }
+  constructor(private http: HttpClient) { }
 
   public addPlayerListener() {
     hubConnection.on('videoupdate', (data) => {
@@ -42,6 +44,12 @@ export class PlayerService {
     });
   }
 
+  public addGallowListener() {
+    hubConnection.on('playinggallows', (data) => {
+      this.playingGallows.next(data);
+    });
+  }
+
   public removePauseListener() {
     hubConnection.off('isplayingupdate', (data) => {
     });
@@ -53,5 +61,9 @@ export class PlayerService {
 
   public SetTime(time: number, UniqueId: string) {
     hubConnection.invoke('SetTime', time, UniqueId);
+  }
+
+  public GetYTTitle(url: string) {
+    return this.http.get('https://noembed.com/embed?url=' + url).toPromise();
   }
 }

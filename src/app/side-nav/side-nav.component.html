@@ -1,8 +1,8 @@
 <div class="status-box" [class.fade-out]="nav||fullscreen" (mouseenter)="enterMenu()" (mouseleave)="exitMenu()">
-    <i class="fa statusbtn pt-2 dreck-tooltip" [class.fa-user]="!IsHost" [class.fa-user-circle-o]="IsHost" (click)="!IsHost && SetHost()" [class.pointer]="!IsHost" [class.text-warning]="IsHost" [class.text-light]="!IsHost"></i>
-    <span class="badge badge-dreck my-2 block add-video-btn pointer" (click)="ToggleInput()"><i class="fa fa-plus" ></i></span>
+    <i class="fa statusbtn pt-2 dreck-tooltip" title="Indicates whether you are host or not" [class.fa-user]="!IsHost" [class.fa-user-circle-o]="IsHost" (click)="!IsHost && SetHost()" [class.pointer]="!IsHost" [class.text-warning]="IsHost" [class.text-light]="!IsHost"></i>
+    <span class="badge badge-dreck my-2 block add-video-btn pointer" title="Open a local file to sync the time with" (click)="PlayFile()"><i class="fa fa-file" ></i></span>
     <span class="badge badge-dreck my-2 block pointer" title="Adds video from clipboard" (click)="quickPlay()"><i class="fa fa-plus-circle" ></i></span>
-    <div class="add-video-fade" [class.fade-out]="!showInput" [class.nopointer]="!showInput" style="width: 200px;">
+    <!--<div class="add-video-fade" [class.fade-out]="!showInput" [class.nopointer]="!showInput" style="width: 200px;">
         <div class="form-group">
             <div class="input-group input-group-md">
                 <input type="text" tabindex="-1" (keyup.enter)="PlayURL()" placeholder="https://..." class="form-control" id="video-tooltip-input">
@@ -12,7 +12,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div>-->
     <span class="badge badge-dreck mt-1 block pointer playlist-btn" (click)="TogglePlaylist()">
         <i class="fa fa-video-camera" [class.text-primary]="!isPlaying" [class.text-success]="isPlaying"></i><br><span *ngIf="Playlist">{{Playlist.length}}</span>
     </span>
@@ -33,7 +33,7 @@
             </div>
         </div>
     </div>
-    <span class="badge badge-dreck my-2 block pointer" (click)="nextVideo()"><i class="fa fa-forward" ></i></span>
+    <span class="badge badge-dreck my-2 block pointer" title="Skip to next video" (click)="nextVideo()"><i class="fa fa-forward" ></i></span>
     <span class="badge badge-dreck my-2 block dreck-tooltip"><span class="dreck-tooltiptext nopointer"><p *ngFor="let member of Members" style="position: relative; display: block;">{{member.username}}</p></span><i class="fa fa-user"></i><br>{{Members.length}}</span>
 
     <span class="badge badge-dreck my-2 block pointer" title="Toggles the chat" (click)="toggleTwitchChat()"><i class="fa fa-comment"></i></span>
@@ -42,7 +42,7 @@
     <hr>
     <span class="badge badge-dreck my-2 block pointer" title="Leave room" (click)="refresh()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>
 
-    <span class="badge badge-dreck mt-2 block pointer" (click)="ToggleThreshhold()">
+    <span class="badge badge-dreck mt-2 block pointer" title="{{ IsHost ? 'Time updates send to server (changes with ping)' : 'Maximum time difference to host (changes with ping)'}}" (click)="ToggleThreshhold()">
         <i class="fa fa-clock-o"></i><br>
     </span>
     <div class="add-playlist-fade text-center" [class.fade-out]="!Threshhold" [class.nopointer]="!Threshhold" style="z-index: 200; padding: 5px; width: 150px;">

@@ -22,9 +22,16 @@ import {
 import {
   Subject
 } from 'rxjs';
-import { PingService } from '../services/pingservice.service';
-import { SignalRService } from '../services/signal-r.service';
-declare var $:any
+import {
+  PingService
+} from '../services/pingservice.service';
+import {
+  SignalRService
+} from '../services/signal-r.service';
+import {
+  ReadVarExpr
+} from '@angular/compiler';
+declare var $: any
 
 export var player: Plyr;
 
@@ -38,6 +45,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(public playerService: PlayerService, public playlistService: PlaylistService, public signalrService: SignalRService, private _pingService: PingService) {}
 
   @Input() nav: boolean;
+  @Input() logout: boolean;
   @Input() fullscreen: boolean;
   @Input() IsHost: boolean;
   @Input() UniqueId: string;
@@ -47,7 +55,11 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() Username = "";
   @Output() isPlaying = new EventEmitter();
   @Output() playlistChange = new EventEmitter();
+  @Output() toggleChat = new EventEmitter();
   @Output() threshholdChange = new EventEmitter();
+  GallowWord = "";
+  playingGallows;
+
   YTPlayer: YT.Player;
   readyEvent: Subject < void > = new Subject < void > ();
   CurrentPlayerType: PlayerType = PlayerType.Nothing;
@@ -65,6 +77,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   currentKey = "";
   currentVimeoKey = "";
   LastAddedExternalSource = "";
+  LatestGuess = "";
   Init = false;
   PingInterval;
 
@@ -89,11 +102,11 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit(): void {
     this.PingInterval = setInterval(() => {
-      if (this.isPlaying) {      
-        this._pingService.GetPing(); 
+      if (this.isPlaying) {
+        this._pingService.GetPing();
         this.signalrService.pingStream.subscribe(ping => {
           const Ping = Number.parseFloat(ping.toFixed(2));
-          if (this.Threshhold < Ping || (this.IsHost&&this.Threshhold>2&&Ping<2) || (!this.IsHost&&this.Threshhold>.5&&Ping<.5)) {
+          if (this.Threshhold < Ping || (this.IsHost && this.Threshhold > 2 && Ping < 2) || (!this.IsHost && this.Threshhold > .5 && Ping < .5)) {
             if (!this.IsHost) {
               this.Threshhold = Ping < .5 ? .5 : Ping;
             } else {
@@ -124,7 +137,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
               }
               if (this.YTPlayer.getPlayerState() != YT.PlayerState.PAUSED) {
                 const ytTime = this.YTPlayer.getCurrentTime();
-                if (ytTime && ytTime>0) {
+                if (ytTime && ytTime > 0) {
                   this.SetTime(this.YTPlayer.getCurrentTime());
                 }
               }
@@ -144,6 +157,15 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.playerService.addPlayerListener();
     this.playerService.addPauseListener();
     this.playerService.addTimeListener();
+    this.playerService.addGallowListener();
+    this.playingGallows = this.playerService.playingGallows.subscribe(playGallows => {
+      if (playGallows == null||!playGallows) {
+        this.DrawWhiteboard(false);
+        return;
+      }      
+      this.GallowWord = playGallows;
+      this.DrawWhiteboard(true);
+    });
     this.playerUpdate = this.playerService.player.subscribe(event => {
       if (!this.YTPlayer) {
         return;
@@ -227,6 +249,8 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     var url = window.URL.createObjectURL(file.target.files[0]);
+    console.log(file.target.files[0]);
+    console.log(url);
     this.CurrentPlayerType = PlayerType.External;
     this.YTPlayer.pauseVideo();
     this.setVideo(url);
@@ -323,7 +347,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     if (url.includes('vimeo.com')) {
       const keys = url.split('/');
-      const key = keys[keys.length-1];
+      const key = keys[keys.length - 1];
       this.CurrentPlayerType = PlayerType.Vimeo;
       player.source = {
         type: 'video',
@@ -358,31 +382,36 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     if (!key || !key.url || key.url.length == 0) {
+      this.CurrentPlayerType = PlayerType.Nothing;
+      setTimeout(() => {
+        this.YTPlayer.pauseVideo();
+        player.pause();
+      }, 100);
       return;
     }
     this.currentKey = key.url;
     if (key.url.includes('youtube') || key.url.includes('youtu.be')) {
       this.CurrentPlayerType = PlayerType.YouTube;
       this.YTPlayer.loadVideoById(this.youtube_parser(key.url), time, 'hd1080');
-      setTimeout(() => {      
+      setTimeout(() => {
         player.pause();
-        }, 100);
+      }, 100);
       return;
     }
     if (key.url.includes('vimeo.com')) {
       this.CurrentPlayerType = PlayerType.Vimeo;
-      setTimeout(() => {      
+      setTimeout(() => {
         this.YTPlayer.pauseVideo();
         player.pause();
-        }, 100);
+      }, 100);
       this.setVideo(key.url);
       return;
     }
     if (!key.url.includes('twitch.tv') && key.url.startsWith('http')) {
       this.CurrentPlayerType = PlayerType.External;
-      setTimeout(() => {      
+      setTimeout(() => {
         this.YTPlayer.pauseVideo();
-        }, 100);
+      }, 100);
       this.setVideo(key.url);
       return;
     }
@@ -394,21 +423,37 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       this.twitchChannel = key.title;
       this.twitchVOD = undefined;
     }
-    setTimeout(() => {      
-    this.YTPlayer.pauseVideo();
-    player.pause();
+    setTimeout(() => {
+      this.YTPlayer.pauseVideo();
+      player.pause();
     }, 100);
   }
 
   public async PlayURL() {
     var videourl = document.getElementById('videoinput') as HTMLInputElement;
-    if (!videourl.value.startsWith('https://') && !videourl.value.startsWith('http://') && !videourl.value.startsWith('blob'))
+    if (!videourl.value.startsWith('https://') && !videourl.value.startsWith('http://') && !videourl.value.startsWith('blob')) {
+      var filebtn = document.getElementById('playerFileBtn') as HTMLButtonElement;
+      if (!filebtn) {
+        return;
+      }
+      filebtn.click();
       return;
+    }
     this.currentKey = videourl.value;
     if (videourl.value.includes('youtube') || videourl.value.includes('youtu.be') || videourl.value.includes('twitch.tv') || videourl.value.includes('vimeo.com')) {
+      var videoTitle = videourl.value.includes('vimeo.com') ? 'Vimeo - Video' : '';
+      if (videourl.value.includes('youtube') || videourl.value.includes('youtu.be')) {
+        try {
+          var videoInfo = await this.playerService.GetYTTitle(videourl.value);
+          videoTitle = videoInfo["title"];
+        } catch (error) {
+          console.log(error);
+          videoTitle = '';
+        }
+      }
       var ytVid: VideoDTO = {
         url: videourl.value,
-        title: videourl.value.includes('vimeo.com') ? 'Vimeo - Video' : ''
+        title: videoTitle
       };
       this.playlistService.addVideo(ytVid, this.UniqueId);
     } else {
@@ -438,22 +483,30 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  public DrawWhiteboard() {
-    if (this.IsHost || !this.IsPlaying) {
-      if (this.CurrentPlayerType !== PlayerType.WhiteBoard) {
+  public DrawWhiteboard(activate: boolean) {
+    if (activate == true) {
+      var chat = this.twitchChat;
+      if (!chat) {
+        this.toggleChat.emit();
+      }
+      setTimeout(() => {
         this.LastPlayerType = this.CurrentPlayerType;
         this.CurrentPlayerType = PlayerType.WhiteBoard;
         if (this.IsHost) {
           this.playerService.PlayPause(false, this.UniqueId);
-          setTimeout(() => {      
+          setTimeout(() => {
             this.YTPlayer.pauseVideo();
             player.pause();
           }, 100);
         }
-      } else {
-        this.CurrentPlayerType = this.LastPlayerType;
-      }
+      }, chat ? 0 : 510);
+    } else {
+      this.CurrentPlayerType = this.LastPlayerType;
     }
+  }
+
+  public WhiteBoardGuess(event) {
+    this.LatestGuess = event;
   }
 
 }

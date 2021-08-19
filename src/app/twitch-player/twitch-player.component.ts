@@ -75,13 +75,13 @@ export class TwitchPlayerComponent implements OnChanges, OnInit, OnDestroy {
           this.LiveStream = true;
           setTimeout(() => {            
             var player = document.getElementById('twitchPlayer') as HTMLIFrameElement;
-            const newStream = "https://player.twitch.tv/?channel=" + this.channel + "&parent=dreckbu.de";
+            const newStream = "https://player.twitch.tv/?channel=" + this.channel + "&parent=drecktu.be";
             player.src = newStream;
           }, 10);
       }
       if (this.chat==true) {
         var chat = document.getElementById('twitchChat') as HTMLIFrameElement;      
-        const newChat = "https://www.twitch.tv/embed/" + this.channel + "/chat?parent=dreckbu.de&darkpopout";;
+        const newChat = "https://www.twitch.tv/embed/" + this.channel + "/chat?parent=drecktu.be&darkpopout";;
         if (chat.src !== newChat) {      
           chat.src = newChat;
         }  

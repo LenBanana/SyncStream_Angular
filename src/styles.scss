@@ -163,12 +163,13 @@ body {
     list-style: none;
     padding: 0;
     width: 100%;
-    height: 90%;
+    height: 100%;
     overflow: hidden;
     overflow-y: auto;
-    //max-height: 45vh;
-    //border-left: 1px dotted rgba(154, 140, 142, 0.3);
-    padding: 10px;
+}
+
+.liststyle li {
+    word-wrap: break-word;
 }
 
 .text-main-color {

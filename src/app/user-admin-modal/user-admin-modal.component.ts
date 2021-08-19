@@ -84,7 +84,6 @@ export class UserAdminModalComponent implements OnInit {
       alert("Please wait until fully logged in and try again");
       return;
     }
-    console.log("Now");
     this.LastSelectedUser = user;
     this.DialogQuestion = "Are you sure you want to delete the user " + user.username + "?";
     this.DialogHeader = "Delete User";

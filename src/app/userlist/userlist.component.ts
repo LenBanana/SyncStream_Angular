@@ -38,7 +38,7 @@ export class UserlistComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.Privileges = MainUser.userprivileges;
     this.userService.addMemberListener();
-    this.userService.addHostListener(this.Username);
+    this.userService.addHostListener();
     this.userService.addUserListener();
     this.AddUser();
     this.userService.addUserFail.subscribe(room => {

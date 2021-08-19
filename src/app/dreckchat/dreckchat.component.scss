@@ -1,6 +1,6 @@
 .chat {
     width: 100%;
-    height: 100%;
+    height: 95%;
 }
 
 .username {
@@ -13,4 +13,18 @@
 
 .nopointer {
     pointer-events: none;
+}
+
+.chatstyle {
+    list-style: none;
+    padding: 0;
+    width: 100%;
+    height: 99%;
+    overflow: hidden;
+    overflow-y: auto;
+    font-size: 0.75em;
+}
+
+.chatstyle li {
+    word-wrap: break-word;
 }

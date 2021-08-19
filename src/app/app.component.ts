@@ -9,7 +9,7 @@ declare var $:any
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
-  title = 'SyncStream';
+  title = 'DreckTube';
   serverDialog: Dialog = { id: 'server', header: 'Haha', question: '', answer1: 'Ok', answer2: '', yes: null, no: null }
 
   constructor(public dialogService: DialogService) {}

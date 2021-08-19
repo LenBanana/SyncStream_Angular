@@ -1,0 +1,28 @@
+.canvas {
+    transition: none;
+}
+
+.crosshair {    
+    cursor: crosshair;
+}
+
+.DrawWord {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-100%);
+    top: 10px;
+    z-index: 10;
+    font-size: 4em;
+    color: #333;
+}
+
+.GallowBoard {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    z-index: 10;
+    color: #EEE;
+    background: #333;
+    padding: 10px;
+    border-radius: 5px;
+}

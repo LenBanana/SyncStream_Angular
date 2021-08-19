@@ -40,8 +40,8 @@ export class AddRoomModalComponent implements OnInit {
   public async CreateRoom(roomName: string, pw: string) {
     if (roomName != null && roomName.length > 0) {
       var randomId = randomID();
-      var server: Server = { currenttime: 0, isplaying: false, members: [], title: "Nothing playing", ytURL: {title: "", url: ""}, ytURLs: [] }
-      var room: Room = { uniqueId: randomId, name: roomName, server: server, password: pw }
+      var server: Server = { currenttime: 0, isplaying: false, members: [], title: "Nothing playing", currentVideo: {title: "", url: ""}, playlist: [] }
+      var room: Room = { uniqueId: randomId, name: roomName, server: server, password: pw, gallowWord: "", playingGallows: false }
       this.signalRService.addRoom(room);
       this.JoinRoom.emit(randomId);
       this.NewRoomName = "";

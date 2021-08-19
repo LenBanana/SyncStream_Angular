@@ -41,6 +41,9 @@ export class PlaylistComponent implements OnInit, OnDestroy {
           this.FirstLoad = false;
           this.nowPlaying.emit(this.CurrentVideo);
         }
+      } else {
+        this.nowPlaying.emit(null);
+        console.log("No items")
       }
     });
   }

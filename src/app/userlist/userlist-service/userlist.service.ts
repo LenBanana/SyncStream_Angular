@@ -53,14 +53,14 @@ export class UserlistService {
     hubConnection.off('userupdate', (data) => {});
   }
 
-  public addHostListener(username: string) {
-    hubConnection.on('hostupdate' + username, (data: boolean) => {
+  public addHostListener() {
+    hubConnection.on('hostupdate', (data: boolean) => {
       this.host.next(data);
     });
   }
 
-  public removeHostListener(username: string) {
-    hubConnection.off('hostupdate' + username, (data) => {});
+  public removeHostListener() {
+    hubConnection.off('hostupdate', (data) => {});
   }
 
 }

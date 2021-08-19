@@ -3,8 +3,8 @@ import { Member } from './Member';
 
 export interface Server {
     currenttime: number;
-    ytURL: VideoDTO;
-    ytURLs: VideoDTO[];
+    currentVideo: VideoDTO;
+    playlist: VideoDTO[];
     isplaying: boolean;
     title: string;
     members: Member[];

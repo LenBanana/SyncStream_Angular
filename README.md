@@ -1,4 +1,4 @@
-Angular frontend of SyncStream_API
+Angular frontend of DreckTube_API
 
 ## Development server
 

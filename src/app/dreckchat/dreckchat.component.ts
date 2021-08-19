@@ -1,4 +1,4 @@
-import { Component, OnInit, Input } from '@angular/core';
+import { Component, OnInit, Input, OnDestroy, Output, EventEmitter } from '@angular/core';
 import { DreckchatService } from './dreckchat-service/dreckchat.service';
 import { ChatMessage } from '../Interfaces/Chatmessage';
 import $ from 'jquery';
@@ -8,34 +8,71 @@ import $ from 'jquery';
   templateUrl: './dreckchat.component.html',
   styleUrls: ['./dreckchat.component.scss']
 })
-export class DreckchatComponent implements OnInit {
+export class DreckchatComponent implements OnInit, OnDestroy {
 
   constructor(public chatService: DreckchatService) { }
 
   @Input() UniqueId: string;
   @Input() Username: string;
   @Input() nav: boolean;
+  @Input() logout: boolean;
+  @Input() WhiteBoard: boolean;
   Messages: ChatMessage[];
   CurrentDate: Date = new Date();
   smileys: string[] = ('😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 😘 😗 😙 😚 😋 😜 😝 😛 🤑 🤗 🤓 😎 🤡 🤠 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 😤 😠 😡 😶 😐 😑 😯 😦 😧 😮 😲 😵 😳 😱 😨 😰 😢 😥 🤤 😭 😓 😪 😴 🙄 🤔 🤥 😬 🤐 🤢 🤮 🤧 😷 🤒 🤕 🤨 🤩 🤯 🧐 🤫 🤪 🤭').split(' ');
   showSmileys: boolean = false;
+  messages: any;
+  message: any;
 
   ngOnInit(): void {    
     this.chatService.addMessageListener();
-    this.chatService.messages.subscribe(result => {
+    this.chatService.addMessagesListener();
+    this.messages = this.chatService.messages.subscribe(result => {
       this.Messages = result;
       setTimeout(() => $('#messagebox').scrollTop($('#messagebox')[0].scrollHeight), 100);
     });
-    this.chatService.HttpGetMessages(this.UniqueId);
+    this.message = this.chatService.message.subscribe(result => {
+      if (result == null) {
+        return;
+      }
+      this.Messages.push(result);
+      if (this.Messages.length >= 100) {
+        this.Messages.shift();
+      }
+      setTimeout(() => $('#messagebox').scrollTop($('#messagebox')[0].scrollHeight), 100);
+    });
+    this.chatService.getMessages(this.UniqueId);
+  }
+
+  ngOnDestroy() {
+    this.chatService.removeMessageListener();
+    this.chatService.removeMessagesListener();
+    this.messages.unsubscribe();
+    this.message.unsubscribe();
   }
 
   public async SendMessage() {
     const textelement = document.getElementById('textmessage') as HTMLInputElement;
-    if (textelement.value.length === 0)
-      return;
-    const chatmessage: ChatMessage = { username: this.Username, message: textelement.value, time: new Date() }
-    this.chatService.sendMessage(chatmessage, this.UniqueId);
+    const msg = textelement.value;
     textelement.value = '';
+    if (msg.length === 0)
+      return;
+    if (msg.toLocaleLowerCase() == '/clear') {
+      if (this.logout) {
+        this.ClearChat();
+      }
+      return;
+    }
+    if ((msg.toLocaleLowerCase() == '/playgallows'||msg.toLocaleLowerCase() == '/gallows')) {
+      this.chatService.playGallows(this.UniqueId);
+      return;
+    }
+    const chatmessage: ChatMessage = { username: this.Username, message: msg.slice(0, 500), time: new Date() }
+    this.chatService.sendMessage(chatmessage, this.UniqueId);
+  }
+
+  public ClearChat() {
+    this.chatService.clearChat(this.UniqueId);
   }
 
   public AddSmiley(smiley: string) {

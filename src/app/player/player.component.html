@@ -1,46 +1,57 @@
-<app-text-dialog [Id]="'Sync'" [Question]="'Do you want to share this URL with other viewers, or only sync the time?'" [AddInput]="true" [Header]="'Share URL'" [Answer1]="'Share URL'" [Answer2]="'Sync time'" (Yes)="PlayExternalVideo($event)" (No)="setVideo(LastAddedExternalSource)">
+<app-text-dialog [Id]="'Sync'" [Question]="'Do you want to share this URL with other viewers, or only sync the time?'"
+  [AddInput]="true" [Header]="'Share URL'" [Answer1]="'Share URL'" [Answer2]="'Sync time'"
+  (Yes)="PlayExternalVideo($event)" (No)="setVideo(LastAddedExternalSource)">
 </app-text-dialog>
 <div class="row" [class.no-margin]="(!nav&&!twitchChat)||(CurrentPlayerType==playerType.Twitch&&twitchChat)">
-    <div class="transition" [class.vh-semi]="nav" [class.vh-big]="!nav" [class.col-10]="twitchChat&&CurrentPlayerType!=playerType.Twitch&&!nav">
-        <div [class.none]="CurrentPlayerType!=playerType.External&&CurrentPlayerType!=playerType.Vimeo" [class.vh-90]="!nav">
-            <video id="VideoPlayer" playsinline controls>
-                </video>
-        </div>
-        <div [class.none]="CurrentPlayerType!=playerType.Twitch" [class.vh-90]="!nav">
-            <app-twitch-player *ngIf="CurrentPlayerType==playerType.Twitch" [channel]="twitchChannel" [chat]="twitchChat" [IsHost]="IsHost" [videoID]="twitchVOD" [UniqueId]="UniqueId" [Threshhold]="Threshhold" (isPlaying)="playPauseTwitch($event)"></app-twitch-player>
-        </div>
-        <div [class.none]="CurrentPlayerType!=playerType.Nothing" [class.vh-90]="!nav" class="nothing-playing">
-            <span><i class="fa fa-clock-o" aria-hidden="true"></i> Nothing playing</span>
-        </div>
-        <iframe [class.none]="CurrentPlayerType!=playerType.YouTube" id="YTPlayer" style="min-height: 80vh; width: 100%; border: none;" [class.vh-90]="!nav" src="https://www.youtube.com/embed/?iv_load_policy=3&amp;modestbranding=1&amp;playsinline=1&amp;showinfo=0&amp;rel=0&amp;enablejsapi=1"
-            allowfullscreen allowtransparency allow="fullscreen" allowfullscreen></iframe>
+  <div class="transition" [class.vh-semi]="nav" [class.vh-big]="!nav"
+    [class.col-10]="twitchChat&&CurrentPlayerType!=playerType.Twitch&&!nav">
+    <div [class.none]="CurrentPlayerType!=playerType.External&&CurrentPlayerType!=playerType.Vimeo"
+      [class.vh-90]="!nav">
+      <video id="VideoPlayer" playsinline controls>
+      </video>
+    </div>
+    <div [class.none]="CurrentPlayerType!=playerType.Twitch" [class.vh-90]="!nav">
+      <app-twitch-player *ngIf="CurrentPlayerType==playerType.Twitch" [channel]="twitchChannel" [chat]="twitchChat"
+        [IsHost]="IsHost" [videoID]="twitchVOD" [UniqueId]="UniqueId" [Threshhold]="Threshhold"
+        (isPlaying)="playPauseTwitch($event)"></app-twitch-player>
+    </div>
+    <div [class.none]="CurrentPlayerType!=playerType.Nothing" [class.vh-90]="!nav" class="nothing-playing">
+      <span><i class="fa fa-clock-o" aria-hidden="true"></i> Nothing playing</span>
+    </div>
+    <iframe [class.none]="CurrentPlayerType!=playerType.YouTube" id="YTPlayer"
+      style="min-height: 80vh; width: 100%; border: none;" [class.vh-90]="!nav"
+      src="https://www.youtube.com/embed/?iv_load_policy=3&amp;modestbranding=1&amp;playsinline=1&amp;showinfo=0&amp;rel=0&amp;enablejsapi=1"
+      allowfullscreen allowtransparency allow="fullscreen" allowfullscreen></iframe>
 
-        <div style="height: 100%; width: 100%;" [class.none]="CurrentPlayerType!=playerType.WhiteBoard">
-            <app-whiteboard [UniqueId]="UniqueId" [IsDrawing]="CurrentPlayerType==playerType.WhiteBoard" [class.vh-90]="!nav"></app-whiteboard>
-        </div>
+    <div style="height: 100vh; width: 100%;">
+      <app-whiteboard *ngIf="CurrentPlayerType==playerType.WhiteBoard" [UniqueId]="UniqueId" [IsDrawing]="IsHost" [class.vh-90]="!nav" [GallowWord]="GallowWord">
+      </app-whiteboard>
     </div>
-    <ng-container *ngIf="!nav&&twitchChat&&CurrentPlayerType!=playerType.Twitch">
-        <div class="transition col-2 mt-5 pr-4" style="height: 90vh;">
-            <app-dreckchat [nav]="nav" [UniqueId]="UniqueId" [Username]="Username"></app-dreckchat>
-        </div>
-    </ng-container>
-    <div class="col-12">
-        <div class="row" [ngClass]="{'none': !nav}">
-            <div class="transition pb-4 pt-2 col-12">
-                <div class="dark-floatbox mt-3">
-                    <div class="form-group">
-                        <div class="input-group input-group-md">
-                            <input type="text" tabindex="-1" (keyup.enter)="PlayURL()" placeholder="https://..." class="form-control" id="videoinput">
-                            <input type="file" style="display: none" (change)="fileChange($event)" #file/>
-                            <div class="input-group-append">
-                                <button type="button" class="btn px-3" [class.btn-primary]="!IsPlaying" [class.btn-success]="IsPlaying" (click)="file.click()" id="playerFileBtn"><i class="fa fa-file" aria-hidden="true"></i></button>
-                                <button type="button" class="btn px-3" [class.btn-primary]="!IsPlaying" [class.btn-success]="IsPlaying" (click)="PlayURL()"><i class="fa fa-play" aria-hidden="true"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+  </div>
+  <div class="transition vh-big col-2" [class.none]="!twitchChat&&CurrentPlayerType!=playerType.Twitch">
+    <app-dreckchat [nav]="nav" [logout]="logout" [UniqueId]="UniqueId" [Username]="Username" [WhiteBoard]="CurrentPlayerType==playerType.WhiteBoard"></app-dreckchat>
+  </div>
+  <div class="col-12">
+    <div class="row" [ngClass]="{'none': !nav}">
+      <div class="transition pb-4 pt-2 col-12">
+        <div class="dark-floatbox mt-3">
+          <div class="form-group">
+            <div class="input-group input-group-md">
+              <input type="text" tabindex="-1" (keyup.enter)="PlayURL()" placeholder="https://..." class="form-control"
+                id="videoinput">
+              <input type="file" style="display: none" (change)="fileChange($event)" #file />
+              <div class="input-group-append">
+                <button type="button" class="btn px-3" [class.btn-primary]="!IsPlaying" [class.btn-success]="IsPlaying"
+                  (click)="file.click()" id="playerFileBtn"><i class="fa fa-file" aria-hidden="true"></i></button>
+                <button type="button" class="btn px-3" [class.btn-primary]="!IsPlaying" [class.btn-success]="IsPlaying"
+                  (click)="PlayURL()"><i class="fa fa-play" aria-hidden="true"></i></button>
+              </div>
             </div>
+          </div>
         </div>
-        <app-playlist [nav]="nav" [UniqueId]="UniqueId" (nowPlaying)="setVideoDTO($event, currentTime)" [ready]="readyEvent.asObservable()" (playlistChange)="playlistChange.emit($event)"></app-playlist>
+      </div>
     </div>
+    <app-playlist [nav]="nav" [UniqueId]="UniqueId" (nowPlaying)="setVideoDTO($event, currentTime)"
+      [ready]="readyEvent.asObservable()" (playlistChange)="playlistChange.emit($event)"></app-playlist>
+  </div>
 </div>
