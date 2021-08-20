@@ -160,9 +160,12 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.playerService.addGallowListener();
     this.playingGallows = this.playerService.playingGallows.subscribe(playGallows => {
       if (playGallows == null||!playGallows) {
-        this.DrawWhiteboard(false);
         return;
       }      
+      if (playGallows=="$clearboard$") {        
+        this.DrawWhiteboard(false);
+        return;
+      }
       this.GallowWord = playGallows;
       this.DrawWhiteboard(true);
     });
@@ -249,8 +252,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     var url = window.URL.createObjectURL(file.target.files[0]);
-    console.log(file.target.files[0]);
-    console.log(url);
     this.CurrentPlayerType = PlayerType.External;
     this.YTPlayer.pauseVideo();
     this.setVideo(url);
@@ -382,11 +383,13 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     if (!key || !key.url || key.url.length == 0) {
-      this.CurrentPlayerType = PlayerType.Nothing;
-      setTimeout(() => {
-        this.YTPlayer.pauseVideo();
-        player.pause();
-      }, 100);
+      if (this.CurrentPlayerType != PlayerType.WhiteBoard) {
+        this.CurrentPlayerType = PlayerType.Nothing;
+        setTimeout(() => {
+          this.YTPlayer.pauseVideo();
+          player.pause();
+        }, 100);
+      }
       return;
     }
     this.currentKey = key.url;
@@ -495,11 +498,13 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
         if (this.IsHost) {
           this.playerService.PlayPause(false, this.UniqueId);
           setTimeout(() => {
-            this.YTPlayer.pauseVideo();
+            if (this.YTPlayer&&this.YTPlayer.pauseVideo) {
+              this.YTPlayer.pauseVideo();
+            }
             player.pause();
           }, 100);
         }
-      }, chat ? 0 : 510);
+      }, chat ? 0 : 750);
     } else {
       if (this.LastPlayerType==PlayerType.WhiteBoard) {
         this.CurrentPlayerType = PlayerType.Nothing;

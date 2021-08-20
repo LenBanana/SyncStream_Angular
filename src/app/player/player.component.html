@@ -23,7 +23,7 @@
       src="https://www.youtube.com/embed/?iv_load_policy=3&amp;modestbranding=1&amp;playsinline=1&amp;showinfo=0&amp;rel=0&amp;enablejsapi=1"
       allowfullscreen allowtransparency allow="fullscreen" allowfullscreen></iframe>
 
-    <div style="height: 100vh; width: 100%;">
+    <div style="height: 100vh; width: 100%;" [class.bg-canvas]="CurrentPlayerType==playerType.WhiteBoard">
       <app-whiteboard *ngIf="CurrentPlayerType==playerType.WhiteBoard" [UniqueId]="UniqueId" [IsDrawing]="IsHost" [class.vh-90]="!nav" [GallowWord]="GallowWord">
       </app-whiteboard>
     </div>

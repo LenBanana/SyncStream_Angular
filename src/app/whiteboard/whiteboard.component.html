@@ -1,9 +1,29 @@
 <span class="DrawWord">{{IsDrawing ? GallowWord : getAnonWord()}}</span>
+
 <div class="GallowBoard">
-    <p class="text-center">Leaderboard - {{RemainingGallowTime}}</p>
-    <ul class="liststyle">
-        <li *ngFor="let member of GallowMembers">{{member.username}} - {{member.gallowPoints}}</li>
-    </ul>
+  <p class="text-center">Leaderboard - {{RemainingGallowTime}}</p>
+  <ul class="liststyle">
+    <li *ngFor="let member of GallowMembers">{{member.username}} - {{member.gallowPoints}}</li>
+  </ul>
 </div>
-<canvas-whiteboard *ngIf="!reload" #canvasWhiteboard class="canvas" [class.crosshair]="IsDrawing" [options]="canvasOptions" (onBatchUpdate)="sendBatchUpdate($event)" (onClear)="onCanvasClear()" (onUndo)="onCanvasUndo($event)" (onRedo)="onCanvasRedo($event)">
+
+<div class="ColorBoard" *ngIf="IsDrawing">
+  <div *ngFor="let color of Colors">
+    <div class="ColorBall" [ngStyle]="{'background-color': color}" (click)="ChangeStrokeColor(color)"></div>
+  </div>
+  <input class="ColorBall" type="color" id="head" name="head" value="{{SelectedColor}}" (input)="ChangeStrokeColor($event.target.value)">
+</div>
+
+<div class="Tools center-bottom" *ngIf="IsDrawing">
+    <input type="range" class="form-range" id="customRange1" min="3" max="50" value="{{lineWidth}}"  #ref (input)="changeStrokeThickness(ref.value)">
+    <i class="fa fa-trash-o fa-3x ml-5 p-2 bg-dark text-light rounded pointer" (click)="ClearCanvas()"></i>
+    <i class="fa fa-eraser fa-3x p-2 ml-3 bg-dark text-light rounded pointer" (click)="ChangeStrokeColor('#eee')"></i>
+    <i class="fa fa-refresh fa-3x p-2 ml-3 bg-dark text-light rounded pointer" (click)="ReloadWhiteboard()"></i>
+</div>
+
+<div *ngIf="IsDrawing" class="custom-cursor" id="CustomCursor" [ngStyle]="{'width': lineWidth + 'px', 'height': lineWidth + 'px', 'background-color': SelectedColor}" ></div>
+
+<canvas-whiteboard #canvasWhiteboard *ngIf="!reload" class="canvas" [class.no-cursor]="IsDrawing" (mousemove)="hoverCanvas($event)"  (mouseleave)="exitCanvas()"
+  [options]="canvasOptions" (onBatchUpdate)="sendBatchUpdate($event)"
+  (onUndo)="onCanvasUndo($event)" (onRedo)="onCanvasRedo($event)">
 </canvas-whiteboard>

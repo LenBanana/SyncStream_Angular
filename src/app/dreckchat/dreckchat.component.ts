@@ -1,6 +1,17 @@
-import { Component, OnInit, Input, OnDestroy, Output, EventEmitter } from '@angular/core';
-import { DreckchatService } from './dreckchat-service/dreckchat.service';
-import { ChatMessage } from '../Interfaces/Chatmessage';
+import {
+  Component,
+  OnInit,
+  Input,
+  OnDestroy,
+  Output,
+  EventEmitter
+} from '@angular/core';
+import {
+  DreckchatService
+} from './dreckchat-service/dreckchat.service';
+import {
+  ChatMessage
+} from '../Interfaces/Chatmessage';
 import $ from 'jquery';
 
 @Component({
@@ -10,7 +21,7 @@ import $ from 'jquery';
 })
 export class DreckchatComponent implements OnInit, OnDestroy {
 
-  constructor(public chatService: DreckchatService) { }
+  constructor(public chatService: DreckchatService) {}
 
   @Input() UniqueId: string;
   @Input() Username: string;
@@ -24,7 +35,7 @@ export class DreckchatComponent implements OnInit, OnDestroy {
   messages: any;
   message: any;
 
-  ngOnInit(): void {    
+  ngOnInit(): void {
     this.chatService.addMessageListener();
     this.chatService.addMessagesListener();
     this.messages = this.chatService.messages.subscribe(result => {
@@ -54,20 +65,25 @@ export class DreckchatComponent implements OnInit, OnDestroy {
   public async SendMessage() {
     const textelement = document.getElementById('textmessage') as HTMLInputElement;
     const msg = textelement.value;
+    const lowCase = msg.toLocaleLowerCase();
     textelement.value = '';
     if (msg.length === 0)
       return;
-    if (msg.toLocaleLowerCase() == '/clear') {
+    if (lowCase == '/clear' || lowCase == '/c') {
       if (this.logout) {
         this.ClearChat();
       }
       return;
     }
-    if ((msg.toLocaleLowerCase() == '/playgallows'||msg.toLocaleLowerCase() == '/gallows')) {
+    if ((lowCase == '/playgallows' || lowCase == '/playgallow' || lowCase == '/gallows' || lowCase == '/gallow' || lowCase == '/galgenraten' || lowCase == '/galgen')) {
       this.chatService.playGallows(this.UniqueId);
       return;
     }
-    const chatmessage: ChatMessage = { username: this.Username, message: msg.slice(0, 500), time: new Date() }
+    const chatmessage: ChatMessage = {
+      username: this.Username,
+      message: msg.slice(0, 500),
+      time: new Date()
+    }
     this.chatService.sendMessage(chatmessage, this.UniqueId);
   }
 

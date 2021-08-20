@@ -43,7 +43,6 @@ export class PlaylistComponent implements OnInit, OnDestroy {
         }
       } else {
         this.nowPlaying.emit(null);
-        console.log("No items")
       }
     });
   }

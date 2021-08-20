@@ -47,6 +47,19 @@ body {
     display: none;
 }
 
+.none-important {
+    display: none !important;
+}
+
+.center-bottom {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-100%);
+    bottom: 10px;
+    z-index: 10;
+}
+
+
 .text-left {
     text-align: left;
 }

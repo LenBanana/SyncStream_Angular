@@ -34,7 +34,6 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
   GallowMembers: Member[] = [];
   LastIsDrawing = null;
   Init = false;
-  reload = false;
   RemainingGallowTime = 90;
   gallowGuess;
   gallowTimer;
@@ -43,28 +42,53 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
   whiteboardClear;
   whiteboardUndo;
   whiteboardRedo;
+  lineWidth = 4;
+  posX = 10;
+  posY = 10;
+  SelectedColor = '#333333';
+  reload = false;
   canvasOptions: CanvasWhiteboardOptions = {
-    drawButtonEnabled: true,
-    drawButtonClass: 'fa fa-pencil fa-2x p-2',
+    drawButtonEnabled: false,
     drawButtonText: '',
-    clearButtonEnabled: true,
-    clearButtonClass: 'fa fa-trash fa-2x p-2',
+    clearButtonEnabled: false,
     clearButtonText: '',
     undoButtonText: 'Undo',
     undoButtonEnabled: false,
     redoButtonText: 'Redo',
     redoButtonEnabled: false,
-    colorPickerEnabled: true,
-    shapeSelectorEnabled: true,
-    strokeColorPickerEnabled: true,
-    fillColorPickerEnabled: true,
+    colorPickerEnabled: false,
+    shapeSelectorEnabled: false,
+    strokeColorPickerEnabled: false,
+    fillColorPickerEnabled: false,
+    fillColorPickerText: '',
     drawingEnabled: this.IsDrawing,
     batchUpdateTimeoutDuration: 50,
-    lineWidth: 4,
+    lineWidth: this.lineWidth,
     scaleFactor: 1,
     startingColor: '#EEEEEE',
     strokeColor: '#333333',    
   };
+  Colors = [
+    "#333333",
+    "#EEEEEE",
+    "#808080",
+    "#D3D3D3",
+    "#8B0000",
+    "#FF0000",
+    "#FFA500",
+    "#FFFF00",
+    "#006400",
+    "#008000",
+    "#90EE90",
+    "#00008B",
+    "#0000FF",
+    "#ADD8E6",
+    "#4C004C",
+    "#800080",
+    "#FFC0CB",
+    "#8B4513",
+    "#53290B",
+  ]
 
   ngOnChanges() {
     if (!this.Init) {
@@ -72,19 +96,16 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
       this.whiteBoardSerive.getWhiteBoard(this.UniqueId);
     }
     if (this.LastIsDrawing!=this.IsDrawing) {
-      console.log(this.IsDrawing);
       this.LastIsDrawing = this.IsDrawing;
-      this.canvasOptions.drawingEnabled = this.IsDrawing;
-      this.canvasOptions.drawButtonEnabled = this.IsDrawing;
-      this.canvasOptions.clearButtonEnabled = this.IsDrawing;
-      this.canvasOptions.shapeSelectorEnabled = this.IsDrawing;
-      this.canvasOptions.fillColorPickerText = this.IsDrawing ? 'Fill' : '';
-      this.canvasOptions.strokeColorPickerText = this.IsDrawing ? 'Stroke' : '';
-      this.canvasOptions.strokeColor = this.IsDrawing ? '#333333' : 'transparent';
-      this.reload = true;
-      setTimeout(() => {
-        this.reload = false;
-      }, 1);
+      this.ReloadWhiteboard();
+      //this.canvasOptions.fillColorPickerText = this.IsDrawing ? 'Fill' : '';
+      //this.canvasOptions.strokeColorPickerText = this.IsDrawing ? 'Stroke' : '';
+      //this.canvasOptions.strokeColor = this.IsDrawing ? '#333333' : 'transparent';
+      this.canvasOptions = {
+        ...this.canvasOptions,
+        lineWidth: this.lineWidth,
+        drawingEnabled: this.IsDrawing
+      };
     }
   }
 
@@ -178,6 +199,53 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     return AnonWord;
   }
 
+  ReloadWhiteboard() {
+    this.reload = true;
+    setTimeout(() => {
+      this.reload = false;
+      this.ClearCanvas();
+    }, 1);
+  }
+
+  ChangeStrokeColor(color) {
+    this.SelectedColor = color;
+    this.canvasOptions = {
+      ...this.canvasOptions,
+      lineWidth: this.lineWidth,
+      strokeColor: color
+    };
+  }
+
+  changeStrokeThickness(thickness) {
+    if (thickness >= 3 && thickness <= 50) {   
+      this.lineWidth = thickness;
+      this.canvasOptions = {
+        ...this.canvasOptions,
+        lineWidth: this.lineWidth,
+      };
+    }
+  }
+
+  ClearCanvas() {
+    this._canvasWhiteboardService.clearCanvas();
+    this.whiteBoardSerive.clearWhiteBoard(this.UniqueId);
+  }
+
+  hoverCanvas(event) {
+    if (this.IsDrawing) {
+      const halfWidth = this.lineWidth / 2;
+      document.getElementById('CustomCursor').style.top= (event.offsetY - halfWidth) + 'px';
+      document.getElementById('CustomCursor').style.left= ((event.offsetX + 15) - halfWidth) + 'px';
+    }
+  }
+
+  exitCanvas() {
+    if (this.IsDrawing) {
+      document.getElementById('CustomCursor').style.top= '50%';
+      document.getElementById('CustomCursor').style.left= '50%';
+    }
+  }
+
   delay(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -193,10 +261,6 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
     this.whiteBoardSerive.updateWhiteBoard(event, this.UniqueId);
-  }
-
-  onCanvasClear() {
-    this.whiteBoardSerive.clearWhiteBoard(this.UniqueId);
   }
 
   onCanvasUndo(event) {
