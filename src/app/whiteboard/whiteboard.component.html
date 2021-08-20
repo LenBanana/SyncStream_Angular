@@ -1,6 +1,6 @@
-<span class="DrawWord">{{IsDrawing ? GallowWord : getAnonWord()}}</span>
+<span class="DrawWord"><span class="no-pointer-events unselectable">{{IsDrawing ? GallowWord : getAnonWord()}}</span><i *ngIf="IsDrawing" class="fa fa-refresh p-2 ml-2 text-dark rounded pointer" (click)="NewGallow()"></i></span>
 
-<div class="GallowBoard">
+<div class="GallowBoard no-pointer-events">
   <p class="text-center">Leaderboard - {{RemainingGallowTime}}</p>
   <ul class="liststyle">
     <li *ngFor="let member of GallowMembers">{{member.username}} - {{member.gallowPoints}}</li>
@@ -21,7 +21,7 @@
     <i class="fa fa-refresh fa-3x p-2 ml-3 bg-dark text-light rounded pointer" (click)="ReloadWhiteboard()"></i>
 </div>
 
-<div *ngIf="IsDrawing" class="custom-cursor" id="CustomCursor" [ngStyle]="{'width': lineWidth + 'px', 'height': lineWidth + 'px', 'background-color': SelectedColor}" ></div>
+<div *ngIf="IsDrawing" class="custom-cursor no-pointer-events" id="CustomCursor" [ngStyle]="{'width': lineWidth + 'px', 'height': lineWidth + 'px', 'background-color': SelectedColor}" ></div>
 
 <canvas-whiteboard #canvasWhiteboard *ngIf="!reload" class="canvas" [class.no-cursor]="IsDrawing" (mousemove)="hoverCanvas($event)"  (mouseleave)="exitCanvas()"
   [options]="canvasOptions" (onBatchUpdate)="sendBatchUpdate($event)"

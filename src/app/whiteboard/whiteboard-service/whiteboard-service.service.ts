@@ -22,6 +22,10 @@ export class WhiteboardService {
     hubConnection.invoke('WhiteBoardJoin', UniqueId);
   }
 
+  public NewGallow(UniqueId: string) {
+    hubConnection.invoke('NewGallow', UniqueId);
+  }
+
   public updateWhiteBoard(update, UniqueId: string) {
     hubConnection.invoke('WhiteBoardUpdate', update, UniqueId);
   }

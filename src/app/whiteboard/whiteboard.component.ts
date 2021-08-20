@@ -199,6 +199,12 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     return AnonWord;
   }
 
+  NewGallow() {
+    if (this.IsDrawing) {
+      this.whiteBoardSerive.NewGallow(this.UniqueId);
+    }
+  }
+
   ReloadWhiteboard() {
     this.reload = true;
     setTimeout(() => {

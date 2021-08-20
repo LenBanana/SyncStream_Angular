@@ -152,7 +152,11 @@ export class SideNavComponent implements OnInit {
   }  
   
   toggleTwitchChat() {
-    this.toggleTwitch.emit()
+    this.toggleTwitch.emit();
+    setTimeout(() => {      
+      var videourl = document.getElementById('textmessage') as HTMLInputElement;
+      videourl.focus();
+    }, 25);
   }
 
   DrawWhiteboard() {
