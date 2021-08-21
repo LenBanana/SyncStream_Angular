@@ -6,6 +6,7 @@ import { VideoDTO } from '../Interfaces/VideoDTO';
 import { Member } from '../Interfaces/Member';
 import { PlayerComponent } from '../player/player.component';
 import { Location } from '@angular/common';
+import { PlayerService } from '../player/player-service/player.service';
 
 @Component({
   selector: 'app-side-nav',
@@ -14,7 +15,7 @@ import { Location } from '@angular/common';
 })
 export class SideNavComponent implements OnInit {
 
-  constructor(public playlistService: PlaylistService, public userService: UserlistService, private location: Location) { }
+  constructor(public playlistService: PlaylistService, public playerService: PlayerService, public userService: UserlistService, private location: Location) { }
 
   @Input() logout: boolean;
   @Input() nav: boolean;
@@ -37,6 +38,8 @@ export class SideNavComponent implements OnInit {
   showInput = false;
   showPlaylist = false;
   showUsername = false;
+  WhiteboardActive = false;
+  playingGallows
 
   ngOnInit(): void {
     if (this.IsHost) {      
@@ -45,7 +48,17 @@ export class SideNavComponent implements OnInit {
     } else {      
       this.ThreshholdNumber = .5;
       this.threshholdChange.emit(this.ThreshholdNumber);
-    }
+    }    
+    this.playingGallows = this.playerService.playingGallows.subscribe(playGallows => {
+      if (playGallows == null||!playGallows) {
+        return;
+      }      
+      if (playGallows=="$clearboard$") {        
+        this.WhiteboardActive = false;
+        return;
+      } 
+      this.WhiteboardActive = true;
+    });
   } 
   
   refresh(): void {

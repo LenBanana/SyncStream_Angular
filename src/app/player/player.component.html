@@ -2,9 +2,9 @@
   [AddInput]="true" [Header]="'Share URL'" [Answer1]="'Share URL'" [Answer2]="'Sync time'"
   (Yes)="PlayExternalVideo($event)" (No)="setVideo(LastAddedExternalSource)">
 </app-text-dialog>
-<div class="row" [class.no-margin]="(!nav&&!twitchChat)||(CurrentPlayerType==playerType.Twitch&&twitchChat)">
-  <div class="transition" [class.vh-semi]="nav" [class.vh-big]="!nav"
-    [class.col-10]="twitchChat&&CurrentPlayerType!=playerType.Twitch&&!nav">
+<div class="row" [class.no-margin]="(!nav&&(!twitchChat && CurrentPlayerType != playerType.WhiteBoard))||(CurrentPlayerType==playerType.Twitch&&twitchChat)">
+  <div class="transition PlayerWindow" [class.vh-semi]="nav" [class.vh-big]="!nav"
+    [class.col-10]="(twitchChat||CurrentPlayerType==playerType.WhiteBoard)&&CurrentPlayerType!=playerType.Twitch&&!nav">
     <div [class.none]="CurrentPlayerType!=playerType.External&&CurrentPlayerType!=playerType.Vimeo"
       [class.vh-90]="!nav">
       <video id="VideoPlayer" playsinline controls>
@@ -23,12 +23,12 @@
       src="https://www.youtube.com/embed/?iv_load_policy=3&amp;modestbranding=1&amp;playsinline=1&amp;showinfo=0&amp;rel=0&amp;enablejsapi=1"
       allowfullscreen allowtransparency allow="fullscreen" allowfullscreen></iframe>
 
-    <div *ngIf="CurrentPlayerType==playerType.WhiteBoard" style="height: 100vh; width: 100%;" [class.bg-canvas]="CurrentPlayerType==playerType.WhiteBoard">
+    <div *ngIf="CurrentPlayerType==playerType.WhiteBoard" class="CanvasStyle" [class.bg-canvas]="CurrentPlayerType==playerType.WhiteBoard">
       <app-whiteboard [UniqueId]="UniqueId" [IsDrawing]="IsHost" [class.vh-90]="!nav" [GallowWord]="GallowWord">
       </app-whiteboard>
     </div>
   </div>
-  <div class="transition vh-big col-2" [class.none]="(!twitchChat && CurrentPlayerType != playerType.WhiteBoard) || CurrentPlayerType==playerType.Twitch">
+  <div class="transition vh-big col-2 border-left-dark" [class.none]="(!twitchChat && CurrentPlayerType != playerType.WhiteBoard) || CurrentPlayerType==playerType.Twitch">
     <app-dreckchat [nav]="nav" [logout]="logout" [UniqueId]="UniqueId" [Username]="Username" [WhiteBoard]="CurrentPlayerType==playerType.WhiteBoard"></app-dreckchat>
   </div>
   <div class="col-12">

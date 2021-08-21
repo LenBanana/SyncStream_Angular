@@ -53,7 +53,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() Threshhold: number = 0.5;
   @Input() twitchChat = false;
   @Input() Username = "";
-  @Output() isPlaying = new EventEmitter();
+  @Output() isPlayingEvent = new EventEmitter();
   @Output() playlistChange = new EventEmitter();
   @Output() toggleChat = new EventEmitter();
   @Output() threshholdChange = new EventEmitter();
@@ -64,6 +64,8 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   readyEvent: Subject < void > = new Subject < void > ();
   CurrentPlayerType: PlayerType = PlayerType.Nothing;
   LastPlayerType: PlayerType = PlayerType.Nothing;
+  Playlist: VideoDTO[] = [];
+  CurrentVideo: VideoDTO;
   playerType = PlayerType;
   lastTime: number = 0;
   IsPlaying: boolean = false;
@@ -79,6 +81,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   LastAddedExternalSource = "";
   LatestGuess = "";
   Init = false;
+  CurrentPing = 0;
   PingInterval;
 
   ngAfterViewInit(): void {
@@ -102,20 +105,8 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit(): void {
     this.PingInterval = setInterval(() => {
-      if (this.isPlaying) {
-        this._pingService.GetPing();
-        this.signalrService.pingStream.subscribe(ping => {
-          const Ping = Number.parseFloat(ping.toFixed(2));
-          if (this.Threshhold < Ping || (this.IsHost && this.Threshhold > 2 && Ping < 2) || (!this.IsHost && this.Threshhold > .5 && Ping < .5)) {
-            if (!this.IsHost) {
-              this.Threshhold = Ping < .5 ? .5 : Ping;
-            } else {
-              this.Threshhold = (Ping < 2 ? 2 : Ping) * 2;
-            }
-            this.threshholdChange.emit(this.Threshhold);
-          }
-        });
-      }
+      this._pingService.GetPing();
+      if (this.IsPlaying) {}
     }, 5000);
     this.addListener();
     if (typeof (YT) == 'undefined' || typeof (YT.Player) == 'undefined') {
@@ -132,16 +123,22 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
             this.Init = true;
             this.readyEvent.next();
             this.TimeUpdate = setInterval(() => {
+              var playerState = this.YTPlayer.getPlayerState();
               if (!this.IsHost) {
+                if (this.IsPlaying && playerState == YT.PlayerState.PAUSED) {
+                  this.playerPlay(true);
+                } else if (!this.IsPlaying && playerState == YT.PlayerState.PLAYING) {
+                  this.playerPause(true);
+                }
                 return;
               }
-              if (this.YTPlayer.getPlayerState() != YT.PlayerState.PAUSED) {
+              if (playerState != YT.PlayerState.PAUSED) {
                 const ytTime = this.YTPlayer.getCurrentTime();
                 if (ytTime && ytTime > 0) {
                   this.SetTime(this.YTPlayer.getCurrentTime());
                 }
               }
-            }, 100);
+            }, 250);
           },
           onStateChange: (event) => {
             this.YTStateChange(event);
@@ -158,11 +155,35 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.playerService.addPauseListener();
     this.playerService.addTimeListener();
     this.playerService.addGallowListener();
-    this.playingGallows = this.playerService.playingGallows.subscribe(playGallows => {
-      if (playGallows == null||!playGallows) {
+    this.signalrService.AddPingListener();    
+    this.playlistService.playlist.subscribe(result => {
+      if (!result) {
         return;
-      }      
-      if (playGallows=="$clearboard$") {        
+      }
+      this.Playlist = result;
+      if (result && result.length > 0) {
+        this.CurrentVideo = result[0];
+      }
+    });
+    this.signalrService.pingStream.subscribe(ping => {
+      if (!ping) {
+        return;
+      }
+      this.CurrentPing = Number.parseFloat(ping.toFixed(2));
+      if (this.Threshhold < this.CurrentPing || (this.IsHost && this.Threshhold > 2 && this.CurrentPing < 2) || (!this.IsHost && this.Threshhold > .5 && this.CurrentPing < .5)) {
+        if (!this.IsHost) {
+          this.Threshhold = this.CurrentPing < .5 ? .5 : Number.parseFloat(ping.toFixed(2));
+        } else {
+          this.Threshhold = (this.CurrentPing < 2 ? 2 : Number.parseFloat(ping.toFixed(2))) * 2;
+        }
+        this.threshholdChange.emit(this.Threshhold);
+      }
+    });
+    this.playingGallows = this.playerService.playingGallows.subscribe(playGallows => {
+      if (playGallows == null || !playGallows) {
+        return;
+      }
+      if (playGallows == "$clearboard$") {
         this.DrawWhiteboard(false);
         return;
       }
@@ -180,7 +201,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     });
     this.isPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {
       this.IsPlaying = isplaying;
-      this.isPlaying.emit(isplaying);
+      this.isPlayingEvent.emit(isplaying);
       if (!this.YTPlayer || !player) {
         return;
       }
@@ -217,7 +238,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
             if (this.YTPlayer.getPlayerState() == YT.PlayerState.PAUSED) {
               this.YTPlayer.playVideo();
             }
-            this.YTPlayer.seekTo(currentTime, true);
+            this.YTPlayer.seekTo(currentTime + this.CurrentPing, true);
           }
         } else {
           let playerTime = 0;
@@ -261,10 +282,10 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     const state = event.data as YT.PlayerState;
     switch (state) {
       case YT.PlayerState.PAUSED:
-        this.playerPause();
+        this.playerPause(false);
         break;
       case YT.PlayerState.PLAYING:
-        this.playerPlay();
+        this.playerPlay(false);
         break;
       case YT.PlayerState.ENDED:
         if (!this.IsHost) {
@@ -277,13 +298,17 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
 
   playPauseTwitch(playing: boolean) {
     this.IsPlaying = playing;
-    this.isPlaying.emit(playing);
+    this.isPlayingEvent.emit(playing);
     if (this.IsHost) {
       this.playerService.PlayPause(playing, this.UniqueId);
     }
   }
 
-  playerPlay() {
+  playerPlay(forcePlay) {
+    if (forcePlay && this.YTPlayer && this.YTPlayer.playVideo) {
+      this.YTPlayer.playVideo();
+      player.play();
+    }
     if (!this.IsHost && this.IsPlaying === false) {
       if (this.CurrentPlayerType == PlayerType.YouTube) {
         this.YTPlayer.pauseVideo();
@@ -291,13 +316,16 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
         player.pause();
       }
     }
-    if (!this.IsHost) {
-      return;
+    if (this.IsHost) {
+      this.playerService.PlayPause(true, this.UniqueId);
     }
-    this.playerService.PlayPause(true, this.UniqueId);
   }
 
-  playerPause() {
+  playerPause(forcePause) {
+    if (forcePause && this.YTPlayer && this.YTPlayer.pauseVideo) {
+      this.YTPlayer.pauseVideo();
+      player.pause();
+    }
     if (!this.IsHost && this.IsPlaying === true) {
       if (this.CurrentPlayerType == PlayerType.YouTube) {
         this.YTPlayer.playVideo();
@@ -305,21 +333,25 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
         player.play();
       }
     }
-    if (!this.IsHost) {
-      return;
+    if (this.IsHost) {
+      this.playerService.PlayPause(false, this.UniqueId);
     }
-    this.playerService.PlayPause(false, this.UniqueId);
   }
 
   InitPlayer() {
     player.on("play", event => {
-      this.playerPlay();
+      this.playerPlay(false);
     });
     player.on("pause", event => {
-      this.playerPause();
+      this.playerPause(false);
     });
     player.on("timeupdate", timeupdated => {
       if (!this.IsHost) {
+        if (this.IsPlaying && player.paused) {
+          this.playerPlay(true);
+        } else if (!this.IsPlaying && player.playing) {
+          this.playerPause(true);
+        }
         return;
       }
       const currentTime: number = timeupdated.detail.plyr.currentTime;
@@ -394,7 +426,9 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     this.currentKey = key.url;
     if (key.url.includes('youtube') || key.url.includes('youtu.be')) {
-      this.CurrentPlayerType = PlayerType.YouTube;
+      if (this.CurrentPlayerType != PlayerType.WhiteBoard) {
+        this.CurrentPlayerType = PlayerType.YouTube;
+      }
       this.YTPlayer.loadVideoById(this.youtube_parser(key.url), time, 'hd1080');
       setTimeout(() => {
         player.pause();
@@ -402,7 +436,9 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     if (key.url.includes('vimeo.com')) {
-      this.CurrentPlayerType = PlayerType.Vimeo;
+      if (this.CurrentPlayerType != PlayerType.WhiteBoard) {
+        this.CurrentPlayerType = PlayerType.Vimeo;
+      }
       setTimeout(() => {
         this.YTPlayer.pauseVideo();
         player.pause();
@@ -411,14 +447,18 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     if (!key.url.includes('twitch.tv') && key.url.startsWith('http')) {
-      this.CurrentPlayerType = PlayerType.External;
+      if (this.CurrentPlayerType != PlayerType.WhiteBoard) {
+        this.CurrentPlayerType = PlayerType.External;
+      }
       setTimeout(() => {
         this.YTPlayer.pauseVideo();
       }, 100);
       this.setVideo(key.url);
       return;
     }
-    this.CurrentPlayerType = PlayerType.Twitch;
+    if (this.CurrentPlayerType != PlayerType.WhiteBoard) {
+      this.CurrentPlayerType = PlayerType.Twitch;
+    }
     if (key.title.startsWith("v")) {
       this.twitchVOD = key.title;
       this.twitchChannel = undefined;
@@ -450,7 +490,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
           var videoInfo = await this.playerService.GetYTTitle(videourl.value);
           videoTitle = videoInfo["title"];
         } catch (error) {
-          console.log(error);
           videoTitle = '';
         }
       }
@@ -492,25 +531,31 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       if (!chat) {
         this.toggleChat.emit();
       }
-      setTimeout(() => {
-        this.LastPlayerType = this.CurrentPlayerType;
-        this.CurrentPlayerType = PlayerType.WhiteBoard;
-        if (this.IsHost) {
-          this.playerService.PlayPause(false, this.UniqueId);
-          setTimeout(() => {
-            if (this.YTPlayer&&this.YTPlayer.pauseVideo) {
-              this.YTPlayer.pauseVideo();
-            }
-            player.pause();
-          }, 100);
-        }
-      }, chat ? 0 : 750);
+      this.LastPlayerType = this.CurrentPlayerType;
+      this.CurrentPlayerType = PlayerType.WhiteBoard;
+      if (this.IsHost) {
+        this.playerService.PlayPause(false, this.UniqueId);
+      }
+      this.playerPause(true);
     } else {
-      if (this.LastPlayerType==PlayerType.WhiteBoard) {
+      if (this.Playlist.length > 0) {
+        if (this.CurrentVideo.url.includes('youtube') || this.CurrentVideo.url.includes('youtu.be')) {
+          this.CurrentPlayerType = PlayerType.YouTube;
+          return;
+        }
+        if (this.CurrentVideo.url.includes('vimeo.com')) {
+          this.CurrentPlayerType = PlayerType.Vimeo;
+          return;
+        }
+        if (this.CurrentVideo.url.includes('twitch.tv') && this.CurrentVideo.url.startsWith('http')) {
+          this.CurrentPlayerType = PlayerType.Twitch;
+          return;
+        }
+        this.CurrentPlayerType = PlayerType.External;
+      } else {
         this.CurrentPlayerType = PlayerType.Nothing;
         return;
       }
-      this.CurrentPlayerType = this.LastPlayerType;
     }
   }
 

@@ -10,7 +10,7 @@ import { hubConnection } from 'src/app/services/signal-r.service';
 export class WhiteboardService {
 
   constructor() { }
-  gallowUser: BehaviorSubject<Member[]> = new BehaviorSubject(null);
+  gallowMember: BehaviorSubject<Member[]> = new BehaviorSubject(null);
   gallowTimer: BehaviorSubject<number> = new BehaviorSubject(null);
   whiteboardUpdate: BehaviorSubject<any> = new BehaviorSubject(null);
   whiteboardJoin: BehaviorSubject<any> = new BehaviorSubject(null);
@@ -44,7 +44,7 @@ export class WhiteboardService {
 
   public addGallowUserListener() {
     hubConnection.on('gallowusers', (data) => {
-      this.gallowUser.next(data);
+      this.gallowMember.next(data);
     });
   }
 

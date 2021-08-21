@@ -1,4 +1,4 @@
-<div class="status-box" [class.fade-out]="nav||fullscreen" (mouseenter)="enterMenu()" (mouseleave)="exitMenu()">
+<div *ngIf="!WhiteboardActive" class="status-box" [class.fade-out]="nav||fullscreen" (mouseenter)="enterMenu()" (mouseleave)="exitMenu()">
     <i class="fa statusbtn pt-2 dreck-tooltip" title="Indicates whether you are host or not" [class.fa-user]="!IsHost" [class.fa-user-circle-o]="IsHost" (click)="!IsHost && SetHost()" [class.pointer]="!IsHost" [class.text-warning]="IsHost" [class.text-info]="!IsHost"></i>
     <span class="badge badge-dreck my-2 block add-video-btn pointer" title="Open a local file to sync the time with" (click)="PlayFile()"><i class="fa fa-file" ></i></span>
     <span class="badge badge-dreck my-2 block pointer" title="Adds video from clipboard" (click)="quickPlay()"><i class="fa fa-plus-circle" ></i></span>
@@ -58,3 +58,4 @@
         <input type="text" tabindex="-1" (keyup.enter)="SetUsername()" placeholder="0.5" class="form-control" id="username-input">
     </div>-->
 </div>
+<span *ngIf="WhiteboardActive" class="badge badge-dreck my-2 block pointer status-box" title="Leave room" (click)="refresh()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>

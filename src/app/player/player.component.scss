@@ -20,6 +20,22 @@
     background-color: #EEE;
 }
 
+.PlayerWindow {
+    padding-right: 0;
+}
+
+.CanvasStyle {
+    height: 100vh;
+    width: 100%;
+    //width: 1280px;
+    //height: 720px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    -webkit-transform: translate(-50%, -50%);
+    transform: translate(-50%, -50%);
+}
+
 .nothing-playing {
     border-left: 1px solid #3369e7;
     border-right: 1px solid #3369e7;

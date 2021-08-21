@@ -33,13 +33,6 @@ ngb-pagination ::ng-deep ul > li:not(.active) > a {
     width: 100%;
 }
 
-.center-content {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-}
-
 .center-absolute {    
     position: absolute;
     left: 50%;

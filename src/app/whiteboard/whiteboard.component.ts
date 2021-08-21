@@ -14,10 +14,12 @@ import {
   CanvasWhiteboardService,
   CanvasWhiteboardUpdate
 } from 'ng2-canvas-whiteboard';
+import { randomIntFromInterval } from '../helper/generic';
 import { Member } from '../Interfaces/Member';
 import {
   WhiteboardService
 } from './whiteboard-service/whiteboard-service.service';
+declare var $: any;
 
 @Component({
   selector: 'app-whiteboard',
@@ -33,9 +35,33 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
   @Input() GallowWord = "";
   GallowMembers: Member[] = [];
   LastIsDrawing = null;
+  LastGallowWord = null;
+  AnonGallowWord = null;
+  ChangeWord = false;
   Init = false;
-  RemainingGallowTime = 90;
-  gallowGuess;
+  NotHidden = [];
+  private _RemainingGallowTime:number = 90;
+
+  get RemainingGallowTime():number {
+    return this._RemainingGallowTime;
+  }
+  set RemainingGallowTime(theBar:number) {    
+    this._RemainingGallowTime = theBar;    
+    if (this.RemainingGallowTime==90&&this.NotHidden.length>0) {
+      this.NotHidden = [];
+    }
+    if (this.RemainingGallowTime<=60&&this.GallowWord.length>2&&this.NotHidden.length<1) {
+      this.AnonGallowWord = this.getAnonWord(this.GallowWord, 1);
+    }
+    if (this.RemainingGallowTime<=30&&this.GallowWord.length>4&&this.NotHidden.length<2) {
+      this.AnonGallowWord = this.getAnonWord(this.GallowWord, 2);
+    }
+    if (this.RemainingGallowTime<=15&&this.GallowWord.length>6&&this.NotHidden.length<3) {
+      this.AnonGallowWord = this.getAnonWord(this.GallowWord, 3);
+    }
+  }
+
+  gallowMember;
   gallowTimer;
   whiteboardJoin;
   whiteboardUpdate;
@@ -61,12 +87,12 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     strokeColorPickerEnabled: false,
     fillColorPickerEnabled: false,
     fillColorPickerText: '',
-    drawingEnabled: this.IsDrawing,
+    drawingEnabled: false,
     batchUpdateTimeoutDuration: 50,
     lineWidth: this.lineWidth,
     scaleFactor: 1,
     startingColor: '#EEEEEE',
-    strokeColor: '#333333',    
+    strokeColor: '#333333',        
   };
   Colors = [
     "#333333",
@@ -95,17 +121,23 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
       this.Init = true;
       this.whiteBoardSerive.getWhiteBoard(this.UniqueId);
     }
+    if (this.LastGallowWord!=this.GallowWord) {
+      this.ChangeWord = true;
+      setTimeout(() => {     
+        this.LastGallowWord = this.GallowWord;
+        this.AnonGallowWord = this.getAnonWord(this.LastGallowWord);
+        this.ChangeWord = false;   
+      }, 250);
+    }
     if (this.LastIsDrawing!=this.IsDrawing) {
-      this.LastIsDrawing = this.IsDrawing;
-      this.ReloadWhiteboard();
-      //this.canvasOptions.fillColorPickerText = this.IsDrawing ? 'Fill' : '';
-      //this.canvasOptions.strokeColorPickerText = this.IsDrawing ? 'Stroke' : '';
-      //this.canvasOptions.strokeColor = this.IsDrawing ? '#333333' : 'transparent';
-      this.canvasOptions = {
-        ...this.canvasOptions,
-        lineWidth: this.lineWidth,
-        drawingEnabled: this.IsDrawing
-      };
+      setTimeout(() => {    
+        this.LastIsDrawing = this.IsDrawing;
+        this.ReloadWhiteboard();
+        this.ShowLeaderboard(true);
+        setTimeout(() => {        
+          this.ShowLeaderboard(false);
+        }, 2500);
+      }, 250);
     }
   }
 
@@ -123,7 +155,7 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
       }
       this.RemainingGallowTime = time;
     });
-    this.gallowGuess = this.whiteBoardSerive.gallowUser.subscribe(members => {
+    this.gallowMember = this.whiteBoardSerive.gallowMember.subscribe(members => {
       if (members == null) {
         return;
       }
@@ -164,7 +196,7 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.gallowGuess.unsubscribe();
+    this.gallowMember.unsubscribe();
     this.gallowTimer.unsubscribe();
     this.whiteboardRedo.unsubscribe();
     this.whiteboardJoin.unsubscribe();
@@ -181,22 +213,42 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     this.whiteBoardSerive.removeWhiteBoardReDoListener();
   }
 
-  getAnonWord() {
+  getAnonWord(GallowWord: string, numsToPush = 0) {
     var AnonWord = "";
-    for (var i = 0; i < this.GallowWord.length; i++) {
-      const char = this.GallowWord.charAt(i);
-      const nextChar = this.GallowWord.charAt(i + 1);
-      const regex = new RegExp("[a-zA-ZäöüÄÖÜß]");
-      if (regex.test(char)) {
+    for (let i = 0; i < numsToPush; i++) {      
+      if (this.NotHidden.length>i) {
+        continue;
+      }
+      var rndInt = -1;
+      while (rndInt<0||this.NotHidden.includes(rndInt)) {        
+        rndInt = randomIntFromInterval(0, GallowWord.length-1);
+      }
+      this.NotHidden.push(rndInt);      
+    }
+    const regex = new RegExp("[a-zA-ZäöüÄÖÜß]");
+    for (var i = 0; i < GallowWord.length; i++) {
+      const char = GallowWord.charAt(i);
+      const nextChar = GallowWord.charAt(i + 1);
+      if (!this.NotHidden.includes(i)&&regex.test(char)) {
         AnonWord += "_";
-        if (regex.test(nextChar)) {
-          AnonWord += " ";
-        }
       } else {
         AnonWord += char;
+      }      
+      if (regex.test(nextChar)) {
+        AnonWord += " ";
       }
     }
     return AnonWord;
+  }
+
+  ShowLeaderboard(show) {
+    setTimeout(() => {        
+      if (show) {
+        $('#LeaderboardCollapse').collapse("show")
+      } else {
+        $('#LeaderboardCollapse').collapse("hide")
+      }
+    }, $('#LeaderboardCollapse').hasClass('collapsing') ? 350 : 0);
   }
 
   NewGallow() {
@@ -206,11 +258,19 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ReloadWhiteboard() {
-    this.reload = true;
-    setTimeout(() => {
-      this.reload = false;
-      this.ClearCanvas();
-    }, 1);
+      this.reload = true;
+      setTimeout(() => {
+        this.reload = false;
+        this.canvasOptions = {
+          ...this.canvasOptions,
+          lineWidth: this.lineWidth,
+          drawingEnabled: this.IsDrawing,
+          strokeColor: this.SelectedColor
+        };   
+        if (this.IsDrawing) {
+          this.ClearCanvas();
+        }
+      }, 1);
   }
 
   ChangeStrokeColor(color) {
@@ -241,7 +301,7 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     if (this.IsDrawing) {
       const halfWidth = this.lineWidth / 2;
       document.getElementById('CustomCursor').style.top= (event.offsetY - halfWidth) + 'px';
-      document.getElementById('CustomCursor').style.left= ((event.offsetX + 15) - halfWidth) + 'px';
+      document.getElementById('CustomCursor').style.left= ((event.offsetX) - halfWidth) + 'px';
     }
   }
 

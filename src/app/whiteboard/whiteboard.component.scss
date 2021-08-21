@@ -13,7 +13,7 @@
 .DrawWord {
     position: fixed;
     left: 50%;
-    transform: translateX(-100%);
+    transform: translateX(-50%);
     top: 10px;
     z-index: 10;
     font-size: 4em;
@@ -24,13 +24,8 @@
     pointer-events: none;
 }
 
-.unselectable {
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -khtml-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+.normal-pointer-events {    
+    pointer-events: all;
 }
 
 .custom-cursor {
@@ -41,9 +36,10 @@
 }
 
 .GallowBoard {
+    min-width: 20%;
     position: fixed;
     bottom: 10px;
-    left: 10px;
+    left: 25px;
     z-index: 10;
     color: #EEE;
     background: #333;
@@ -61,11 +57,11 @@
     display: flex;
     flex-wrap: wrap;
     position: fixed;
-    max-width: 22%;
+    max-width: 25%;
     padding: 10px;
     background: #333;
     bottom: 10px;
-    right: 20%;
+    right: 25px;
     z-index: 10;
     border-radius: 5px;
 }

@@ -18,7 +18,7 @@
             </div>
         </div>
         <div [ngClass]="{'col-9': nav, 'col-12': !nav}">
-            <app-player [nav]="nav" [logout]="logout" [Username]="Username" (toggleChat)="twitchChat=!twitchChat" [fullscreen]="fullscreen" [twitchChat]="twitchChat" [currentTime]="currentTime" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold" (threshholdChange)="Threshhold=$event" (isPlaying)="isPlaying=$event"
+            <app-player [nav]="nav" [logout]="logout" [Username]="Username" (toggleChat)="twitchChat=!twitchChat" [fullscreen]="fullscreen" [twitchChat]="twitchChat" [currentTime]="currentTime" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold" (threshholdChange)="Threshhold=$event" (isPlayingEvent)="isPlaying=$event"
                 (playlistChange)="Playlist=$event"></app-player>
         </div>
     </div>

@@ -64,19 +64,21 @@ export class DreckchatComponent implements OnInit, OnDestroy {
 
   public async SendMessage() {
     const textelement = document.getElementById('textmessage') as HTMLInputElement;
-    const msg = textelement.value;
+    const msg = textelement.value.trim();
     const lowCase = msg.toLocaleLowerCase();
     textelement.value = '';
     if (msg.length === 0)
       return;
-    if (lowCase == '/clear' || lowCase == '/c') {
-      if (this.logout) {
-        this.ClearChat();
+
+    if (lowCase.startsWith('/')) {
+      if (lowCase == '/clear' || lowCase == '/c') {
+        if (this.logout) {
+          this.ClearChat();
+        }
       }
-      return;
-    }
-    if ((lowCase == '/playgallows' || lowCase == '/playgallow' || lowCase == '/gallows' || lowCase == '/gallow' || lowCase == '/galgenraten' || lowCase == '/galgen')) {
-      this.chatService.playGallows(this.UniqueId);
+      if ((lowCase == '/playgallows' || lowCase == '/playgallow' || lowCase == '/gallows' || lowCase == '/gallow' || lowCase == '/galgenraten' || lowCase == '/galgen' || lowCase == '/g')) {
+        this.chatService.playGallows(this.UniqueId);
+      }
       return;
     }
     const chatmessage: ChatMessage = {
