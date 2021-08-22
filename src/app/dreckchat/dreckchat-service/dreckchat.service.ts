@@ -4,6 +4,7 @@ import { ChatMessage } from '../../Interfaces/Chatmessage';
 import { BehaviorSubject } from 'rxjs';
 import { hubConnection, baseUrl } from '../../services/signal-r.service';
 import { HttpClient } from '@angular/common/http';
+import { Language } from 'src/app/Interfaces/Language';
 
 @Injectable({
   providedIn: 'root'
@@ -21,8 +22,8 @@ export class DreckchatService {
   }
 
   public removeMessagesListener() {
-    hubConnection.off('sendmessages', (data) => {
-    });
+    hubConnection.off('sendmessages');
+    this.messages.next(null);
   }
 
   public addMessageListener() {
@@ -32,8 +33,8 @@ export class DreckchatService {
   }
 
   public removeMessageListener() {
-    hubConnection.off('sendmessage', (data) => {
-    });
+    hubConnection.off('sendmessage');
+    this.message.next(null);
   }
 
   public sendMessage(message: ChatMessage, UniqueId: string) {
@@ -48,8 +49,8 @@ export class DreckchatService {
     hubConnection.invoke('ClearChat', UniqueId);
   }
 
-  public playGallows(UniqueId: string) {
-    hubConnection.invoke('PlayGallows', UniqueId);
+  public playGallows(UniqueId: string, language: Language) {
+    hubConnection.invoke('PlayGallows', UniqueId, language);
   }
 
   public async HttpGetMessages(UniqueId: string) {

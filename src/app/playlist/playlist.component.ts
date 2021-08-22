@@ -25,11 +25,12 @@ export class PlaylistComponent implements OnInit, OnDestroy {
   dropped = false;
   failed = false;
   FirstLoad = true;
+  playlistUpdate;
 
   ngOnInit(): void {
     this.readySub = this.ready.subscribe(() => { this.nowPlaying.emit(this.CurrentVideo); });
     this.playlistService.addPlaylistListener();
-    this.playlistService.playlist.subscribe(result => {
+    this.playlistUpdate = this.playlistService.playlist.subscribe(result => {
       if (!result) {
         return;
       }
@@ -37,10 +38,6 @@ export class PlaylistComponent implements OnInit, OnDestroy {
       this.playlistChange.emit(result);
       if (result && result.length > 0) {
         this.CurrentVideo = result[0];
-        if (this.FirstLoad==true) {
-          this.FirstLoad = false;
-          this.nowPlaying.emit(this.CurrentVideo);
-        }
       } else {
         this.nowPlaying.emit(null);
       }
@@ -49,6 +46,8 @@ export class PlaylistComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.readySub.unsubscribe();
+    this.playlistUpdate.unsubscribe();
+    this.playlistService.removePlaylistListener();
   }
 
   public play(url: string) {

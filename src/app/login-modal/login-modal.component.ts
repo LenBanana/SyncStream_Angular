@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, OnChanges, ViewChild, ElementRef, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, Input, OnChanges, ViewChild, ElementRef, Output, EventEmitter, OnDestroy } from '@angular/core';
 import { User } from '../Interfaces/User';
 import { SignalRService } from '../services/signal-r.service';
 import { MainUser } from '../helper/Globals';
@@ -11,7 +11,7 @@ declare var $:any
   templateUrl: './login-modal.component.html',
   styleUrls: ['./login-modal.component.scss']
 })
-export class LoginModalComponent implements OnInit {
+export class LoginModalComponent implements OnInit, OnDestroy {
 
   constructor(public signalRService: SignalRService) { }
   @ViewChild('userLoginInput') userLoginElement: ElementRef;
@@ -23,12 +23,13 @@ export class LoginModalComponent implements OnInit {
   loginError = false;
   userExist = false;
   wrongPw = false;
+  loginRequest;
+  registerRequest;
   
-  ngOnInit(): void {    
-
+  ngOnInit(): void {  
     this.signalRService.AddLoginListener();
     this.signalRService.AddRegisterListener();
-    this.signalRService.loginRequest.subscribe(result => { 
+    this.loginRequest = this.signalRService.loginRequest.subscribe(result => { 
       if (result == null || result.username == null) {
         this.wrongPw = true;
         setTimeout(() => {
@@ -47,7 +48,7 @@ export class LoginModalComponent implements OnInit {
       $('#loginModal').modal('hide');
     });
 
-    this.signalRService.registerRequest.subscribe(result => { 
+    this.registerRequest = this.signalRService.registerRequest.subscribe(result => { 
       if (result == null) {
         this.userExist = true;
         setTimeout(() => {
@@ -64,6 +65,13 @@ export class LoginModalComponent implements OnInit {
       $('#registerModal').modal('show');
     });    
   } 
+
+  ngOnDestroy() {
+    this.signalRService.RemoveLoginListener();
+    this.signalRService.RemoveRegisterListener();
+    this.loginRequest.unsubscribe();
+    this.registerRequest.unsubscribe();
+  }
 
   public LoginRequest() {
     const user: User = this.validateUserRequest();

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { User } from '../Interfaces/User';
 import { SignalRService } from '../services/signal-r.service';
 import { UserAdminService } from './user-admin-service/user-admin.service';
@@ -9,7 +9,7 @@ declare var $:any
   templateUrl: './user-admin-modal.component.html',
   styleUrls: ['./user-admin-modal.component.scss']
 })
-export class UserAdminModalComponent implements OnInit {
+export class UserAdminModalComponent implements OnInit, OnDestroy {
 
   constructor(public userAdminService: UserAdminService, public signalRService: SignalRService) { }
   Users: User[] = [];
@@ -27,10 +27,12 @@ export class UserAdminModalComponent implements OnInit {
   FilterTerm = "";
   Sort = 0;
   Desc = true;
+  userUpdate;
+  tokenUpdate;
 
   ngOnInit(): void {
     this.userAdminService.addUserListener();
-    this.userAdminService.Users.subscribe(users => {
+    this.userUpdate = this.userAdminService.Users.subscribe(users => {
       if (!users) {
         return;
       }      
@@ -38,7 +40,7 @@ export class UserAdminModalComponent implements OnInit {
       this.FilteredUsers = users;
       this.Filter();
     });    
-    this.signalRService.tokenUpdate.subscribe(result => {
+    this.tokenUpdate = this.signalRService.tokenUpdate.subscribe(result => {
       if (!result) {
         return;
       }
@@ -46,6 +48,12 @@ export class UserAdminModalComponent implements OnInit {
       this.UserID = result.userID;
       this.userAdminService.GetUsers(this.Token, this.UserID);
     })
+  }
+
+  ngOnDestroy() {
+    this.userAdminService.removeUserListener();
+    this.userUpdate.unsubscribe();
+    this.tokenUpdate.unsubscribe();
   }
 
   Filter() {

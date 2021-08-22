@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { DownloadService } from './download-service/download-service.service';
 
 @Component({
@@ -6,18 +6,20 @@ import { DownloadService } from './download-service/download-service.service';
   templateUrl: './download-modal.component.html',
   styleUrls: ['./download-modal.component.scss']
 })
-export class DownloadModalComponent implements OnInit {
+export class DownloadModalComponent implements OnInit, OnDestroy {
 
   constructor(public downloadService: DownloadService) { }
 
   listenId: string
   dlStart = false;
   currentStatus = '';
+  dlUpdates;
+
   ngOnInit(): void {
     var uniqid = Date.now() + '' + Math.round((Math.random() * 100000));
     this.listenId = uniqid.toString();
     this.downloadService.addDownloadListener(this.listenId);
-    this.downloadService.dlUpdates.subscribe(update => {
+    this.dlUpdates = this.downloadService.dlUpdates.subscribe(update => {
       this.currentStatus = JSON.stringify(update);
       if (this.currentStatus.includes('completed')) {
         setTimeout(() => {
@@ -25,6 +27,11 @@ export class DownloadModalComponent implements OnInit {
         }, 2000);
       }
     });
+  }
+
+  ngOnDestroy() {
+    this.downloadService.removeDownloadListener(this.listenId);
+    this.dlUpdates.unsubscribe();
   }
 
   downloadRequest() {

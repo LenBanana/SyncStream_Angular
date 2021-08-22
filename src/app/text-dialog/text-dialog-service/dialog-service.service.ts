@@ -18,7 +18,7 @@ export class DialogService {
   }
 
   public removeDialogListener() {
-    hubConnection.off('dialog', (data) => {
-    });
+    hubConnection.off('dialog');
+    this.newDialog.next(null);
   }
 }

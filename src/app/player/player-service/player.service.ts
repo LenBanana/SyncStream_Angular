@@ -23,8 +23,8 @@ export class PlayerService {
   }
 
   public removePlayerListener() {
-    hubConnection.off('videoupdate', (data) => {
-    });
+    hubConnection.off('videoupdate');
+    this.player.next(null);
   }
 
   public addTimeListener() {
@@ -34,8 +34,8 @@ export class PlayerService {
   }
 
   public removeTimeListener() {
-    hubConnection.off('timeupdate', (data) => {
-    });
+    hubConnection.off('timeupdate');
+    this.currentTime.next(null);
   }
 
   public addPauseListener() {
@@ -44,15 +44,20 @@ export class PlayerService {
     });
   }
 
+  public removePauseListener() {
+    hubConnection.off('isplayingupdate');
+    this.isplaying.next(null);
+  }
+
   public addGallowListener() {
     hubConnection.on('playinggallows', (data) => {
       this.playingGallows.next(data);
     });
   }
 
-  public removePauseListener() {
-    hubConnection.off('isplayingupdate', (data) => {
-    });
+  public removeGallowListener() {
+    hubConnection.off('playinggallows');
+    this.playingGallows.next(null);
   }
 
   public PlayPause(isplaying: boolean, UniqueId: string) {

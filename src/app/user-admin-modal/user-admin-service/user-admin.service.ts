@@ -37,6 +37,7 @@ export class UserAdminService {
   }
 
   public removeUserListener() {
-    hubConnection.off('getusers', (data) => {});
+    hubConnection.off('getusers');
+    this.Users.next(null);
   }
 }

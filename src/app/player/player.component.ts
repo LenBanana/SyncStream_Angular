@@ -70,6 +70,8 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   lastTime: number = 0;
   IsPlaying: boolean = false;
   TimeUpdate: any;
+  playlistUpdate;
+  pingUpdate;
   playerUpdate;
   isPlayingUpdate;
   timeUpdate;
@@ -109,6 +111,10 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.IsPlaying) {}
     }, 5000);
     this.addListener();
+    if (( < any > window).onYouTubePlayerAPIReady!=undefined) {
+      this.setInit();
+      return;
+    }
     if (typeof (YT) == 'undefined' || typeof (YT.Player) == 'undefined') {
       var tag = document.createElement('script');
       tag.src = "https://www.youtube.com/iframe_api";
@@ -116,38 +122,43 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
     }
     ( < any > window).onYouTubePlayerAPIReady = () => {
-      const YTElement = document.getElementById('YTPlayer');
-      this.YTPlayer = new YT.Player(YTElement, {
-        events: {
-          onReady: () => {
-            this.Init = true;
-            this.readyEvent.next();
-            this.TimeUpdate = setInterval(() => {
-              var playerState = this.YTPlayer.getPlayerState();
-              if (!this.IsHost) {
-                if (this.IsPlaying && playerState == YT.PlayerState.PAUSED) {
-                  this.playerPlay(true);
-                } else if (!this.IsPlaying && playerState == YT.PlayerState.PLAYING) {
-                  this.playerPause(true);
-                }
-                return;
-              }
-              if (playerState != YT.PlayerState.PAUSED) {
-                const ytTime = this.YTPlayer.getCurrentTime();
-                if (ytTime && ytTime > 0) {
-                  this.SetTime(this.YTPlayer.getCurrentTime());
-                }
-              }
-            }, 250);
-          },
-          onStateChange: (event) => {
-            this.YTStateChange(event);
-          }
-        },
-        width: '100%',
-        height: '100%'
-      });
+      this.setInit();
     };
+    
+  }
+
+  setInit() {
+    const YTElement = document.getElementById('YTPlayer');
+    this.YTPlayer = new YT.Player(YTElement, {
+      events: {
+        onReady: () => {
+          this.Init = true;
+          this.readyEvent.next();
+          this.TimeUpdate = setInterval(() => {
+            var playerState = this.YTPlayer.getPlayerState();
+            if (!this.IsHost) {
+              if (this.IsPlaying && playerState == YT.PlayerState.PAUSED) {
+                this.playerPlay(true);
+              } else if (!this.IsPlaying && playerState == YT.PlayerState.PLAYING) {
+                this.playerPause(true);
+              }
+              return;
+            }
+            if (playerState != YT.PlayerState.PAUSED) {
+              const ytTime = this.YTPlayer.getCurrentTime();
+              if (ytTime && ytTime > 0) {
+                this.SetTime(this.YTPlayer.getCurrentTime());
+              }
+            }
+          }, 250);
+        },
+        onStateChange: (event) => {
+          this.YTStateChange(event);
+        }
+      },
+      width: '100%',
+      height: '100%'
+    });
   }
 
   addListener() {
@@ -156,7 +167,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.playerService.addTimeListener();
     this.playerService.addGallowListener();
     this.signalrService.AddPingListener();    
-    this.playlistService.playlist.subscribe(result => {
+    this.playlistUpdate = this.playlistService.playlist.subscribe(result => {
       if (!result) {
         return;
       }
@@ -165,7 +176,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
         this.CurrentVideo = result[0];
       }
     });
-    this.signalrService.pingStream.subscribe(ping => {
+    this.pingUpdate = this.signalrService.pingStream.subscribe(ping => {
       if (!ping) {
         return;
       }
@@ -263,9 +274,14 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.playerService.removePlayerListener();
     this.playerService.removePauseListener();
     this.playerService.removeTimeListener();
+    this.playerService.removeGallowListener();
+    this.signalrService.RemovePingListener();    
     this.playerUpdate.unsubscribe();
     this.isPlayingUpdate.unsubscribe();
     this.timeUpdate.unsubscribe();
+    this.playingGallows.unsubscribe();
+    this.playlistUpdate.unsubscribe();
+    this.pingUpdate.unsubscribe();
   }
 
   fileChange(file) {
@@ -411,7 +427,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.Init) {
       setTimeout(() => {
         this.setVideoDTO(key, time);
-      }, 100);
+      }, 500);
       return;
     }
     if (!key || !key.url || key.url.length == 0) {

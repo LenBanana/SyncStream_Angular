@@ -34,6 +34,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   @Input() Username: string;
   @Input() logout: boolean;
   @Output() IntervalOff = new EventEmitter();  
+  @Output() isInMenu = new EventEmitter();  
   Members: Member[] = [];
   inMenu = false;
   IsHost: boolean = false;
@@ -45,6 +46,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   Threshhold: number = 0.5;
   currentTimeout;
   UserAdded = false;
+  loginRequest;
 
   @HostListener('document:mousemove', ['$event']) 
   onMouseMove(e) {
@@ -53,10 +55,12 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
     }
     if (this.fullscreen==true&&this.nav==false) {
       this.fullscreen = false;
+      this.isInMenu.emit(true);
     }
     if (this.fullscreen==false&&this.nav==false&&this.inMenu==false) {
       this.currentTimeout = setTimeout(() => {
         this.fullscreen = true;
+        this.isInMenu.emit(false);
       }, 2000);
     }
   }
@@ -96,6 +100,10 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
     }    
   }
 
+  menuEnter(enter) {
+    this.inMenu=enter;
+  }
+
   ChangeHost(isHost: boolean) {
     this.IsHost = isHost;
     if (this.IsHost) {
@@ -111,7 +119,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
       this.signalRService.AddLoginListener();
       this.dialogService.addDialogListener();
     });          
-    this.signalRService.loginRequest.subscribe(result => { 
+    this.loginRequest = this.signalRService.loginRequest.subscribe(result => { 
       if (result == null) {
         return;
       }
@@ -131,8 +139,13 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
     this.cdRef.detectChanges();
   }
 
-  ngOnDestroy() {
-
+  ngOnDestroy() {    
+    if (!hubConnection) {
+      this.signalRService.removeRoomListener();     
+      this.signalRService.RemoveLoginListener();
+      this.dialogService.removeDialogListener();
+      this.loginRequest.unsubscribe();
+    }
   }
 
   toggleNav() {

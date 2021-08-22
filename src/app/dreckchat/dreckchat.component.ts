@@ -13,6 +13,7 @@ import {
   ChatMessage
 } from '../Interfaces/Chatmessage';
 import $ from 'jquery';
+import { Language } from '../Interfaces/Language';
 
 @Component({
   selector: 'app-dreckchat',
@@ -76,8 +77,19 @@ export class DreckchatComponent implements OnInit, OnDestroy {
           this.ClearChat();
         }
       }
-      if ((lowCase == '/playgallows' || lowCase == '/playgallow' || lowCase == '/gallows' || lowCase == '/gallow' || lowCase == '/galgenraten' || lowCase == '/galgen' || lowCase == '/g')) {
-        this.chatService.playGallows(this.UniqueId);
+      if ((lowCase.startsWith('/playgallows') || lowCase.startsWith('/playgallow') || lowCase.startsWith('/gallows') || lowCase.startsWith('/gallow') || lowCase.startsWith('/galgenraten') || lowCase.startsWith('/galgen') || lowCase.startsWith('/g'))) {
+        var lang = lowCase.split(' ')[1]
+        if (lang) {
+          lang = lang.trim();
+          if (lang.startsWith("g")||lang.startsWith("d")) {
+            this.chatService.playGallows(this.UniqueId, Language.German);
+            return;
+          } else if (lang.startsWith("e")) {
+            this.chatService.playGallows(this.UniqueId, Language.English);
+            return;
+          }
+        }
+        this.chatService.playGallows(this.UniqueId, Language.German);        
       }
       return;
     }

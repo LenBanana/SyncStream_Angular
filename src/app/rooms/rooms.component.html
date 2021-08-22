@@ -3,7 +3,7 @@
 <div *ngIf="!SignalR" class="username-container text-center mb-2">
     <span>Please wait until connected to our servers...</span>
 </div>
-<div id="RoomView" *ngIf="!currentRoom && SignalR">
+<div id="RoomView" *ngIf="!currentRoom && SignalR">    
     <div class="header text-center">
         <div class="center-content">
             <span class="globe-icon"><i class="fa fa-globe mr-3" aria-hidden="true"></i></span>
@@ -108,4 +108,6 @@
     <app-user-setting-modal *ngIf="user.username&&logout" [User]="user"></app-user-setting-modal>
     <div style="margin-top: 75px;"></div>
 </div>
-<app-home *ngIf="currentRoom" [UniqueId]="currentRoom" [currentTime]="currentTime" [Username]="user.username" [DelInterval]="delInterval" [logout]="logout" (IntervalOff)="currentRoom=undefined; currentTime=undefined"></app-home>
+
+<span *ngIf="currentRoom" class="badge badge-dreck my-2 block pointer leaveBtn" [class.fade-out]="!inMenu" title="Leave room" (click)="LeaveRoom()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>
+<app-home *ngIf="currentRoom" [UniqueId]="currentRoom" [currentTime]="currentTime" [Username]="user.username" [DelInterval]="delInterval" [logout]="logout" (IntervalOff)="currentRoom=undefined; currentTime=undefined" (isInMenu)="inMenu=$event"></app-home>

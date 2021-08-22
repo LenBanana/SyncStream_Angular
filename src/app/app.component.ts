@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Dialog } from './Interfaces/Dialog';
 import { DialogService } from './text-dialog/text-dialog-service/dialog-service.service';
 declare var $:any
@@ -8,14 +8,15 @@ declare var $:any
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   title = 'DreckTube';
   serverDialog: Dialog = { id: 'server', header: 'Haha', question: '', answer1: 'Ok', answer2: '', yes: null, no: null }
+  dialogUpdate;
 
   constructor(public dialogService: DialogService) {}
 
   ngOnInit()  {   
-    this.dialogService.newDialog.subscribe(dialog => {
+    this.dialogUpdate = this.dialogService.newDialog.subscribe(dialog => {
       if (dialog == null) {
         return;
       }
@@ -25,5 +26,9 @@ export class AppComponent implements OnInit {
       this.serverDialog.answer2 = dialog.answer2;
       $('#dialogModal-server').modal('show');     
     });
+  }
+
+  ngOnDestroy() {
+    this.dialogUpdate.unsubscribe();
   }
 }

@@ -30,9 +30,18 @@ export class UserlistComponent implements OnInit, OnDestroy {
   RoomPassword = "";
   publicIP = "";
   Privileges = 0;
+  userFailUpdate;
+  memberUpdate;
+  hostUpdate;
 
   ngOnDestroy() {
     clearInterval(this.UserUpdate);
+    this.userService.removeMemberListener();
+    this.userService.removeHostListener();
+    this.userService.removeUserListener();
+    this.userFailUpdate.unsubscribe();
+    this.memberUpdate.unsubscribe();
+    this.hostUpdate.unsubscribe();
   }
 
   ngOnInit(): void {
@@ -40,8 +49,17 @@ export class UserlistComponent implements OnInit, OnDestroy {
     this.userService.addMemberListener();
     this.userService.addHostListener();
     this.userService.addUserListener();
-    this.AddUser();
-    this.userService.addUserFail.subscribe(room => {
+    this.AddUser();    
+    this.UserUpdate = setInterval(() => {
+      if (this.DelInterval) {
+        clearInterval(this.UserUpdate);
+        this.userService.removeUser(this.Username, this.UniqueId);
+        this.intervalOff.emit();
+        return;
+      }
+      this.userService.updateUser(this.Username, this.UniqueId);
+    }, 2500);
+    this.userFailUpdate = this.userService.addUserFail.subscribe(room => {
       if (room == null) {
         return;
       }
@@ -60,25 +78,16 @@ export class UserlistComponent implements OnInit, OnDestroy {
         this.FailedPassword = false;
         $('#roomPwModal').modal('hide');        
         this.userAdded.emit();
-        this.UserUpdate = setInterval(async () => {
-          if (this.DelInterval) {
-            clearInterval(this.UserUpdate);
-            this.userService.removeUser(this.Username, this.UniqueId);
-            this.intervalOff.emit();
-            return;
-          }
-          this.userService.updateUser(this.Username, this.UniqueId);
-        }, 2500);
       }
     });
-    this.userService.members.subscribe(members => {
+    this.memberUpdate = this.userService.members.subscribe(members => {
       if (!members) {
         return;
       }
       this.Members = members;
       this.userlistChange.emit(members);
     });
-    this.userService.host.subscribe(ishost => {
+    this.hostUpdate = this.userService.host.subscribe(ishost => {
       if (ishost === true) {
         this.IsHost = true;
         this.isHost.emit(true);

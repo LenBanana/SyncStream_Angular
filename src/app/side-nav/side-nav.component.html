@@ -1,4 +1,4 @@
-<div *ngIf="!WhiteboardActive" class="status-box" [class.fade-out]="nav||fullscreen" (mouseenter)="enterMenu()" (mouseleave)="exitMenu()">
+<div *ngIf="!WhiteboardActive" class="status-box" [class.fade-out]="nav||fullscreen" (mouseenter)="enterMenu(true)" (mouseleave)="enterMenu(false)">
     <i class="fa statusbtn pt-2 dreck-tooltip" title="Indicates whether you are host or not" [class.fa-user]="!IsHost" [class.fa-user-circle-o]="IsHost" (click)="!IsHost && SetHost()" [class.pointer]="!IsHost" [class.text-warning]="IsHost" [class.text-info]="!IsHost"></i>
     <span class="badge badge-dreck my-2 block add-video-btn pointer" title="Open a local file to sync the time with" (click)="PlayFile()"><i class="fa fa-file" ></i></span>
     <span class="badge badge-dreck my-2 block pointer" title="Adds video from clipboard" (click)="quickPlay()"><i class="fa fa-plus-circle" ></i></span>
@@ -40,7 +40,7 @@
 
     <!--<span *ngIf="logout" class="badge badge-dreck my-2 block pointer" title="Start whiteboard" (click)="DrawWhiteboard()"><i class="fa fa-pencil-square-o"></i></span>-->
     <hr>
-    <span class="badge badge-dreck my-2 block pointer" title="Leave room" (click)="refresh()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>
+    <!--<span class="badge badge-dreck my-2 block pointer" title="Leave room" (click)="refresh()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>-->
 
     <span class="badge badge-dreck mt-2 block pointer" title="{{ IsHost ? 'Time updates send to server (changes with ping)' : 'Maximum time difference to host (changes with ping)'}}" (click)="ToggleThreshhold()">
         <i class="fa fa-clock-o"></i><br>
@@ -58,4 +58,4 @@
         <input type="text" tabindex="-1" (keyup.enter)="SetUsername()" placeholder="0.5" class="form-control" id="username-input">
     </div>-->
 </div>
-<span *ngIf="WhiteboardActive" class="badge badge-dreck my-2 block pointer status-box" title="Leave room" (click)="refresh()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>
+<!--<span *ngIf="WhiteboardActive" class="badge badge-dreck my-2 block pointer status-box" title="Leave room" (click)="refresh()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>-->

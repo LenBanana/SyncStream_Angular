@@ -3,7 +3,7 @@ import { Server } from '../Interfaces/server';
 import { Member } from '../Interfaces/Member';
 import { ChatMessage } from '../Interfaces/Chatmessage';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { SignalRService, baseUrl } from '../services/signal-r.service';
 import { ThrowStmt } from '@angular/compiler';
 import { Location } from '@angular/common';
@@ -15,6 +15,7 @@ import { Room } from '../Interfaces/Room';
 import { MainUser } from '../helper/Globals';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
 import { Dialog } from '../Interfaces/Dialog';
+import { UserlistService } from '../userlist/userlist-service/userlist.service';
 
 
 @Component({
@@ -36,6 +37,7 @@ export class RoomsComponent implements OnInit {
   SignalR: boolean = false;
   user: User = { username: "", password: "", id: 0, approved: 0, userprivileges: 0 };
   logout = false;
+  inMenu = true;
   page = 1;
   pageSize = 9;
   
@@ -55,7 +57,7 @@ export class RoomsComponent implements OnInit {
     }
   }
 
-  constructor(private http: HttpClient, private router: Router, public signalRService: SignalRService, public roomService: RoomService, public dialogService: DialogService, private cdRef:ChangeDetectorRef, private loc: Location) {
+  constructor(private route: ActivatedRoute, private userService: UserlistService, private http: HttpClient, private router: Router, public signalRService: SignalRService, public roomService: RoomService, public dialogService: DialogService, private cdRef:ChangeDetectorRef, private loc: Location) {
   // this.GetRooms();
   // this.setIntervals();
   this.onResize();
@@ -70,9 +72,15 @@ export class RoomsComponent implements OnInit {
     }
   }
 
-  ngOnInit() {        
-    this.user.username = 'Anon' + "#" + randomIntFromInterval(100, 10000);
-    this.signalR();
+  ngOnInit() {         
+    this.route.paramMap.subscribe(async params => {      
+      this.user.username = 'Anon' + "#" + randomIntFromInterval(100, 10000);
+      await this.signalR();
+      var room = params.get('UniqueId');
+      if (room&&room.length>0) {
+        this.JoinRoom(room, 0);
+      }
+    });     
   }
 
   trackByFn(index, item: Room) {
@@ -171,6 +179,12 @@ export class RoomsComponent implements OnInit {
     this.loc.go('/room/' + uniqueId);
     this.currentRoom = uniqueId;
     this.currentTime = time;
+  }
+
+  public LeaveRoom() {
+    this.userService.removeUser(this.user.username, this.currentRoom);
+    this.loc.go('/');
+    this.currentRoom = undefined;
   }
 
   public DeleteRoom(uniqueId: string, memberCount: number) {

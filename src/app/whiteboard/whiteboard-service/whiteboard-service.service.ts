@@ -49,7 +49,8 @@ export class WhiteboardService {
   }
 
   public removeGallowUserListener() {
-    hubConnection.off('gallowusers', (data) => {});
+    hubConnection.off('gallowusers');
+    this.gallowMember.next(null);
   }
 
   public addGallowTimerListener() {
@@ -59,7 +60,8 @@ export class WhiteboardService {
   }
 
   public removeGallowTimerListener() {
-    hubConnection.off('gallowtimerupdate', (data) => {});
+    hubConnection.off('gallowtimerupdate');
+    this.gallowTimer.next(null);
   }
 
   public addWhiteBoardJoinListener() {
@@ -69,7 +71,8 @@ export class WhiteboardService {
   }
 
   public removeWhiteBoardJoinListener() {
-    hubConnection.off('whiteboardjoin', (data) => {});
+    hubConnection.off('whiteboardjoin');
+    this.whiteboardJoin.next(null);
   }
 
   public addWhiteBoardListener() {
@@ -79,7 +82,8 @@ export class WhiteboardService {
   }
 
   public removeWhiteBoardListener() {
-    hubConnection.off('whiteboardupdate', (data) => {});
+    hubConnection.off('whiteboardupdate');
+    this.whiteboardUpdate.next(null);
   }
 
   public addWhiteBoardClearListener() {
@@ -89,7 +93,8 @@ export class WhiteboardService {
   }
 
   public removeWhiteBoardClearListener() {
-    hubConnection.off('whiteboardclear', (data) => {});
+    hubConnection.off('whiteboardclear');
+    this.whiteboardClear.next(null);
   }
 
   public addWhiteBoardUnDoListener() {
@@ -99,7 +104,8 @@ export class WhiteboardService {
   }
 
   public removeWhiteBoardUnDoListener() {
-    hubConnection.off('whiteboardundo', (data) => {});
+    hubConnection.off('whiteboardundo');
+    this.whiteboardUndo.next(null);
   }
 
   public addWhiteBoardReDoListener() {
@@ -109,6 +115,7 @@ export class WhiteboardService {
   }
 
   public removeWhiteBoardReDoListener() {
-    hubConnection.off('whiteboardredo', (data) => {});
+    hubConnection.off('whiteboardredo');
+    this.whiteboardRedo.next(null);
   }
 }

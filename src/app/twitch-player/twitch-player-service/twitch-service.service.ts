@@ -19,8 +19,8 @@ export class TwitchService {
   }
 
   public removePlayingListener() {
-    hubConnection.off('twitchPlaying', (data) => {
-    });
+    hubConnection.off('twitchPlaying');
+    this.Playing.next(null);
   }
   
   public addTimeListener() {
@@ -30,7 +30,7 @@ export class TwitchService {
   }
 
   public removeTimeListener() {
-    hubConnection.off('twitchTimeUpdate', (data) => {
-    });
+    hubConnection.off('twitchTimeUpdate');
+    this.Time.next(null);
   }
 }

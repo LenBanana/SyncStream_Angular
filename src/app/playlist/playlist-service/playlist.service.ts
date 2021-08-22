@@ -21,8 +21,8 @@ export class PlaylistService {
   }
 
   public removePlaylistListener() {
-    hubConnection.off('playlistupdate', (data) => {
-    });
+    hubConnection.off('playlistupdate');
+    this.playlist.next(null);
   }
 
   public addVideo(key: VideoDTO, UniqueId: string) {

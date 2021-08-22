@@ -33,6 +33,18 @@ ngb-pagination ::ng-deep ul > li:not(.active) > a {
     width: 100%;
 }
 
+.leaveBtn {
+    position: fixed;
+    top: 25px;
+    left: 17px;
+}
+
+.badge-dreck {
+    background-color: #2c2f33;
+    box-shadow: 0px 0px 5px 0.5px rgba(0, 0, 0, 0.8);
+    z-index: 100;
+}
+
 .center-absolute {    
     position: absolute;
     left: 50%;

@@ -20,8 +20,8 @@ export class DownloadService {
   }
 
   public removeDownloadListener(listeningId: string) {
-    hubConnection.off('dlUpdate' + listeningId, (data) => {
-    });
+    hubConnection.off('dlUpdate' + listeningId);
+    this.dlUpdates.next(null);
   }
 
   public sendDownloadRequst(url: string, filename: string, listeningId: string) {

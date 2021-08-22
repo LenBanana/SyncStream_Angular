@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, ViewChild, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, Input, ViewChild, Output, EventEmitter, OnDestroy } from '@angular/core';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PlaylistService } from '../playlist/playlist-service/playlist.service';
 import { UserlistService } from '../userlist/userlist-service/userlist.service';
@@ -13,7 +13,7 @@ import { PlayerService } from '../player/player-service/player.service';
   templateUrl: './side-nav.component.html',
   styleUrls: ['./side-nav.component.scss']
 })
-export class SideNavComponent implements OnInit {
+export class SideNavComponent implements OnInit, OnDestroy {
 
   constructor(public playlistService: PlaylistService, public playerService: PlayerService, public userService: UserlistService, private location: Location) { }
 
@@ -32,14 +32,13 @@ export class SideNavComponent implements OnInit {
   @Output() usernameChange = new EventEmitter();
   @Output() toggleTwitch = new EventEmitter();
   @Output() menuEnter = new EventEmitter();
-  @Output() menuExit = new EventEmitter();
   @Output() Draw = new EventEmitter();
   Threshhold = false;
   showInput = false;
   showPlaylist = false;
   showUsername = false;
   WhiteboardActive = false;
-  playingGallows
+  playingGallows;
 
   ngOnInit(): void {
     if (this.IsHost) {      
@@ -60,18 +59,18 @@ export class SideNavComponent implements OnInit {
       this.WhiteboardActive = true;
     });
   } 
+
+  ngOnDestroy() {
+    this.playingGallows.unsubscribe();
+  }
   
   refresh(): void {
     this.location.go("/");
     window.location.reload();
   }
 
-  enterMenu() {
-    this.menuEnter.emit();
-  }
-
-  exitMenu() {
-    this.menuExit.emit();
+  enterMenu(enter) {
+    this.menuEnter.emit(enter);
   }
 
   SetHost() {    

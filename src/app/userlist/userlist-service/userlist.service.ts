@@ -40,7 +40,8 @@ export class UserlistService {
   }
 
   public removeUserListener() {
-    hubConnection.off('adduserupdate', (data) => {});
+    hubConnection.off('adduserupdate');
+    this.addUserFail.next(null);
   }
 
   public addMemberListener() {
@@ -50,7 +51,8 @@ export class UserlistService {
   }
 
   public removeMemberListener() {
-    hubConnection.off('userupdate', (data) => {});
+    hubConnection.off('userupdate');
+    this.members.next(null);
   }
 
   public addHostListener() {
@@ -60,7 +62,8 @@ export class UserlistService {
   }
 
   public removeHostListener() {
-    hubConnection.off('hostupdate', (data) => {});
+    hubConnection.off('hostupdate');
+    this.host.next(null);
   }
 
 }

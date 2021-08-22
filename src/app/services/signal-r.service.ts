@@ -34,8 +34,8 @@ export class SignalRService {
   }
 
   public RemoveLoginListener() {
-    hubConnection.off('userlogin', (data) => {
-    });
+    hubConnection.off('userlogin');
+    this.loginRequest.next(null);
   }
 
   public AddRegisterListener() {
@@ -45,8 +45,8 @@ export class SignalRService {
   }
 
   public RemoveRegisterListener() {
-    hubConnection.off('userRegister', (data) => {
-    });
+    hubConnection.off('userRegister');
+    this.registerRequest.next(null);
   }
   
   public LoginRequest(user: User) {
@@ -137,6 +137,7 @@ export class SignalRService {
 
   public removeRoomListener() {
     hubConnection.off('getrooms', (data) => {});
+    this.room.next(null);
   }
 
   public addRoom(room: Room) {
@@ -165,9 +166,14 @@ export class SignalRService {
     });
   }
 
-  public RemoveTokenListener() {
-    hubConnection.off('rememberToken', (data) => {
+  public RemovePingListener() {
+    hubConnection.off('PingTest', (date) => {
     });
+  }
+
+  public RemoveTokenListener() {
+    hubConnection.off('rememberToken');
+    this.tokenUpdate.next(null);
   }
 
   public ValidateToken(token: string, userId: number) {
