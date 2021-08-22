@@ -1,4 +1,4 @@
-<span *ngIf="LastGallowWord" class="DrawWord no-pointer-events" [class.fade-out]="ChangeWord"><span class="no-pointer-events unselectable">{{LastIsDrawing ? LastGallowWord : AnonGallowWord}}</span></span>
+<span *ngIf="LastGallowWord" class="DrawWord no-pointer-events" [class.fade-out]="ChangeWord"><span class="no-pointer-events unselectable" [class.letter-space]="!LastIsDrawing">{{LastIsDrawing ? LastGallowWord : AnonGallowWord}}</span></span>
 
 <div class="GallowBoard" (mouseenter)="ShowLeaderboard(true)" (mouseleave)="ShowLeaderboard(false)">
   <p class="text-center">Leaderboard<br><span class="badge badge-primary badge-info">{{RemainingGallowTime}}s left</span></p>  
@@ -13,7 +13,7 @@
 </div>
 
 <div class="Tools center-bottom op-0" [class.fade-in]="IsDrawing">
-    <input type="range" class="form-range" id="customRange1" min="3" max="50" value="{{lineWidth}}"  #ref (input)="changeStrokeThickness(ref.value)">
+    <input type="range" title="Stroke thickness" class="form-range" id="customRange1" min="3" max="50" value="{{lineWidth}}"  #ref (input)="changeStrokeThickness(ref.value)">
     <i class="fa fa-trash-o fa-3x ml-5 p-2 bg-dark text-light rounded pointer" (click)="ReloadWhiteboard()"></i>
     <i class="fa fa-eraser fa-3x p-2 ml-3 bg-dark text-light rounded pointer" (click)="ChangeStrokeColor('#eee')"></i>
     <i *ngIf="RemainingGallowTime>80" class="fa fa-refresh fa-3x p-2 ml-3 bg-dark text-light rounded pointer" (click)="NewGallow()"></i>

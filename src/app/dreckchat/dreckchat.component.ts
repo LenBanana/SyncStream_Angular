@@ -41,17 +41,18 @@ export class DreckchatComponent implements OnInit, OnDestroy {
     this.chatService.addMessagesListener();
     this.messages = this.chatService.messages.subscribe(result => {
       this.Messages = result;
-      setTimeout(() => $('#messagebox').scrollTop($('#messagebox')[0].scrollHeight), 100);
+      setTimeout(() => $('#messagebox').scrollTop($('#messagebox')[0]?.scrollHeight), 100);
     });
     this.message = this.chatService.message.subscribe(result => {
       if (result == null) {
         return;
       }
+      console.log(result);
       this.Messages.push(result);
       if (this.Messages.length >= 100) {
         this.Messages.shift();
       }
-      setTimeout(() => $('#messagebox').scrollTop($('#messagebox')[0].scrollHeight), 100);
+      setTimeout(() => $('#messagebox').scrollTop($('#messagebox')[0]?.scrollHeight), 100);
     });
     this.chatService.getMessages(this.UniqueId);
   }
@@ -96,7 +97,9 @@ export class DreckchatComponent implements OnInit, OnDestroy {
     const chatmessage: ChatMessage = {
       username: this.Username,
       message: msg.slice(0, 500),
-      time: new Date()
+      time: new Date(),
+      color: '',
+      usercolor: ''
     }
     this.chatService.sendMessage(chatmessage, this.UniqueId);
   }

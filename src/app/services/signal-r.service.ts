@@ -13,8 +13,8 @@ import { Token } from '../helper/Globals';
 
 export var hubConnection: signalR.HubConnection;
 export var CurrentPing: number = 0.5;
-export var baseUrl: string = "https://sync.dreckbu.de/";
-//export var baseUrl: string = "https://localhost:5001/";
+//export var baseUrl: string = "https://sync.dreckbu.de/";
+export var baseUrl: string = "https://localhost:5001/";
 @Injectable({
   providedIn: 'root'
 })

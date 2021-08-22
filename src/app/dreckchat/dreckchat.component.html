@@ -1,7 +1,10 @@
 <div class="chat">
     <ul class="chatstyle pt-4 pr-4" id="messagebox">
-        <li>Hello <span class="username" [class.text-danger]="logout">{{Username}}</span>. You connected <span class="text-success">@{{CurrentDate | date: 'HH:mm:ss'}}</span></li>
-        <li *ngFor="let Message of Messages; let i=index;" tabindex="{{i}}">{{Message.time | date: 'HH:mm:ss'}} <span class="username" [class.text-danger]="logout&&Message.username==Username" [class.other-user]="Message.username!=Username">{{Message.username}}</span>: {{Message.message}}</li>
+        <li>Hello <span class="username" [class.text-warning]="logout">{{Username}}</span>. You connected <span class="text-success">@{{CurrentDate | date: 'HH:mm:ss'}}</span></li>
+        <li *ngFor="let Message of Messages; let i=index;" tabindex="{{i}}">
+            {{Message.time | date: 'HH:mm:ss'}} 
+            <span class="username" [ngStyle]="{'color': Message.usercolor.length > 0 ? Message.usercolor : ''}" [class.text-warning]="logout&&Message.usercolor.length==0&&Message.username==Username" [class.other-user]="Message.usercolor.length==0&&Message.username!=Username">{{Message.username}}</span>: 
+            <span [ngStyle]="{'color': Message.color.length > 0 ? Message.color : '#FFFFFF'}">{{Message.message}}</span></li>
     </ul>
 </div>
 <div class="d-flex pr-4">

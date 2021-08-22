@@ -132,7 +132,10 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     if (this.LastIsDrawing!=this.IsDrawing) {
       setTimeout(() => {    
         this.LastIsDrawing = this.IsDrawing;
-        this.ReloadWhiteboard();
+        this.ChangeStrokeColor('#333333');
+        if (this.IsDrawing) {
+          this.ReloadWhiteboard();
+        }
         this.ShowLeaderboard(true);
         setTimeout(() => {        
           this.ShowLeaderboard(false);
@@ -220,7 +223,7 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
         continue;
       }
       var rndInt = -1;
-      while (rndInt<0||this.NotHidden.includes(rndInt)) {        
+      while (rndInt<0||this.NotHidden.includes(rndInt)||GallowWord.charAt(rndInt).trim().length==0) {        
         rndInt = randomIntFromInterval(0, GallowWord.length-1);
       }
       this.NotHidden.push(rndInt);      
@@ -228,14 +231,10 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     const regex = new RegExp("[a-zA-ZäöüÄÖÜß]");
     for (var i = 0; i < GallowWord.length; i++) {
       const char = GallowWord.charAt(i);
-      const nextChar = GallowWord.charAt(i + 1);
       if (!this.NotHidden.includes(i)&&regex.test(char)) {
         AnonWord += "_";
       } else {
         AnonWord += char;
-      }      
-      if (regex.test(nextChar)) {
-        AnonWord += " ";
       }
     }
     return AnonWord;
@@ -253,6 +252,7 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
 
   NewGallow() {
     if (this.IsDrawing) {
+      this.ReloadWhiteboard();
       this.whiteBoardSerive.NewGallow(this.UniqueId);
     }
   }
@@ -277,7 +277,6 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     this.SelectedColor = color;
     this.canvasOptions = {
       ...this.canvasOptions,
-      lineWidth: this.lineWidth,
       strokeColor: color
     };
   }
