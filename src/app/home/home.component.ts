@@ -114,11 +114,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   }
 
   async InitSignalR() {
-    await this.signalRService.startConnection().finally(() => {
-      this.signalRService.addRoomListener();     
-      this.signalRService.AddLoginListener();
-      this.dialogService.addDialogListener();
-    });          
     this.loginRequest = this.signalRService.loginRequest.subscribe(result => { 
       if (result == null) {
         return;
@@ -141,9 +136,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
 
   ngOnDestroy() {    
     if (!hubConnection) {
-      this.signalRService.removeRoomListener();     
-      this.signalRService.RemoveLoginListener();
-      this.dialogService.removeDialogListener();
       this.loginRequest.unsubscribe();
     }
   }

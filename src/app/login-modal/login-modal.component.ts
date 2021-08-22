@@ -27,8 +27,6 @@ export class LoginModalComponent implements OnInit, OnDestroy {
   registerRequest;
   
   ngOnInit(): void {  
-    this.signalRService.AddLoginListener();
-    this.signalRService.AddRegisterListener();
     this.loginRequest = this.signalRService.loginRequest.subscribe(result => { 
       if (result == null || result.username == null) {
         this.wrongPw = true;
@@ -67,8 +65,6 @@ export class LoginModalComponent implements OnInit, OnDestroy {
   } 
 
   ngOnDestroy() {
-    this.signalRService.RemoveLoginListener();
-    this.signalRService.RemoveRegisterListener();
     this.loginRequest.unsubscribe();
     this.registerRequest.unsubscribe();
   }

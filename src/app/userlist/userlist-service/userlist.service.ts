@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Member } from '../../Interfaces/Member';
 import { BehaviorSubject } from 'rxjs';
-import { hubConnection } from '../../services/signal-r.service';
+import { hubConnection, SignalRService } from '../../services/signal-r.service';
 import { Room } from 'src/app/Interfaces/Room';
 
 @Injectable({
@@ -11,7 +11,20 @@ export class UserlistService {
   members: BehaviorSubject<Member[]> = new BehaviorSubject(null);
   host: BehaviorSubject<boolean> = new BehaviorSubject(null);
   addUserFail: BehaviorSubject<number> = new BehaviorSubject(null);
-  constructor() { }
+  constructor(private signalRService: SignalRService) {
+    signalRService.connectionClosed.subscribe(isClosed => {
+      if (isClosed===false) {
+        this.addHostListener();
+        this.addMemberListener();
+        this.addUserListener();
+      }
+      if (isClosed===true) {
+        this.removeHostListener();
+        this.removeMemberListener();
+        this.removeUserListener();
+      }
+    });
+   }
 
   public addUser(username: string, UniqueId: string, password: string) {
     hubConnection.invoke('AddUser', username, UniqueId, password);

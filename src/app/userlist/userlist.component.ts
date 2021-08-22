@@ -36,9 +36,6 @@ export class UserlistComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     clearInterval(this.UserUpdate);
-    this.userService.removeMemberListener();
-    this.userService.removeHostListener();
-    this.userService.removeUserListener();
     this.userFailUpdate.unsubscribe();
     this.memberUpdate.unsubscribe();
     this.hostUpdate.unsubscribe();
@@ -46,9 +43,6 @@ export class UserlistComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.Privileges = MainUser.userprivileges;
-    this.userService.addMemberListener();
-    this.userService.addHostListener();
-    this.userService.addUserListener();
     this.AddUser();    
     this.UserUpdate = setInterval(() => {
       if (this.DelInterval) {

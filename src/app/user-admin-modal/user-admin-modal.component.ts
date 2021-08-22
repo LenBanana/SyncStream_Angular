@@ -31,7 +31,6 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
   tokenUpdate;
 
   ngOnInit(): void {
-    this.userAdminService.addUserListener();
     this.userUpdate = this.userAdminService.Users.subscribe(users => {
       if (!users) {
         return;
@@ -51,7 +50,6 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.userAdminService.removeUserListener();
     this.userUpdate.unsubscribe();
     this.tokenUpdate.unsubscribe();
   }

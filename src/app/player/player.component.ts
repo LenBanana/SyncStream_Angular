@@ -162,11 +162,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   addListener() {
-    this.playerService.addPlayerListener();
-    this.playerService.addPauseListener();
-    this.playerService.addTimeListener();
-    this.playerService.addGallowListener();
-    this.signalrService.AddPingListener();    
     this.playlistUpdate = this.playlistService.playlist.subscribe(result => {
       if (!result) {
         return;
@@ -270,12 +265,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  removeListener() {
-    this.playerService.removePlayerListener();
-    this.playerService.removePauseListener();
-    this.playerService.removeTimeListener();
-    this.playerService.removeGallowListener();
-    this.signalrService.RemovePingListener();    
+  removeListener() { 
     this.playerUpdate.unsubscribe();
     this.isPlayingUpdate.unsubscribe();
     this.timeUpdate.unsubscribe();

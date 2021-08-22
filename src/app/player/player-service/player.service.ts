@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import * as signalR from "@aspnet/signalr";
 import { VideoDTO } from '../../Interfaces/VideoDTO';
-import { hubConnection, baseUrl } from '../../services/signal-r.service';
+import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
 import { BehaviorSubject } from 'rxjs'; 
 import { HttpClient } from '@angular/common/http';
 
@@ -14,7 +14,22 @@ export class PlayerService {
   isplaying: BehaviorSubject<boolean> = new BehaviorSubject(null);
   playingGallows: BehaviorSubject<string> = new BehaviorSubject(null);
   currentTime: BehaviorSubject<number> = new BehaviorSubject(null);
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private signalRService: SignalRService) {
+    signalRService.connectionClosed.subscribe(isClosed => {
+      if (isClosed===false) {
+        this.addGallowListener();
+        this.addPauseListener();
+        this.addPlayerListener();
+        this.addTimeListener();
+      }
+      if (isClosed===true) {
+        this.removeGallowListener();
+        this.removePauseListener();
+        this.removePlayerListener();
+        this.removeTimeListener();
+      }
+    });
+   }
 
   public addPlayerListener() {
     hubConnection.on('videoupdate', (data) => {

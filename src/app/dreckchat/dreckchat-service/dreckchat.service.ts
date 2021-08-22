@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import * as signalR from "@aspnet/signalr";
 import { ChatMessage } from '../../Interfaces/Chatmessage';
 import { BehaviorSubject } from 'rxjs';
-import { hubConnection, baseUrl } from '../../services/signal-r.service';
+import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
 import { HttpClient } from '@angular/common/http';
 import { Language } from 'src/app/Interfaces/Language';
 
@@ -13,7 +13,18 @@ export class DreckchatService {
 
   messages: BehaviorSubject<ChatMessage[]> = new BehaviorSubject([]);
   message: BehaviorSubject<ChatMessage> = new BehaviorSubject(null);
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private signalRService: SignalRService) {
+    signalRService.connectionClosed.subscribe(isClosed => {
+      if (isClosed===false) {
+        this.addMessageListener();
+        this.addMessagesListener();
+      }
+      if (isClosed===true) {
+        this.removeMessageListener();
+        this.removeMessagesListener();
+      }
+    });
+   }
 
   public addMessagesListener() {
     hubConnection.on('sendmessages', (data) => {

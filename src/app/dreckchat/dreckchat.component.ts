@@ -29,7 +29,7 @@ export class DreckchatComponent implements OnInit, OnDestroy {
   @Input() nav: boolean;
   @Input() logout: boolean;
   @Input() WhiteBoard: boolean;
-  Messages: ChatMessage[];
+  Messages: ChatMessage[] = [];
   CurrentDate: Date = new Date();
   smileys: string[] = ('😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 😘 😗 😙 😚 😋 😜 😝 😛 🤑 🤗 🤓 😎 🤡 🤠 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 😤 😠 😡 😶 😐 😑 😯 😦 😧 😮 😲 😵 😳 😱 😨 😰 😢 😥 🤤 😭 😓 😪 😴 🙄 🤔 🤥 😬 🤐 🤢 🤮 🤧 😷 🤒 🤕 🤨 🤩 🤯 🧐 🤫 🤪 🤭').split(' ');
   showSmileys: boolean = false;
@@ -37,8 +37,6 @@ export class DreckchatComponent implements OnInit, OnDestroy {
   message: any;
 
   ngOnInit(): void {
-    this.chatService.addMessageListener();
-    this.chatService.addMessagesListener();
     this.messages = this.chatService.messages.subscribe(result => {
       this.Messages = result;
       setTimeout(() => $('#messagebox').scrollTop($('#messagebox')[0]?.scrollHeight), 100);
@@ -47,7 +45,9 @@ export class DreckchatComponent implements OnInit, OnDestroy {
       if (result == null) {
         return;
       }
-      console.log(result);
+      if (this.Messages==null) {
+        this.Messages = [];
+      }
       this.Messages.push(result);
       if (this.Messages.length >= 100) {
         this.Messages.shift();
@@ -58,8 +58,6 @@ export class DreckchatComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.chatService.removeMessageListener();
-    this.chatService.removeMessagesListener();
     this.messages.unsubscribe();
     this.message.unsubscribe();
   }

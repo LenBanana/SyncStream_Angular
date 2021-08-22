@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { hubConnection, baseUrl } from '../../services/signal-r.service';
+import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
 import { BehaviorSubject, from } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { User } from 'src/app/Interfaces/User';
@@ -11,7 +11,16 @@ import { RememberToken } from 'src/app/Interfaces/RememberToken';
 export class UserAdminService {
 
   Users: BehaviorSubject<User[]> = new BehaviorSubject(null);
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private signalRService: SignalRService) {
+    signalRService.connectionClosed.subscribe(isClosed => {
+      if (isClosed===false) {
+        this.addUserListener();
+      }
+      if (isClosed===true) {
+        this.removeUserListener();
+      }
+    });
+   }
 
 
   public GetUsers(token: string, userID: number) {

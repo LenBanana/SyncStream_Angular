@@ -2,14 +2,35 @@ import { Injectable } from '@angular/core';
 import { CanvasWhiteboardUpdate } from 'ng2-canvas-whiteboard';
 import { BehaviorSubject } from 'rxjs';
 import { Member } from 'src/app/Interfaces/Member';
-import { hubConnection } from 'src/app/services/signal-r.service';
+import { hubConnection, SignalRService } from 'src/app/services/signal-r.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class WhiteboardService {
 
-  constructor() { }
+  constructor(private signalRService: SignalRService) {
+    signalRService.connectionClosed.subscribe(isClosed => {
+      if (isClosed===false) {
+        this.addGallowTimerListener();
+        this.addGallowUserListener();
+        this.addWhiteBoardClearListener();
+        this.addWhiteBoardJoinListener();
+        this.addWhiteBoardListener();
+        this.addWhiteBoardReDoListener();
+        this.addWhiteBoardUnDoListener();
+      }
+      if (isClosed===true) {
+        this.removeGallowTimerListener();
+        this.removeGallowUserListener();
+        this.removeWhiteBoardClearListener();
+        this.removeWhiteBoardJoinListener();
+        this.removeWhiteBoardListener();
+        this.removeWhiteBoardReDoListener();
+        this.removeWhiteBoardUnDoListener();
+      }
+    });
+   }
   gallowMember: BehaviorSubject<Member[]> = new BehaviorSubject(null);
   gallowTimer: BehaviorSubject<number> = new BehaviorSubject(null);
   whiteboardUpdate: BehaviorSubject<any> = new BehaviorSubject(null);

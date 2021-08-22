@@ -59,13 +59,9 @@ export class TwitchPlayerComponent implements OnChanges, OnInit, OnDestroy {
           }
         }
     }, 500);
-    this.twitchService.addPlayingListener();
-    this.twitchService.addTimeListener();
   }
 
   ngOnDestroy() {
-    this.twitchService.removePlayingListener();
-    this.twitchService.removeTimeListener();
     this.PlayingEvent.unsubscribe();
     this.TimeEvent.unsubscribe();
     clearInterval(this.TimeInterval);

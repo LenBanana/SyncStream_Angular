@@ -145,13 +145,6 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.whiteBoardSerive.addGallowUserListener();
-    this.whiteBoardSerive.addGallowTimerListener();
-    this.whiteBoardSerive.addWhiteBoardListener();
-    this.whiteBoardSerive.addWhiteBoardJoinListener();
-    this.whiteBoardSerive.addWhiteBoardClearListener();
-    this.whiteBoardSerive.addWhiteBoardUnDoListener();
-    this.whiteBoardSerive.addWhiteBoardReDoListener();
     this.gallowTimer = this.whiteBoardSerive.gallowTimer.subscribe(time => {
       if (time == null) {
         return;
@@ -207,13 +200,6 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     this.whiteboardClear.unsubscribe();
     this.whiteboardUndo.unsubscribe();
     this.whiteboardRedo.unsubscribe();
-    this.whiteBoardSerive.removeGallowUserListener();
-    this.whiteBoardSerive.removeGallowTimerListener();
-    this.whiteBoardSerive.removeWhiteBoardListener();
-    this.whiteBoardSerive.removeWhiteBoardJoinListener();
-    this.whiteBoardSerive.removeWhiteBoardClearListener();
-    this.whiteBoardSerive.removeWhiteBoardUnDoListener();
-    this.whiteBoardSerive.removeWhiteBoardReDoListener();
   }
 
   getAnonWord(GallowWord: string, numsToPush = 0) {

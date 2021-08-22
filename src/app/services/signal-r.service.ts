@@ -10,7 +10,6 @@ import { randomIntFromInterval } from '../helper/generic';
 import { User } from '../Interfaces/User';
 import { Room } from '../Interfaces/Room';
 import { Token } from '../helper/Globals';
-
 export var hubConnection: signalR.HubConnection;
 export var CurrentPing: number = 0.5;
 //export var baseUrl: string = "https://sync.dreckbu.de/";
@@ -22,7 +21,7 @@ export var baseUrl: string = "https://localhost:5001/";
 export class SignalRService {
   room: BehaviorSubject <Room[]> = new BehaviorSubject([]);
   tokenUpdate: BehaviorSubject<RememberToken> = new BehaviorSubject(null);
-  connectionClosed: BehaviorSubject < boolean > = new BehaviorSubject(false);
+  connectionClosed: BehaviorSubject < boolean > = new BehaviorSubject(null);
   loginRequest: BehaviorSubject<User> = new BehaviorSubject(null);
   registerRequest: BehaviorSubject<User> = new BehaviorSubject(null);
   pingStream: BehaviorSubject<number> = new BehaviorSubject(CurrentPing);
@@ -75,8 +74,13 @@ export class SignalRService {
 
     await this.connect().finally(() => {
       hubConnection.onclose(() => {
+        console.log("Connection closed... Attempting to reconnect");  
         this.connectionClosed.next(true);
-        console.log("Connection closed... Attempting to reconnect");
+        this.removeRoomListener();
+        this.RemoveLoginListener();
+        this.RemoveRegisterListener();
+        this.RemovePingListener();
+        this.RemoveTokenListener();   
         setTimeout(() => {
           this.connect();
         }, 1000);
@@ -88,9 +92,14 @@ export class SignalRService {
     await hubConnection
       .start()
       .then(() => {
-        console.log('Connection started');
-        this.AddTokenListener();        
+        console.log('Connection started');        
+        this.addRoomListener();
+        this.AddLoginListener();
+        this.AddRegisterListener();
         this.AddPingListener();
+        this.AddTokenListener();      
+        this.connectionClosed.next(false); 
+
         var token = this.getCookie("login-token");
         var userId = this.getCookie("user-id");
         if (token==undefined) {
@@ -100,7 +109,6 @@ export class SignalRService {
           userId = "-1";
         }
         this.ValidateToken(token, Number.parseInt(userId));
-        this.connectionClosed.next(false);
       })
       .catch(async err => {
         console.log('Error while starting connection: ' + err + '... Attempting to reconnect');

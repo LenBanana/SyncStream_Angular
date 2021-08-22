@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import * as signalR from "@aspnet/signalr";
 import { VideoDTO } from '../../Interfaces/VideoDTO';
-import { hubConnection, baseUrl } from '../../services/signal-r.service';
+import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
 import { BehaviorSubject, from } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 
@@ -11,7 +11,16 @@ import { HttpClient } from '@angular/common/http';
 export class PlaylistService {
 
   playlist: BehaviorSubject<VideoDTO[]> = new BehaviorSubject(null);
-  constructor(private http: HttpClient) { }
+  constructor(private http: HttpClient, private signalRService: SignalRService) {
+    signalRService.connectionClosed.subscribe(isClosed => {
+      if (isClosed===false) {
+        this.addPlaylistListener();
+      }
+      if (isClosed===true) {
+        this.removePlaylistListener();
+      }
+    });
+   }
 
 
   public addPlaylistListener() {
