@@ -29,6 +29,8 @@ import { UserAdminModalComponent } from './user-admin-modal/user-admin-modal.com
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 import { UserSettingModalComponent } from './user-setting-modal/user-setting-modal.component';
 import { SpotifyPlayerComponent } from './spotify-player/spotify-player.component';
+import { BlackjackGameComponent } from './blackjack-game/blackjack-game.component';
+import { BjPlayingCardsComponent } from './bj-playing-cards/bj-playing-cards.component';
 
 @NgModule({
   declarations: [
@@ -52,7 +54,9 @@ import { SpotifyPlayerComponent } from './spotify-player/spotify-player.componen
     WhiteboardComponent,
     UserAdminModalComponent,
     UserSettingModalComponent,
-    SpotifyPlayerComponent
+    SpotifyPlayerComponent,
+    BlackjackGameComponent,
+    BjPlayingCardsComponent
   ],
   imports: [
     BrowserModule,

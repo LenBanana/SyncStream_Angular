@@ -34,7 +34,7 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
   @Input() IsDrawing = false;
   @Input() GallowWord = "";
   GallowMembers: Member[] = [];
-  LastIsDrawing = null;
+  LastIsDrawing = false;
   LastGallowWord = null;
   AnonGallowWord = null;
   ChangeWord = false;
@@ -47,7 +47,7 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
   }
   set RemainingGallowTime(theBar:number) {    
     this._RemainingGallowTime = theBar;    
-    if (this.RemainingGallowTime==90&&this.NotHidden.length>0) {
+    if (this.RemainingGallowTime>60&&this.NotHidden.length>0) {
       this.NotHidden = [];
     }
     if (this.RemainingGallowTime<=60&&this.GallowWord.length>2&&this.NotHidden.length<1) {
@@ -132,9 +132,9 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     if (this.LastIsDrawing!=this.IsDrawing) {
       setTimeout(() => {    
         this.LastIsDrawing = this.IsDrawing;
-        this.ChangeStrokeColor('#333333');
+        this.ReloadWhiteboard();
         if (this.IsDrawing) {
-          this.ReloadWhiteboard();
+          this.ChangeStrokeColor('#333333');
         }
         this.ShowLeaderboard(true);
         setTimeout(() => {        
@@ -263,6 +263,8 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     this.SelectedColor = color;
     this.canvasOptions = {
       ...this.canvasOptions,
+      lineWidth: this.lineWidth,
+      drawingEnabled: this.IsDrawing,
       strokeColor: color
     };
   }

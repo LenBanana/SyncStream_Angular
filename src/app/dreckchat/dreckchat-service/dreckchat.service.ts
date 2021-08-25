@@ -60,8 +60,8 @@ export class DreckchatService {
     hubConnection.invoke('ClearChat', UniqueId);
   }
 
-  public playGallows(UniqueId: string, language: Language) {
-    hubConnection.invoke('PlayGallows', UniqueId, language);
+  public playGallows(UniqueId: string, language: Language, drawTime: number = 90) {
+    hubConnection.invoke('PlayGallows', UniqueId, language, drawTime);
   }
 
   public async HttpGetMessages(UniqueId: string) {

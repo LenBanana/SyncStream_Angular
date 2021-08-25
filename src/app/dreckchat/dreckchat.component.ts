@@ -78,17 +78,27 @@ export class DreckchatComponent implements OnInit, OnDestroy {
       }
       if ((lowCase.startsWith('/playgallows') || lowCase.startsWith('/playgallow') || lowCase.startsWith('/gallows') || lowCase.startsWith('/gallow') || lowCase.startsWith('/galgenraten') || lowCase.startsWith('/galgen') || lowCase.startsWith('/g'))) {
         var lang = lowCase.split(' ')[1]
+        var gameTimeString = lowCase.split(' ')[2]
+        var gameLanguage = Language.German;
+        var gameTime = 90;
         if (lang) {
           lang = lang.trim();
-          if (lang.startsWith("g")||lang.startsWith("d")) {
-            this.chatService.playGallows(this.UniqueId, Language.German);
-            return;
-          } else if (lang.startsWith("e")) {
-            this.chatService.playGallows(this.UniqueId, Language.English);
-            return;
+          if (lang.startsWith("e")) {
+            gameLanguage = Language.English;
           }
         }
-        this.chatService.playGallows(this.UniqueId, Language.German);        
+        var langAsTime = Number.parseInt(lang);
+        if (!isNaN(langAsTime)) {
+          gameTime = langAsTime;
+        }
+        if (gameTimeString&&gameTime==90) {
+          gameTimeString = gameTimeString.trim();
+          gameTime = Number.parseInt(gameTimeString);
+          if (isNaN(gameTime)) {
+            gameTime = 90;
+          }
+        }
+        this.chatService.playGallows(this.UniqueId, gameLanguage, gameTime);        
       }
       return;
     }
