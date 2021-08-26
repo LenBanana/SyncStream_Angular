@@ -2,3 +2,19 @@ playing-card {
   --card-size: 5rem;
   background: linear-gradient(#e66465, #9198e5);
 }
+
+.pcard {  
+  width: 4vw;
+}
+
+.CardBig {
+  width: 5vw;
+}
+
+.SpacingSmall {  
+  margin-left: -3.2vw !important;
+}
+
+.SpacingBig {  
+  margin-left: -4.2vw !important;
+}

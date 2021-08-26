@@ -100,6 +100,9 @@ export class DreckchatComponent implements OnInit, OnDestroy {
         }
         this.chatService.playGallows(this.UniqueId, gameLanguage, gameTime);        
       }
+      if ((lowCase.startsWith('/playblackjack') || lowCase.startsWith('/playbj') || lowCase.startsWith('/blackjack') || lowCase.startsWith('/bj') || lowCase.startsWith('/b'))) {
+        this.chatService.playBlackjack(this.UniqueId);
+      }
       return;
     }
     const chatmessage: ChatMessage = {

@@ -107,7 +107,6 @@
     <app-user-setting-modal *ngIf="user.username&&logout" [User]="user"></app-user-setting-modal>
     <div style="margin-top: 75px;"></div>
 </div>
-<app-bj-playing-cards></app-bj-playing-cards>
 
 <span *ngIf="currentRoom" class="badge badge-dreck my-2 block pointer leaveBtn" [class.fade-out]="!inMenu" title="Leave room" (click)="LeaveRoom()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>
 <app-home *ngIf="currentRoom" [UniqueId]="currentRoom" [currentTime]="currentTime" [Username]="user.username" [DelInterval]="delInterval" [logout]="logout" (IntervalOff)="currentRoom=undefined; currentTime=undefined" (isInMenu)="inMenu=$event"></app-home>

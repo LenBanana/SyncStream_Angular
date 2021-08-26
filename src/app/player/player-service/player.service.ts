@@ -13,16 +13,19 @@ export class PlayerService {
   player: BehaviorSubject<VideoDTO> = new BehaviorSubject(null);
   isplaying: BehaviorSubject<boolean> = new BehaviorSubject(null);
   playingGallows: BehaviorSubject<string> = new BehaviorSubject(null);
+  playingBlackjack: BehaviorSubject<boolean> = new BehaviorSubject(null);
   currentTime: BehaviorSubject<number> = new BehaviorSubject(null);
   constructor(private http: HttpClient, private signalRService: SignalRService) {
     signalRService.connectionClosed.subscribe(isClosed => {
       if (isClosed===false) {
+        this.addBlackjackListener();
         this.addGallowListener();
         this.addPauseListener();
         this.addPlayerListener();
         this.addTimeListener();
       }
       if (isClosed===true) {
+        this.removeBlackjackListener();
         this.removeGallowListener();
         this.removePauseListener();
         this.removePlayerListener();
@@ -73,6 +76,17 @@ export class PlayerService {
   public removeGallowListener() {
     hubConnection.off('playinggallows');
     this.playingGallows.next(null);
+  }
+
+  public addBlackjackListener() {
+    hubConnection.on('playblackjack', (data) => {
+      this.playingBlackjack.next(data);
+    });
+  }
+
+  public removeBlackjackListener() {
+    hubConnection.off('playblackjack');
+    this.playingBlackjack.next(null);
   }
 
   public PlayPause(isplaying: boolean, UniqueId: string) {

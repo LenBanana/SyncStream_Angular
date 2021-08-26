@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
+import { PlayingCard } from '../Interfaces/Games/blackjack';
 
 @Component({
   selector: 'app-bj-playing-cards',
@@ -7,6 +8,8 @@ import { Component, OnInit } from '@angular/core';
 })
 export class BjPlayingCardsComponent implements OnInit {
 
+  @Input() PlayingCards: PlayingCard[];
+  @Input() IsYourCards: boolean = true;
   constructor() { }
 
   ngOnInit(): void {

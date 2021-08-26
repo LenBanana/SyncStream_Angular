@@ -59,6 +59,8 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   @Output() threshholdChange = new EventEmitter();
   GallowWord = "";
   playingGallows;
+  
+  playingBlackjack;
 
   YTPlayer: YT.Player;
   readyEvent: Subject < void > = new Subject < void > ();
@@ -185,6 +187,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
         this.threshholdChange.emit(this.Threshhold);
       }
     });
+    //Listener for gallow games
     this.playingGallows = this.playerService.playingGallows.subscribe(playGallows => {
       if (playGallows == null || !playGallows) {
         return;
@@ -196,6 +199,34 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       this.GallowWord = playGallows;
       this.DrawWhiteboard(true);
     });
+    this.playerUpdate = this.playerService.player.subscribe(event => {
+      if (!this.YTPlayer) {
+        return;
+      }
+      if (!event || !event.url) {
+        return;
+      }
+      this.setVideoDTO(event, 0);
+    });
+    //Listener for blackjack games
+    this.playingBlackjack = this.playerService.playingBlackjack.subscribe(playBlackjack => {
+      if (playBlackjack == null) {
+        return;
+      }
+      console.log(playBlackjack);
+      if (playBlackjack === true) {
+        this.LastPlayerType = this.CurrentPlayerType;
+        this.CurrentPlayerType = PlayerType.Blackjack;        
+        if (this.IsHost) {
+          this.playerService.PlayPause(false, this.UniqueId);
+        }
+        this.playerPause(true);
+      }
+      if (playBlackjack === false) {
+        this.ResetPlayerType();        
+      }
+    });
+
     this.playerUpdate = this.playerService.player.subscribe(event => {
       if (!this.YTPlayer) {
         return;
@@ -272,6 +303,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.playingGallows.unsubscribe();
     this.playlistUpdate.unsubscribe();
     this.pingUpdate.unsubscribe();
+    this.playingBlackjack.unsubscribe();
   }
 
   fileChange(file) {
@@ -421,7 +453,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     if (!key || !key.url || key.url.length == 0) {
-      if (this.CurrentPlayerType != PlayerType.WhiteBoard) {
+      if (this.CurrentPlayerType != PlayerType.WhiteBoard && this.CurrentPlayerType != PlayerType.Blackjack) {
         this.CurrentPlayerType = PlayerType.Nothing;
         setTimeout(() => {
           this.YTPlayer.pauseVideo();
@@ -544,24 +576,28 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       }
       this.playerPause(true);
     } else {
-      if (this.Playlist.length > 0) {
-        if (this.CurrentVideo.url.includes('youtube') || this.CurrentVideo.url.includes('youtu.be')) {
-          this.CurrentPlayerType = PlayerType.YouTube;
-          return;
-        }
-        if (this.CurrentVideo.url.includes('vimeo.com')) {
-          this.CurrentPlayerType = PlayerType.Vimeo;
-          return;
-        }
-        if (this.CurrentVideo.url.includes('twitch.tv') && this.CurrentVideo.url.startsWith('http')) {
-          this.CurrentPlayerType = PlayerType.Twitch;
-          return;
-        }
-        this.CurrentPlayerType = PlayerType.External;
-      } else {
-        this.CurrentPlayerType = PlayerType.Nothing;
+      this.ResetPlayerType();
+    }
+  }
+
+  public ResetPlayerType() {
+    if (this.Playlist.length > 0) {
+      if (this.CurrentVideo.url.includes('youtube') || this.CurrentVideo.url.includes('youtu.be')) {
+        this.CurrentPlayerType = PlayerType.YouTube;
         return;
       }
+      if (this.CurrentVideo.url.includes('vimeo.com')) {
+        this.CurrentPlayerType = PlayerType.Vimeo;
+        return;
+      }
+      if (this.CurrentVideo.url.includes('twitch.tv') && this.CurrentVideo.url.startsWith('http')) {
+        this.CurrentPlayerType = PlayerType.Twitch;
+        return;
+      }
+      this.CurrentPlayerType = PlayerType.External;
+    } else {
+      this.CurrentPlayerType = PlayerType.Nothing;
+      return;
     }
   }
 
@@ -577,5 +613,6 @@ export enum PlayerType {
   Twitch,
   Vimeo,
   External,
-  WhiteBoard
+  WhiteBoard,
+  Blackjack
 }

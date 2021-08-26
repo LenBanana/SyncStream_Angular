@@ -1,1 +1,81 @@
-<p>blackjack-game works!</p>
+<div class="row justify-content-center mb-5 pb-5 DealerView">
+  <div *ngIf="dealer" class="CardBack col-4 rounded-bottom">
+    <p>Dealer</p>
+    <p>{{dealer.name}} - {{dealer.pointsDTO}}</p>
+    <app-bj-playing-cards [PlayingCards]="dealer.cards"></app-bj-playing-cards>
+  </div>
+</div>
+
+<div class="row justify-content-center mb-5 pb-5 MemberCards">
+  <div *ngFor="let member of members" class="col-1 px-md-4 col-onehalf">
+    <div class="p-3 CardBack rounded">
+      <p>{{member.username}} - {{member.points}}</p>
+      <p class="d-flex justify-content-between align-items-center"><span class="text-left">Money </span><span
+          class="badge badge-info">{{member.money}}</span></p>
+      <p class="d-flex justify-content-between align-items-center"><span class="text-left">Bet </span><span
+          class="badge badge-info">{{member.bet}}</span></p>
+      <app-bj-playing-cards [PlayingCards]="member.cards" [IsYourCards]="false"></app-bj-playing-cards>
+    </div>
+  </div>
+</div>
+
+<div class="row justify-content-center SelfView">
+  <div *ngIf="self" class="CardBack col-4 rounded-top">
+    <p>{{self.username}} - {{self.points}}</p>
+    <p class="d-flex justify-content-between align-items-center"><span class="text-left">Money </span><span
+        class="badge badge-info">{{self.money}}</span></p>
+    <p class="d-flex justify-content-between align-items-center"><span class="text-left">Bet </span><span
+        class="badge badge-info">{{self.bet}}</span></p>
+    <app-bj-playing-cards [PlayingCards]="self.cards"></app-bj-playing-cards>
+  </div>
+</div>
+
+<div *ngIf="self" class="modal fade in" id="bjBetModal" data-keyboard="false" data-backdrop="static">
+  <div class="vertical-alignment-helper">
+    <div class="modal-dialog vertical-align-center">
+      <div class="modal-content bg-dark">
+        <div class="modal-header">
+          <h4>Set your bet - {{timeoutTimer}}</h4>
+        </div>
+        <div class="modal-body p-5">
+          <div class="form-group">
+            <label>Bet amount</label>
+            <div class="input-group input-group-sm">
+              <input [(ngModel)]="BetAmount" type="number" (keyup.enter)="SetBet()" class="form-control"
+                [class.is-invalid]="BetAmount<5||BetAmount>200||self.money<BetAmount" placeholder="Bet amount" style="font-size: 1.75vh;">
+              <div class="input-group-append">
+                <button type="button" class="btn btn-success px-3" (click)="SetBet()"><i class="fa fa-check"
+                    aria-hidden="true"></i></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div *ngIf="self" class="modal fade in" id="bjPullModal" data-keyboard="false" data-backdrop="static">
+  <div class="vertical-alignment-helper">
+    <div class="modal-dialog vertical-align-center">
+      <div class="modal-content bg-dark">
+        <div class="modal-header">
+          <h4>Choose to pull a card - {{timeoutTimer}}</h4>
+        </div>
+        <div class="modal-body text-center">
+          <h3>{{self.points}}</h3>
+          <app-bj-playing-cards [PlayingCards]="self.cards"></app-bj-playing-cards>
+        </div>
+        <div class="modal-footer">
+          <button (click)="Pull(true, false)" type="button" class="btn btn-success mr-auto font-weight-bold"><i
+              class="fa ml-1 fa-check" aria-hidden="true"></i> Pull card</button>
+          <button *ngIf="doubleOption&&self.money>=(BetAmount*2)" (click)="Pull(false, true)" type="button"
+            class="btn btn-primary mr-auto font-weight-bold"><i class="fa ml-1 fa-angle-double-up"
+              aria-hidden="true"></i> Double</button>
+          <button (click)="Pull(false, false)" type="button" class="btn btn-danger font-weight-bold"><i
+              class="fa ml-1 fa-times" aria-hidden="true"></i> Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

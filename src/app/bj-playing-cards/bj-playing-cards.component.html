@@ -1,4 +1,6 @@
 <div class="hand active-hand hhand-compact">
-    <img class='pcard' src='assets/AS.svg' title="Ace of spades">
-    <img class='pcard' src='assets/KS.svg' title="King of spades">
+    <ng-container *ngFor="let card of PlayingCards; let first = first">
+        <img *ngIf="card.faceUp" class='pcard' [class.SpacingBig]="!first&&IsYourCards" [class.SpacingSmall]="!first&&!IsYourCards" [class.CardBig]="IsYourCards" src='assets/{{card.rankS}}{{card.suitS}}.svg' title="{{card.cardName}}">
+        <img *ngIf="!card.faceUp" class='pcard' [class.SpacingBig]="!first&&IsYourCards" [class.SpacingSmall]="!first&&!IsYourCards" [class.CardBig]="IsYourCards" src='assets/Red_Back.svg' title="Back of card">
+    </ng-container>
 </div>

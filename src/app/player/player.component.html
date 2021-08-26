@@ -27,6 +27,11 @@
       <app-whiteboard [UniqueId]="UniqueId" [IsDrawing]="IsHost" [class.vh-90]="!nav" [GallowWord]="GallowWord">
       </app-whiteboard>
     </div>
+    
+    <div *ngIf="CurrentPlayerType==playerType.Blackjack">
+      <app-blackjack-game [UniqueId]="UniqueId" [class.vh-90]="!nav">
+      </app-blackjack-game>
+    </div>
   </div>
   <div class="transition vh-big col-2 border-left-dark" [class.none]="(!twitchChat && CurrentPlayerType != playerType.WhiteBoard) || CurrentPlayerType==playerType.Twitch">
     <app-dreckchat [nav]="nav" [logout]="logout" [UniqueId]="UniqueId" [Username]="Username" [WhiteBoard]="CurrentPlayerType==playerType.WhiteBoard"></app-dreckchat>
