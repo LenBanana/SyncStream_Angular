@@ -10,6 +10,7 @@ import { hubConnection, SignalRService } from 'src/app/services/signal-r.service
 export class BlackjackService {
 
   askPullUpdate: BehaviorSubject<boolean> = new BehaviorSubject(null);
+  askSplitPullUpdate: BehaviorSubject<boolean> = new BehaviorSubject(null);
   askBetUpdate: BehaviorSubject<boolean> = new BehaviorSubject(null);
   dealerUpdate: BehaviorSubject<BlackjackDealer> = new BehaviorSubject(null);
   selfUpdate: BehaviorSubject<BlackjackMember> = new BehaviorSubject(null);
@@ -19,6 +20,7 @@ export class BlackjackService {
       if (isClosed===false) {
         this.addAskBetListener();
         this.addAskPullListener();
+        this.addAskSplitPullListener();
         this.addBlackjackDealerListener();
         this.addBlackjackMemberListener();
         this.addBlackjackSelfListener();
@@ -26,6 +28,7 @@ export class BlackjackService {
       if (isClosed===true) {
         this.removeAskBetListener();
         this.removeAskPullListener();
+        this.removeAskSplitPullListener();
         this.removeBlackjackDealerListener();
         this.removeBlackjackMemberListener();
         this.removeBlackjackSelfListener();
@@ -33,6 +36,14 @@ export class BlackjackService {
     });
    }
    
+  public pushAllNull() {
+    this.askBetUpdate.next(null);
+    this.askPullUpdate.next(null);
+    this.askSplitPullUpdate.next(null);
+    this.selfUpdate.next(null);
+    this.membersUpdate.next(null);
+    this.dealerUpdate.next(null);
+  }
 
   public addAskBetListener() {
     hubConnection.on('askforbet', (data) => {
@@ -54,6 +65,17 @@ export class BlackjackService {
   public removeAskPullListener() {
     hubConnection.off('askforpull');
     this.askPullUpdate.next(null);
+  }
+
+  public addAskSplitPullListener() {
+    hubConnection.on('askforsplitpull', (data) => {
+      this.askSplitPullUpdate.next(data);
+    })
+  }
+
+  public removeAskSplitPullListener() {
+    hubConnection.off('askforsplitpull');
+    this.askSplitPullUpdate.next(null);
   }
 
   public addBlackjackSelfListener() {
@@ -93,8 +115,12 @@ export class BlackjackService {
     hubConnection.invoke('SetBet', UniqueId, bet);
   }  
 
-  public pull(UniqueId: string, pull: boolean, doubleOption: boolean) {
-    hubConnection.invoke('TakePull', UniqueId, pull, doubleOption);
+  public pull(UniqueId: string, pull: boolean, doubleOption: boolean, splitOption: boolean) {
+    hubConnection.invoke('TakePull', UniqueId, pull, doubleOption, splitOption);
+  }
+
+  public splitpull(UniqueId: string, pull: boolean, pullForSplitHand: boolean) {
+    hubConnection.invoke('TakeSplitPull', UniqueId, pull, pullForSplitHand);
   }
 }
 

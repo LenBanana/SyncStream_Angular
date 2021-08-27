@@ -38,7 +38,9 @@ export class SideNavComponent implements OnInit, OnDestroy {
   showPlaylist = false;
   showUsername = false;
   WhiteboardActive = false;
+  BlackjackActive = false;
   playingGallows;
+  playingBlackjack;
 
   ngOnInit(): void {
     if (this.IsHost) {      
@@ -58,10 +60,23 @@ export class SideNavComponent implements OnInit, OnDestroy {
       } 
       this.WhiteboardActive = true;
     });
+
+    this.playingBlackjack = this.playerService.playingBlackjack.subscribe(playBlackjack => {
+      if (playBlackjack == null) {
+        return;
+      }
+      if (playBlackjack === true) {
+        this.BlackjackActive = true;
+      }
+      if (playBlackjack === false) {
+        this.BlackjackActive = false;
+      }
+    });
   } 
 
   ngOnDestroy() {
     this.playingGallows.unsubscribe();
+    this.playingBlackjack.unsubscribe();
   }
   
   refresh(): void {

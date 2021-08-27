@@ -4,7 +4,7 @@
 </app-text-dialog>
 <div class="row" [class.no-margin]="(!nav&&(!twitchChat && CurrentPlayerType != playerType.WhiteBoard))||(CurrentPlayerType==playerType.Twitch&&twitchChat)">
   <div class="transition PlayerWindow" [class.vh-semi]="nav" [class.vh-big]="!nav"
-    [class.col-10]="(twitchChat||CurrentPlayerType==playerType.WhiteBoard)&&CurrentPlayerType!=playerType.Twitch&&!nav">
+    [class.col-10]="(twitchChat||CurrentPlayerType==playerType.WhiteBoard)&&CurrentPlayerType!=playerType.Twitch&&!nav"  [class.BlackjackBg]="CurrentPlayerType==playerType.Blackjack">
     <div [class.none]="CurrentPlayerType!=playerType.External&&CurrentPlayerType!=playerType.Vimeo"
       [class.vh-90]="!nav">
       <video id="VideoPlayer" playsinline controls>
@@ -29,11 +29,11 @@
     </div>
     
     <div *ngIf="CurrentPlayerType==playerType.Blackjack">
-      <app-blackjack-game [UniqueId]="UniqueId" [class.vh-90]="!nav">
+      <app-blackjack-game [UniqueId]="UniqueId" [logout]="logout" [class.vh-90]="!nav">
       </app-blackjack-game>
     </div>
   </div>
-  <div class="transition vh-big col-2 border-left-dark" [class.none]="(!twitchChat && CurrentPlayerType != playerType.WhiteBoard) || CurrentPlayerType==playerType.Twitch">
+  <div *ngIf="CurrentPlayerType!=playerType.Blackjack" class="transition vh-big col-2 border-left-dark" [class.none]="(!twitchChat && CurrentPlayerType != playerType.WhiteBoard) || CurrentPlayerType==playerType.Twitch">
     <app-dreckchat [nav]="nav" [logout]="logout" [UniqueId]="UniqueId" [Username]="Username" [WhiteBoard]="CurrentPlayerType==playerType.WhiteBoard"></app-dreckchat>
   </div>
   <div class="col-12">

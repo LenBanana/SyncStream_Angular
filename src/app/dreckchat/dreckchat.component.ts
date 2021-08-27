@@ -29,6 +29,7 @@ export class DreckchatComponent implements OnInit, OnDestroy {
   @Input() nav: boolean;
   @Input() logout: boolean;
   @Input() WhiteBoard: boolean;
+  @Output() NewMessage = new EventEmitter();
   Messages: ChatMessage[] = [];
   CurrentDate: Date = new Date();
   smileys: string[] = ('😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 😘 😗 😙 😚 😋 😜 😝 😛 🤑 🤗 🤓 😎 🤡 🤠 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 😤 😠 😡 😶 😐 😑 😯 😦 😧 😮 😲 😵 😳 😱 😨 😰 😢 😥 🤤 😭 😓 😪 😴 🙄 🤔 🤥 😬 🤐 🤢 🤮 🤧 😷 🤒 🤕 🤨 🤩 🤯 🧐 🤫 🤪 🤭').split(' ');
@@ -49,6 +50,7 @@ export class DreckchatComponent implements OnInit, OnDestroy {
         this.Messages = [];
       }
       this.Messages.push(result);
+      this.NewMessage.emit();
       if (this.Messages.length >= 100) {
         this.Messages.shift();
       }

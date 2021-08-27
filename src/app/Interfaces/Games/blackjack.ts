@@ -1,10 +1,17 @@
 export class BlackjackMember {
     username: string;
     cards: PlayingCard[];
+    splitCards: PlayingCard[];
     points: number;
+    splitPoints: number;
     money: number;
     bet: number;
     blackjack: boolean;
+    didSplit: boolean;
+    splitBlackjack: boolean;
+    splitable: boolean;
+    waitingForBet: boolean;
+    waitingForPull: boolean;
     doubled: boolean;
 }
 

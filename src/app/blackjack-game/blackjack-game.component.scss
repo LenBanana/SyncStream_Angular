@@ -1,57 +1,129 @@
-.SelfView {    
-    position: fixed;
-    width: 100%;
-    bottom: 0;
-    z-index: 10;
+.SelfView {
+  position: fixed;
+  width: 100%;
+  bottom: 0;
+  z-index: 10;
 }
 
 .DealerView {
-    position: fixed;
-    width: 100%;
-    top: 0;
+  position: fixed;
+  width: 100%;
+  top: 0;
 }
 
 .MemberCards {
-    position: fixed;
-    top: 50%;
-    width: 100%;
-    transform: translateY(-50%);
+  position: fixed;
+  top: 50%;
+  width: 100%;
+  transform: translateY(-50%);
+}
+
+.ChatView {
+  position: fixed;
+  width: 100%;
+  bottom: 0;
+  right: 25px;
+  z-index: 10;
+  text-align: left !important;
+}
+
+.PaddingBotChat {
+  padding-bottom: 6% !important;
+}
+
+.height-25 {
+  height: 25vh;
+}
+
+.border-around-nobot {
+  border: 1px solid #EEE;
+  border-bottom: 0;
+}
+
+.border-around-notop {
+  border: 1px solid #EEE;
+  border-top: 0;
+}
+
+.border-around {
+  border: 1px solid #EEE;
+}
+
+.border-around-waiting {
+  border: 1px solid #f0ad4e;
+}
+
+.LightBreak {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .col-onehalf {
-    width: 12.499999995%;
-    flex: 0 0 12.499%;
-    max-width: 12.499%;
+  width: 12.499999995%;
+  flex: 0 0 12.499%;
+  max-width: 12.499%;
 }
 
 .text-left {
-    text-align: left;
+  text-align: left;
 }
 
 .CardBack {
-    padding: 10px;
-    background: #131523;
-    text-align: center;
+  padding: 10px;
+  background: rgba($color: #000000, $alpha: 0.4);
+  text-align: center;
 }
 
 .vertical-alignment-helper {
-    display:table;
-    height: 100%;
-    width: 100%;
-    pointer-events:none;
+  display: table;
+  height: 100%;
+  width: 100%;
+  pointer-events: none;
 }
+
 .vertical-align-center {
-    /* To center vertically */
-    display: table-cell;
-    vertical-align: middle;
-    pointer-events:none;
+  /* To center vertically */
+  display: table-cell;
+  vertical-align: middle;
+  pointer-events: none;
 }
+
 .modal-content {
-    /* Bootstrap sets the size of the modal in the modal-dialog class, we need to inherit it */
-    width:inherit;
- max-width:inherit; /* For Bootstrap 4 - to avoid the modal window stretching full width */
-    height:inherit;
-    /* To center horizontally */
-    margin: 0 auto;
-    pointer-events:all;
+  /* Bootstrap sets the size of the modal in the modal-dialog class, we need to inherit it */
+  width: inherit;
+  max-width: inherit;
+  /* For Bootstrap 4 - to avoid the modal window stretching full width */
+  height: inherit;
+  /* To center horizontally */
+  margin: 0 auto;
+  pointer-events: all;
+}
+
+.chatBtn {
+  position: relative;
+  border: none;
+  transition: all 0.5s ease;
+  background-color: #0275d8;
+}
+
+
+@keyframes BlinkChat {
+  0% {
+    background-color: #5bc0de;
+  }
+
+  100% {
+    background-color: #0275d8;
+  }
+}
+
+.animateBg {
+  display: inline-block;
+  -webkit-animation: BlinkChat 2s infinite;
+  /* Safari 4+ */
+  -moz-animation: BlinkChat 2s infinite;
+  /* Fx 5+ */
+  -o-animation: BlinkChat 2s infinite;
+  /* Opera 12+ */
+  animation: BlinkChat 2s infinite;
+  /* IE 10+, Fx 29+ */
 }

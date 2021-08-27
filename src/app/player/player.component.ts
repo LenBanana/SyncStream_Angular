@@ -107,6 +107,17 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.removeListener();
   }
 
+  removeListener() { 
+    this.playerUpdate.unsubscribe();
+    this.isPlayingUpdate.unsubscribe();
+    this.timeUpdate.unsubscribe();
+    this.playingGallows.unsubscribe();
+    this.playlistUpdate.unsubscribe();
+    this.pingUpdate.unsubscribe();
+    this.playingBlackjack.unsubscribe();
+    this.playerService.playingBlackjack.next(null);
+  }
+
   ngOnInit(): void {
     this.PingInterval = setInterval(() => {
       this._pingService.GetPing();
@@ -213,7 +224,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       if (playBlackjack == null) {
         return;
       }
-      console.log(playBlackjack);
       if (playBlackjack === true) {
         this.LastPlayerType = this.CurrentPlayerType;
         this.CurrentPlayerType = PlayerType.Blackjack;        
@@ -221,21 +231,15 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
           this.playerService.PlayPause(false, this.UniqueId);
         }
         this.playerPause(true);
+        if (this.twitchChat) {
+          this.toggleChat.emit();
+        }
       }
       if (playBlackjack === false) {
         this.ResetPlayerType();        
       }
     });
-
-    this.playerUpdate = this.playerService.player.subscribe(event => {
-      if (!this.YTPlayer) {
-        return;
-      }
-      if (!event || !event.url) {
-        return;
-      }
-      this.setVideoDTO(event, 0);
-    });
+    
     this.isPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {
       this.IsPlaying = isplaying;
       this.isPlayingEvent.emit(isplaying);
@@ -294,16 +298,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
 
       }
     });
-  }
-
-  removeListener() { 
-    this.playerUpdate.unsubscribe();
-    this.isPlayingUpdate.unsubscribe();
-    this.timeUpdate.unsubscribe();
-    this.playingGallows.unsubscribe();
-    this.playlistUpdate.unsubscribe();
-    this.pingUpdate.unsubscribe();
-    this.playingBlackjack.unsubscribe();
   }
 
   fileChange(file) {
