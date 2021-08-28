@@ -12,6 +12,7 @@ export class BlackjackMember {
     splitable: boolean;
     waitingForBet: boolean;
     waitingForPull: boolean;
+    notPlaying: boolean;
     doubled: boolean;
 }
 

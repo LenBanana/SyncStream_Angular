@@ -63,8 +63,8 @@ export class SignalRService {
       }
       const curDate = new Date();
       curDate.setDate(curDate.getDate() + 30);
-      document.cookie = "login-token=" + result.token + "; expires=" + curDate.toUTCString();
-      document.cookie = "user-id=" + result.userID + "; expires=" + curDate.toUTCString();
+      document.cookie = "login-token=" + result.token + "; expires=" + curDate.toUTCString() + "; path=/";
+      document.cookie = "user-id=" + result.userID + "; expires=" + curDate.toUTCString() + "; path=/";
     });
     
 

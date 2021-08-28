@@ -24,7 +24,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   @ViewChild(PlayerComponent) playerComp;
   constructor(private route: ActivatedRoute, public datepipe: DatePipe, private router: Router, public signalRService: SignalRService, public dialogService: DialogService, public playlistService: PlaylistService, public userService: UserlistService, private cdRef: ChangeDetectorRef, private location: Location) {
     
-    //this.http.post(this.baseUrl + 'api/Server/AddMember', member, { headers: this.headers }).toPromise();
   }
 
   ytHeader: string = "?origin=https://plyr.io&amp;iv_load_policy=3&amp;modestbranding=1&amp;playsinline=1&amp;showinfo=0&amp;rel=0&amp;autoplay=1&amp;enablejsapi=1";
@@ -85,19 +84,21 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
     window.location.reload();
   }
 
-  ngOnInit() {
-    if (!hubConnection) {
-      this.route.paramMap.subscribe(params => {
-        var id = params.get('UniqueId');
-        if (id && id.length > 0) {
-          this.UniqueId = id.toString();  
-          this.currentTime = 0;
-          this.DelInterval = false;
-          this.cdRef.detectChanges();
-        }
-      });  
-      this.InitSignalR();
-    }    
+  ngOnInit() {    
+   /* this.loginRequest = this.signalRService.loginRequest.subscribe(result => { 
+      if (result == null) {
+        return;
+      }
+      if (!result.username||result.username.length==0) {
+        this.Username = 'Anon' + "#" + randomIntFromInterval(100, 10000);   
+        return;
+      }
+      this.Username = result.username;      
+      MainUser.approved = result.approved;
+      MainUser.userprivileges = result.userprivileges;
+      MainUser.username = result.username;
+      this.logout = true;
+    });  */
   }
 
   menuEnter(enter) {
@@ -113,31 +114,12 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
     }
   }
 
-  async InitSignalR() {
-    this.loginRequest = this.signalRService.loginRequest.subscribe(result => { 
-      if (result == null) {
-        return;
-      }
-      if (!result.username||result.username.length==0) {
-        this.Username = 'Anon' + "#" + randomIntFromInterval(100, 10000);   
-        return;
-      }
-      this.Username = result.username;      
-      MainUser.approved = result.approved;
-      MainUser.userprivileges = result.userprivileges;
-      MainUser.username = result.username;
-      this.logout = true;
-    });
-  }
-
   ngAfterViewChecked() {
     this.cdRef.detectChanges();
   }
 
-  ngOnDestroy() {    
-    if (!hubConnection) {
-      this.loginRequest.unsubscribe();
-    }
+  ngOnDestroy() {   
+    //this.loginRequest.unsubscribe();
   }
 
   toggleNav() {

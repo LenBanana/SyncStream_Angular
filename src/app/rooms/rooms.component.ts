@@ -23,9 +23,7 @@ import { UserlistService } from '../userlist/userlist-service/userlist.service';
   templateUrl: './rooms.component.html',
   styleUrls: ['./rooms.component.scss'],
 })
-export class RoomsComponent implements OnInit {
-  @ViewChild('usernameInput') usernameElement: ElementRef;
-  
+export class RoomsComponent implements OnInit {  
   rooms: Room[];
   filterRooms: Room[];
   FilterTerm = "";
@@ -36,7 +34,7 @@ export class RoomsComponent implements OnInit {
   delInterval: boolean;
   SignalR: boolean = false;
   user: User = { username: "", password: "", id: 0, approved: 0, userprivileges: 0 };
-  logout = false;
+  logout;
   inMenu = true;
   page = 1;
   pageSize = 9;
@@ -116,8 +114,6 @@ export class RoomsComponent implements OnInit {
   
   private async signalR() {
     await this.signalRService.startConnection().finally(() => {
-      this.signalRService.addRoomListener();     
-      this.dialogService.addDialogListener();
       this.SignalR = true;
       this.cdRef.detectChanges();
     });    
@@ -131,9 +127,7 @@ export class RoomsComponent implements OnInit {
     
     this.signalRService.connectionClosed.subscribe(con => {
       if (con === false) {      
-        setTimeout(() => {      
-          this.GetRoomsInitial();
-        }, 1000);
+        this.roomService.GetRooms();
       }
     });
   }
@@ -143,35 +137,30 @@ export class RoomsComponent implements OnInit {
     this.user.id = 0;
     const curDate = new Date();
     curDate.setDate(curDate.getDate() - 30);
-    document.cookie = "login-token=none; expires=" + curDate.toUTCString();
+    document.cookie = "login-token=none; expires=" + curDate.toUTCString() + ";path=/;";
     this.logout = false;
   }
 
   public SaveLogin(user: User, logout: boolean) { 
+    if (!user||user.username == null) {
+      this.logout = false;
+      return;
+    }
     if (user && user.approved == 0) {
       $('#registerModal').modal('show');
     }
     if (user && user.approved>0) {
       this.user = user; 
       this.logout = true;
+      this.cdRef.detectChanges();
     }
     if (!logout && user.approved>0) {
       this.roomService.GenerateRememberToken(user, navigator.appVersion);
     }
   }
 
-  private GetRoomsInitial = () => {
-    this.http.get(baseUrl + 'api/Server/GetRooms/').subscribe(res => {});
-  }
-
   public ResetView() {
     this.delInterval = true;
-  }
-
-  public async GetRooms() {
-    this.rooms = await this.http.get<Room[]>(baseUrl + 'api/Server/GetRooms').toPromise();    
-    this.filterRooms = this.rooms;
-    this.Filter();
   }
 
   public JoinRoom(uniqueId: string, time: number) {
@@ -182,7 +171,7 @@ export class RoomsComponent implements OnInit {
   }
 
   public LeaveRoom() {
-    this.userService.removeUser(this.user.username, this.currentRoom);
+    this.userService.removeUser(this.currentRoom);
     this.loc.go('/');
     this.currentRoom = undefined;
   }

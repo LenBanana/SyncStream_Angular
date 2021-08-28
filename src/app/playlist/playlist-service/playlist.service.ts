@@ -54,11 +54,4 @@ export class PlaylistService {
     hubConnection.invoke('MoveVideo', fromIdx, toIdx, UniqueId);
   }
 
-
-  // HTTP
-  public async GetURLTitle(url: string): Promise<string> {
-    var result = await this.http.get<any>(baseUrl + 'api/Server/ResolveURL/?url=' + url).toPromise();
-    return result.title;
-  }
-
 }

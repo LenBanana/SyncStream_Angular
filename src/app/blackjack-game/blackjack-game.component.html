@@ -8,7 +8,7 @@
 
 <div class="container-fluid">
     <div class="row justify-content-around mb-5 pb-5 MemberCards">
-        <div *ngFor="let member of members" class="col-1 px-md-4 col-onehalf">
+        <div *ngFor="let member of filteredMembers()" class="px-md-4" [class.col-onehalf]="!self.notPlaying" [class.col-2]="self.notPlaying">
           <div class="p-3 CardBack rounded" [class.border-around]="!member.waitingForBet&&!member.waitingForPull" [class.border-around-waiting]="member.waitingForBet||member.waitingForPull">
             <p *ngIf="!member.didSplit">{{member.username}} - <span>{{member.points}}</span></p>
             <p *ngIf="member.didSplit"><span>{{member.points}}</span> - {{member.username}} - <span class="text-warning">{{member.splitPoints}}</span></p>
@@ -23,12 +23,12 @@
             </div>
           </div>
         </div>
-        <div class="offset-1" *ngIf="members&&(members.length % 2 != 0)"></div>
+        <div class="offset-1" *ngIf="members&&(filteredMembers().length % 2 != 0)"></div>
       </div>
 </div>
 
 <div class="row justify-content-center SelfView">
-  <div *ngIf="self" class="CardBack col-3 rounded-top border-around-nobot">
+  <div *ngIf="self&&!self.notPlaying" class="CardBack col-3 rounded-top border-around-nobot">
     <div id="BetCollapse" class="collapse mx-3">
       <label>Bet amount</label>
       <div class="input-group input-group-sm">
@@ -65,11 +65,16 @@
         <span class="badge badge-info">{{self.money}}</span>
     </h5>
     <h5 class="d-flex justify-content-between align-items-center px-5">
-        <span class="text-left">Bet </span>
+      <span class="text-left"> Bet </span>
         <span class="badge badge-info">{{self.bet}}</span>
     </h5>
     <app-bj-playing-cards *ngIf="self.cards" [PlayingCards]="self.cards"></app-bj-playing-cards>
     <app-bj-playing-cards class="ml-3" *ngIf="self.splitCards.length>0" [PlayingCards]="self.splitCards"></app-bj-playing-cards>
+    <div class="checkbox AutoBetCheck" title="Autobet">
+      <label><input type="checkbox" 
+        [checked]="autoBet"
+        (change)="SetAutoBet()"><i class="ml-2 fa fa-magic"></i></label>
+    </div>
   </div>
 </div>
 <div *ngIf="self" class="ChatView col-2 CardBack border-around-nobot rounded-top">  

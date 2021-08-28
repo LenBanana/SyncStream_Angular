@@ -34,8 +34,8 @@ export class UserlistService {
     hubConnection.invoke('BanUser', username, UniqueId);
   }
 
-  public removeUser(username: string, UniqueId: string) {
-    hubConnection.invoke('RemoveUser', username, UniqueId);
+  public removeUser(UniqueId: string) {
+    hubConnection.invoke('RemoveUser', UniqueId);
   }
 
   public updateUser(username: string, UniqueId: string) {

@@ -13,6 +13,9 @@ export class RoomService {
   constructor(private http: HttpClient) { }
 
 
+  public GetRooms() {
+    hubConnection.invoke('GetRooms');
+  }
 
   public GenerateRememberToken(user: User, userInfo: string) {
     hubConnection.invoke('GenerateRememberToken', user, userInfo);

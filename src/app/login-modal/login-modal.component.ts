@@ -28,7 +28,11 @@ export class LoginModalComponent implements OnInit, OnDestroy {
   
   ngOnInit(): void {  
     this.loginRequest = this.signalRService.loginRequest.subscribe(result => { 
-      if (result == null || result.username == null) {
+      if (result == null) {
+        return;
+      }
+      if (result.username == null) {
+        this.SaveLogin.emit(result);
         this.wrongPw = true;
         setTimeout(() => {
           this.wrongPw = false;

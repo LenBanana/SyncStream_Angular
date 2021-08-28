@@ -68,9 +68,7 @@ export class DreckchatService {
     hubConnection.invoke('PlayBlackjack', UniqueId);
   }
 
-  public async HttpGetMessages(UniqueId: string) {
-    this.http.get(baseUrl + 'api/Server/GetMessages/?UniqueId=' + UniqueId)
-      .subscribe(res => {
-      })
+  public spectateBj(UniqueId: string) {
+    hubConnection.invoke('SpectateBlackjack', UniqueId);
   }
 }

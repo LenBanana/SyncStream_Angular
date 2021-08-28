@@ -1,7 +1,19 @@
-import { Component, Input, OnDestroy, OnInit } from '@angular/core';
-import { BlackjackDealer, BlackjackMember } from '../Interfaces/Games/blackjack';
-import { PlayerService } from '../player/player-service/player.service';
-import { BlackjackService } from './blackjack-service/blackjack-service.service';
+import {
+  Component,
+  Input,
+  OnDestroy,
+  OnInit
+} from '@angular/core';
+import {
+  BlackjackDealer,
+  BlackjackMember
+} from '../Interfaces/Games/blackjack';
+import {
+  PlayerService
+} from '../player/player-service/player.service';
+import {
+  BlackjackService
+} from './blackjack-service/blackjack-service.service';
 declare var $: any;
 
 @Component({
@@ -13,7 +25,7 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
 
   @Input() UniqueId = "";
   @Input() logout = false;;
-  constructor(private blackjackService: BlackjackService, private playerService: PlayerService) { }
+  constructor(private blackjackService: BlackjackService, private playerService: PlayerService) {}
   BetAmount = 5;
   dealer: BlackjackDealer;
   self: BlackjackMember;
@@ -33,21 +45,32 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
   PercentTimer = 0;
   timeoutInterval;
   playingBlackjack;
+  autoBet = false;
   forSplitHand = undefined;
+
+  filteredMembers() {
+    return this.members.filter(x => !x.notPlaying)
+  } 
 
   ngOnInit(): void {
     this.askBetUpdate = this.blackjackService.askBetUpdate.subscribe(askBet => {
       if (askBet === true) {
         this.ResetView();
         this.forSplitHand = undefined
-        setTimeout(() => {
-          $('#BetCollapse').collapse('show');
-        }, 500);
-        this.betModalTimeout = setTimeout(() => {   
-          this.BetAmount = 5;
-          $('#BetCollapse').collapse('hide');
-          clearTimeout(this.betModalTimeout); 
-        }, this.timeoutTime);
+        if (!this.autoBet) {
+          setTimeout(() => {            
+            $('#BetCollapse').collapse('show');
+          }, 250);
+          this.betModalTimeout = setTimeout(() => {
+            this.BetAmount = 5;
+            $('#BetCollapse').collapse('hide');
+            clearTimeout(this.betModalTimeout);
+          }, this.timeoutTime);
+        } else {
+          setTimeout(() => {            
+            this.SetBet();
+          }, 250);
+        }
       }
     });
     this.askPullUpdate = this.blackjackService.askPullUpdate.subscribe(askPull => {
@@ -56,28 +79,24 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
       }
       this.ResetView();
       this.doubleOption = askPull;
-      setTimeout(() => {
-        $('#PullCollapse').collapse('show');
-      }, 500);
-      this.pullModalTimeout = setTimeout(() => {   
+      $('#PullCollapse').collapse('show');
+      this.pullModalTimeout = setTimeout(() => {
         $('#PullCollapse').collapse('hide');
         clearTimeout(this.pullModalTimeout);
       }, this.timeoutTime);
-    });  
+    });
     this.askSplitPullUpdate = this.blackjackService.askSplitPullUpdate.subscribe(forSplitHand => {
       if (forSplitHand === null) {
         return;
       }
       this.ResetView();
-      setTimeout(() => {
-        this.forSplitHand = forSplitHand;
-        $('#PullCollapse').collapse('show');
-      }, 500);
-      this.pullModalTimeout = setTimeout(() => {   
+      this.forSplitHand = forSplitHand;
+      $('#PullCollapse').collapse('show');
+      this.pullModalTimeout = setTimeout(() => {
         $('#PullCollapse').collapse('hide');
         clearTimeout(this.pullModalTimeout);
       }, this.timeoutTime);
-    });   
+    });
     this.playingBlackjack = this.playerService.playingBlackjack.subscribe(playBlackjack => {
       if (playBlackjack == null) {
         return;
@@ -91,7 +110,7 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
           }
         }, 1000)
       }
-      if (playBlackjack === false) { 
+      if (playBlackjack === false) {
         clearInterval(this.timeoutInterval);
         clearTimeout(this.pullModalTimeout);
         clearTimeout(this.betModalTimeout);
@@ -131,7 +150,7 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
     this.blackjackService.pushAllNull();
   }
 
-  ResetView() {    
+  ResetView() {
     this.timeoutTimer = 60;
     this.PercentTimer = 0;
     clearTimeout(this.pullModalTimeout);
@@ -141,23 +160,35 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
   }
 
   SetBet() {
-    if (this.BetAmount >= 5 && this.BetAmount <= 200 && this.BetAmount < this.self.money) {
-      clearTimeout(this.betModalTimeout);
-      var amount = (Math.round(this.BetAmount * 10)/10).toFixed(1);
-      this.BetAmount = Number(amount);
-      this.blackjackService.setBet(this.UniqueId, this.BetAmount);
-      $('#BetCollapse').collapse('hide');
+    if (this.self.waitingForBet) {
+      this.self.waitingForBet = false;
+      if (this.BetAmount < 5)
+      this.BetAmount = 5;
+      if (this.BetAmount > 200)
+        this.BetAmount = 200;
+      if (this.BetAmount > this.self.money)
+        this.BetAmount = this.self.money;
+      if (this.BetAmount > 0) {
+        clearTimeout(this.betModalTimeout);
+        var amount = (Math.round(this.BetAmount * 10) / 10).toFixed(1);
+        this.BetAmount = Number(amount);
+        this.blackjackService.setBet(this.UniqueId, this.BetAmount);
+        $('#BetCollapse').collapse('hide');
+      }
     }
   }
 
   Pull(doPull, doDouble, doSplit) {
-    clearTimeout(this.pullModalTimeout);
-    if (this.forSplitHand===undefined) {
-      this.blackjackService.pull(this.UniqueId, doPull, doDouble, doSplit);
-    } else {
-      this.blackjackService.splitpull(this.UniqueId, doPull, this.forSplitHand);
+    if (this.self.waitingForPull) {
+      this.self.waitingForPull = false;
+      clearTimeout(this.pullModalTimeout);
+      if (this.forSplitHand === undefined) {
+        this.blackjackService.pull(this.UniqueId, doPull, doDouble, doSplit);
+      } else {
+        this.blackjackService.splitpull(this.UniqueId, doPull, this.forSplitHand);
+      }
+      $('#PullCollapse').collapse('hide');
     }
-    $('#PullCollapse').collapse('hide');
   }
 
   checkChatClass() {
@@ -165,4 +196,10 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
     return hasClass;
   }
 
+  SetAutoBet() {
+    this.autoBet = !this.autoBet;
+    if (this.autoBet&&this.self.waitingForBet) {
+      this.SetBet();
+    }
+  }
 }

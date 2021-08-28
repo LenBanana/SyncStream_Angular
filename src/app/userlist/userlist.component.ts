@@ -47,7 +47,7 @@ export class UserlistComponent implements OnInit, OnDestroy {
     this.UserUpdate = setInterval(() => {
       if (this.DelInterval) {
         clearInterval(this.UserUpdate);
-        this.userService.removeUser(this.Username, this.UniqueId);
+        this.userService.removeUser(this.UniqueId);
         this.intervalOff.emit();
         return;
       }

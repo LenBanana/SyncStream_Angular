@@ -102,11 +102,11 @@
     </div>
     <app-help-modal (AddRoom)="AddRoom()"></app-help-modal>
     <app-add-room-modal [user]="user" [logout]="logout" (JoinRoom)="JoinRoom($event, 0)"></app-add-room-modal>
-    <app-login-modal (SaveLogin)="SaveLogin($event, false)" [user]="user" [logout]="logout"></app-login-modal>
     <app-user-admin-modal *ngIf="user.username&&logout&&user.userprivileges>2"></app-user-admin-modal>
     <app-user-setting-modal *ngIf="user.username&&logout" [User]="user"></app-user-setting-modal>
     <div style="margin-top: 75px;"></div>
 </div>
 
-<span *ngIf="currentRoom" class="badge badge-dreck my-2 block pointer leaveBtn" [class.fade-out]="!inMenu" title="Leave room" (click)="LeaveRoom()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>
-<app-home *ngIf="currentRoom" [UniqueId]="currentRoom" [currentTime]="currentTime" [Username]="user.username" [DelInterval]="delInterval" [logout]="logout" (IntervalOff)="currentRoom=undefined; currentTime=undefined" (isInMenu)="inMenu=$event"></app-home>
+<app-login-modal *ngIf="SignalR" (SaveLogin)="SaveLogin($event, false)" [user]="user" [logout]="logout"></app-login-modal>
+<span *ngIf="currentRoom&&SignalR&&logout!=undefined" class="badge badge-dreck my-2 block pointer leaveBtn" [class.fade-out]="!inMenu" title="Leave room" (click)="LeaveRoom()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>
+<app-home *ngIf="currentRoom&&SignalR&&logout!=undefined" [UniqueId]="currentRoom" [currentTime]="currentTime" [Username]="user.username" [DelInterval]="delInterval" [logout]="logout" (IntervalOff)="currentRoom=undefined; currentTime=undefined" (isInMenu)="inMenu=$event"></app-home>
