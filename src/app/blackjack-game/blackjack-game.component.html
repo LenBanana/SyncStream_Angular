@@ -1,21 +1,22 @@
 <div class="row justify-content-center mb-5 pb-5 DealerView">
   <div *ngIf="dealer" class="CardBack col-3 rounded-bottom border-around-notop">
-    <p>Dealer</p>
+    <p>Dealer - <span class="badge badge-info"><i class="fa fa-money"></i> {{dealer.money}}</span></p>
     <p>{{dealer.name}} - {{dealer.pointsDTO}}</p>
     <app-bj-playing-cards [PlayingCards]="dealer.cards"></app-bj-playing-cards>
   </div>
 </div>
 
-<div class="container-fluid">
-    <div class="row justify-content-around mb-5 pb-5 MemberCards">
-        <div *ngFor="let member of filteredMembers()" class="px-md-4" [class.col-onehalf]="!self.notPlaying" [class.col-2]="self.notPlaying">
+<div *ngIf="members" class="container-fluid">
+    <div class="row justify-content-center mb-5 pb-5 MemberCards">
+      <ng-container *ngFor="let member of filteredMembers(true); let last = last;">
+        <div class="px-md-4" [class.col-onehalf]="!self.notPlaying" [class.col-2]="self.notPlaying">
           <div class="p-3 CardBack rounded" [class.border-around]="!member.waitingForBet&&!member.waitingForPull" [class.border-around-waiting]="member.waitingForBet||member.waitingForPull">
             <p *ngIf="!member.didSplit">{{member.username}} - <span>{{member.points}}</span></p>
             <p *ngIf="member.didSplit"><span>{{member.points}}</span> - {{member.username}} - <span class="text-warning">{{member.splitPoints}}</span></p>
             <p class="d-flex justify-content-between align-items-center"><span class="text-left">Money </span><span
-                class="badge badge-info">{{member.money}}</span></p>
+                class="badge badge-info"><i class="fa fa-money"></i> {{member.money}}</span></p>
             <p class="d-flex justify-content-between align-items-center"><span class="text-left">Bet </span><span
-                class="badge badge-info">{{member.bet}}</span></p>
+                class="badge badge-info"><i class="fa fa-money"></i> {{member.bet}}</span></p>
             <app-bj-playing-cards [PlayingCards]="member.cards" [IsYourCards]="false"></app-bj-playing-cards>
             <div *ngIf="member.splitCards.length>0">
               <br>
@@ -23,7 +24,32 @@
             </div>
           </div>
         </div>
-        <div class="offset-1" *ngIf="members&&(filteredMembers().length % 2 != 0)"></div>
+        <div *ngIf="!last" class="offset-1"></div>
+      </ng-container>
+        <div class="offset-3"></div>
+        <div *ngIf="members.length<=2" class="offset-4"></div>
+        <ng-container *ngIf="members&&members.length>2">
+          <ng-container *ngFor="let member of filteredMembers(false); let last = last;">
+            <div class="px-md-4" [class.col-onehalf]="!self.notPlaying" [class.col-2]="self.notPlaying">
+              <div class="p-3 CardBack rounded" [class.border-around]="!member.waitingForBet&&!member.waitingForPull" [class.border-around-waiting]="member.waitingForBet||member.waitingForPull">
+                <p *ngIf="!member.didSplit">{{member.username}} - <span>{{member.points}}</span></p>
+                <p *ngIf="member.didSplit"><span>{{member.points}}</span> - {{member.username}} - <span class="text-warning">{{member.splitPoints}}</span></p>
+                <p class="d-flex justify-content-between align-items-center"><span class="text-left">Money </span><span
+                    class="badge badge-info"><i class="fa fa-money"></i> {{member.money}}</span></p>
+                <p class="d-flex justify-content-between align-items-center"><span class="text-left">Bet </span><span
+                    class="badge badge-info"><i class="fa fa-money"></i> {{member.bet}}</span></p>
+                <app-bj-playing-cards [PlayingCards]="member.cards" [IsYourCards]="false"></app-bj-playing-cards>
+                <div *ngIf="member.splitCards.length>0">
+                  <br>
+                  <app-bj-playing-cards [IsYourCards]="false" [PlayingCards]="member.splitCards"></app-bj-playing-cards>
+                </div>
+              </div>
+            </div>
+            <div *ngIf="!last" class="offset-1"></div>
+          </ng-container>
+        </ng-container>
+        <div *ngIf="members.length==3" class="col-onehalf"></div>
+        <div *ngIf="members.length==3" class="col-1"></div>
       </div>
 </div>
 
@@ -62,11 +88,11 @@
     <h4 *ngIf="self.didSplit"><span>{{self.points}}</span> - {{self.username}} - <span class="text-warning">{{self.splitPoints}}</span></h4>
     <h5 class="d-flex justify-content-between align-items-center px-5">
         <span class="text-left">Money </span>
-        <span class="badge badge-info">{{self.money}}</span>
+        <span class="badge badge-info"><i class="fa fa-money"></i> {{self.money}}</span>
     </h5>
     <h5 class="d-flex justify-content-between align-items-center px-5">
-      <span class="text-left"> Bet </span>
-        <span class="badge badge-info">{{self.bet}}</span>
+      <span class="text-left">Bet </span>
+        <span class="badge badge-info"><i class="fa fa-money"></i> {{self.bet}}</span>
     </h5>
     <app-bj-playing-cards *ngIf="self.cards" [PlayingCards]="self.cards"></app-bj-playing-cards>
     <app-bj-playing-cards class="ml-3" *ngIf="self.splitCards.length>0" [PlayingCards]="self.splitCards"></app-bj-playing-cards>
@@ -83,7 +109,7 @@
   </div>
   <div id="ChatCollapse" class="collapse">
     <div class="height-25 PaddingBotChat">
-      <app-dreckchat [nav]="false" [logout]="logout" [UniqueId]="UniqueId" [Username]="self.username" [WhiteBoard]="false" (NewMessage)="newMessage=true;"></app-dreckchat>
+      <app-dreckchat [nav]="false" [logout]="logout" [UniqueId]="UniqueId" [Username]="self.username" [WhiteBoard]="false" (NewMessage)="newMessage=true;" (ChangeToAi)="ResetView()"></app-dreckchat>
     </div>
   </div>
 </div>

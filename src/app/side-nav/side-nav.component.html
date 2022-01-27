@@ -3,16 +3,27 @@
   <i class="fa statusbtn pt-2 dreck-tooltip" title="Indicates whether you are host or not" [class.fa-user]="!IsHost"
     [class.fa-user-circle-o]="IsHost" (click)="!IsHost && SetHost()" [class.pointer]="!IsHost"
     [class.text-warning]="IsHost" [class.text-info]="!IsHost"></i>
+    <span class="badge badge-dreck my-2 block pointer" title="Adds video from clipboard" (click)="quickPlay()"><i
+        class="fa fa-plus-circle"></i></span>
+        
+    <div class="add-video-fade" [class.fade-out]="!showInput" [class.nopointer]="!showInput" style="width: 200px;">
+        <div class="form-group">
+            <div class="input-group input-group-md">
+                <input type="text" tabindex="-1" (keyup.enter)="PlayURL()" placeholder="https://..." class="form-control" id="video-tooltip-input">
+                <div class="input-group-append">
+                    <button type="button" class="btn px-2" [class.btn-primary]="!isPlaying" [class.btn-success]="isPlaying" (click)="PlayFile()"><i class="fa fa-file" aria-hidden="true"></i></button>
+                    <button type="button" class="btn px-1" [class.btn-primary]="!isPlaying" [class.btn-success]="isPlaying" (click)="PlayURL()"><i class="fa fa-play" aria-hidden="true"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
   <span class="badge badge-dreck my-2 block add-video-btn pointer" title="Open a local file to sync the time with"
     (click)="PlayFile()"><i class="fa fa-file"></i></span>
-  <span class="badge badge-dreck my-2 block pointer" title="Adds video from clipboard" (click)="quickPlay()"><i
-      class="fa fa-plus-circle"></i></span>
   <span class="badge badge-dreck mt-1 block pointer playlist-btn" (click)="TogglePlaylist()">
     <i class="fa fa-video-camera" [class.text-primary]="!isPlaying" [class.text-success]="isPlaying"></i><br><span
       *ngIf="Playlist">{{Playlist.length}}</span>
   </span>
-  <div style="width: 500px; max-height: 500px; overflow-x: hidden; overflow-y: auto; z-index: 200;"
-    class="add-playlist-fade playlist-preview" [class.nopointer]="!showPlaylist" [class.fade-out]="!showPlaylist"
+  <div class="add-playlist-fade playlist-preview" [class.nopointer]="!showPlaylist" [class.fade-out]="!showPlaylist"
     cdkDropList (cdkDropListDropped)="drop($event)">
     <div *ngIf="Playlist&&Playlist.length==0">
       <h4 class="text-center">Nothing here...</h4>
@@ -35,20 +46,24 @@
   </div>
   <span class="badge badge-dreck my-2 block pointer" title="Skip to next video" (click)="nextVideo()"><i
       class="fa fa-forward"></i></span>
-  <span class="badge badge-dreck my-2 block dreck-tooltip"><span class="dreck-tooltiptext nopointer">
-      <p *ngFor="let member of Members" style="position: relative; display: block;">{{member.username}}</p>
-    </span><i class="fa fa-user"></i><br>{{Members.length}}</span>
+  <span (click)="ToggleMemberlist()" class="badge badge-dreck my-2 block dreck-tooltip Memberlist"><i class="fa fa-user"></i><br>{{Members.length}}</span>  
+  <span class="dreck-tooltiptext Memberlist-preview" style="z-index: 200; padding: 5px; width: 150px; transition: opacity 0.5s ease; opacity: 1; margin-top: -40px; margin-left: 30px;" [class.nopointer]="!showMemberlist" [class.fade-out]="!showMemberlist">
+    <div class="row m-0" *ngFor="let member of Members">
+      <div class="col-2 p-0 text-center">
+        <i *ngIf="member.ishost" class="fa fa-user-circle-o text-warning"></i>
+        <i *ngIf="!member.ishost" (click)="ChangeHost(member.username)" class="fa fa-user text-info"></i>
+      </div>
+      <div class="col-10">
+        <p style="position: relative; display: block; opacity: 1;">{{member.username}}</p>
+      </div>
+    </div>
+  </span>
 
   <span class="badge badge-dreck my-2 block pointer" title="Toggles the chat" (click)="toggleTwitchChat()"><i
       class="fa fa-comment"></i></span>
-  <hr>
-  <span class="badge badge-dreck mt-2 block pointer"
-    title="{{ IsHost ? 'Time updates send to server (changes with ping)' : 'Maximum time difference to host (changes with ping)'}}"
-    (click)="ToggleThreshhold()">
-    <i class="fa fa-clock-o"></i><br>
-  </span>
-  <div class="add-playlist-fade text-center" [class.fade-out]="!Threshhold" [class.nopointer]="!Threshhold"
-    style="z-index: 200; padding: 5px; width: 150px;">
-    <p>{{ThreshholdNumber}}s Threshhold</p>
-  </div>
+  <!--<hr>
+  <span class="badge badge-dreck mt-2 block"
+    title="{{ IsHost ? 'Time updates send to server (changes with ping): ' + ThreshholdNumber + 's' : 'Maximum time difference to host (changes with ping): ' + ThreshholdNumber + 's'}}">
+    <i class="fa fa-info"></i><br>
+  </span>-->
 </div>

@@ -21,6 +21,7 @@ export class BlackjackDealer {
     cards: PlayingCard[];
     pointsDTO: number;
     blackjack: boolean;
+    money: number;
 }
 
 export class PlayingCard {

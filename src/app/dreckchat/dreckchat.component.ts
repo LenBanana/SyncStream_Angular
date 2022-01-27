@@ -30,6 +30,7 @@ export class DreckchatComponent implements OnInit, OnDestroy {
   @Input() logout: boolean;
   @Input() WhiteBoard: boolean;
   @Output() NewMessage = new EventEmitter();
+  @Output() ChangeToAi = new EventEmitter();
   Messages: ChatMessage[] = [];
   CurrentDate: Date = new Date();
   smileys: string[] = ('😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 😘 😗 😙 😚 😋 😜 😝 😛 🤑 🤗 🤓 😎 🤡 🤠 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 😤 😠 😡 😶 😐 😑 😯 😦 😧 😮 😲 😵 😳 😱 😨 😰 😢 😥 🤤 😭 😓 😪 😴 🙄 🤔 🤥 😬 🤐 🤢 🤮 🤧 😷 🤒 🤕 🤨 🤩 🤯 🧐 🤫 🤪 🤭').split(' ');
@@ -62,6 +63,7 @@ export class DreckchatComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.messages.unsubscribe();
     this.message.unsubscribe();
+    this.chatService.NullAllSubs();
   }
 
   public async SendMessage() {
@@ -107,6 +109,13 @@ export class DreckchatComponent implements OnInit, OnDestroy {
       }
       if ((lowCase.startsWith('/s') || lowCase.startsWith('/spectate'))) {
         this.chatService.spectateBj(this.UniqueId);
+      }
+      if ((lowCase.startsWith('/ai'))) {
+        this.chatService.AddBjAi(this.UniqueId);
+      }
+      if ((lowCase.startsWith('/mai'))) {
+        this.chatService.MakeAi(this.UniqueId);
+        this.ChangeToAi.emit();
       }
       return;
     }

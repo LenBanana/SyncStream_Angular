@@ -48,8 +48,13 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
   autoBet = false;
   forSplitHand = undefined;
 
-  filteredMembers() {
-    return this.members.filter(x => !x.notPlaying)
+  filteredMembers(firstHalf) {
+    if (firstHalf) {
+      return this.members.slice(0,2).filter(x => !x.notPlaying)
+    }
+    else {      
+      return this.members.slice(2,4).filter(x => !x.notPlaying)
+    }
   } 
 
   ngOnInit(): void {
@@ -79,7 +84,9 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
       }
       this.ResetView();
       this.doubleOption = askPull;
-      $('#PullCollapse').collapse('show');
+      setTimeout(() => {            
+        $('#PullCollapse').collapse('show');
+      }, 250);
       this.pullModalTimeout = setTimeout(() => {
         $('#PullCollapse').collapse('hide');
         clearTimeout(this.pullModalTimeout);
@@ -91,7 +98,9 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
       }
       this.ResetView();
       this.forSplitHand = forSplitHand;
-      $('#PullCollapse').collapse('show');
+      setTimeout(() => {            
+        $('#PullCollapse').collapse('show');
+      }, 250);
       this.pullModalTimeout = setTimeout(() => {
         $('#PullCollapse').collapse('hide');
         clearTimeout(this.pullModalTimeout);
@@ -155,8 +164,10 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
     this.PercentTimer = 0;
     clearTimeout(this.pullModalTimeout);
     clearTimeout(this.betModalTimeout);
-    $('#BetCollapse').collapse('hide');
-    $('#PullCollapse').collapse('hide');
+    setTimeout(() => {      
+      $('#BetCollapse').collapse('hide');
+      $('#PullCollapse').collapse('hide');
+    }, 500);
   }
 
   SetBet() {

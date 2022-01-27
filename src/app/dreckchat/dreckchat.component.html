@@ -10,7 +10,9 @@
 <div class="d-flex pr-4">
     <div class="smileyBox" [class.fade-out]="!showSmileys" [class.nopointer]="!showSmileys" id="smileyId"><span *ngFor="let smiley of smileys" class="pointer unselectable" (click)="AddSmiley(smiley)">{{smiley}}</span></div>
     <div class="input-group input-group-sm">
-        <input type="text" tabindex="-1" placeholder="Chatmessage..." style="z-index: 1000;" (keyup.enter)="SendMessage()" class="form-control" id="textmessage" maxlength="500">
+        <!-- Disable chrome autofill -->
+        <input type="text" class="form-control" autocomplete="off chrome-off" style="display: none;" />
+        <input type="text" tabindex="-1" placeholder="Chatmessage..." list="autocompleteOff" style="z-index: 1000;" (keyup.enter)="SendMessage()" class="form-control" id="textmessage" maxlength="500">
         <div class="input-group-append">
             <button type="button" class="btn btn-light" (click)="showSmileys=!showSmileys"><i class="fa fa-smile-o" aria-hidden="true"></i></button>
         </div>

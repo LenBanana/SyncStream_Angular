@@ -63,6 +63,7 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
 
   gallowMember;
   gallowTimer;
+  gallowIsDrawing;
   whiteboardJoin;
   whiteboardUpdate;
   whiteboardClear;
@@ -157,6 +158,12 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
       }
       this.GallowMembers = members;
     });
+    this.gallowIsDrawing = this.whiteBoardSerive.gallowIsDrawing.subscribe(isdrawing => {
+      if (isdrawing == null) {
+        return;
+      }
+      this.IsDrawing = isdrawing;
+    });
     this.whiteboardJoin = this.whiteBoardSerive.whiteboardJoin.subscribe(update => {
       if (update == null) {
         return;
@@ -200,6 +207,7 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     this.whiteboardClear.unsubscribe();
     this.whiteboardUndo.unsubscribe();
     this.whiteboardRedo.unsubscribe();
+    this.whiteBoardSerive.NullAllSubs();
   }
 
   getAnonWord(GallowWord: string, numsToPush = 0) {

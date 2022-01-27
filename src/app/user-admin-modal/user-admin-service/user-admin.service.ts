@@ -22,6 +22,9 @@ export class UserAdminService {
     });
    }
 
+  public NullAllSubs() {
+    this.Users.next(null);
+  }
 
   public GetUsers(token: string, userID: number) {
     hubConnection.invoke('GetUsers', token, userID);

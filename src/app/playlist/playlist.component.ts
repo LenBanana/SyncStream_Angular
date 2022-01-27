@@ -46,6 +46,7 @@ export class PlaylistComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.readySub.unsubscribe();
     this.playlistUpdate.unsubscribe();
+    this.playlistService.NullAllSubs();
   }
 
   public play(url: string) {

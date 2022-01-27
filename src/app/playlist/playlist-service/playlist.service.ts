@@ -22,6 +22,9 @@ export class PlaylistService {
     });
    }
 
+  public NullAllSubs() {
+    this.playlist.next(null);
+  }
 
   public addPlaylistListener() {
     hubConnection.on('playlistupdate', (data) => {

@@ -37,6 +37,7 @@ export class SideNavComponent implements OnInit, OnDestroy {
   showInput = false;
   showPlaylist = false;
   showUsername = false;
+  showMemberlist = false;
   WhiteboardActive = false;
   BlackjackActive = false;
   playingGallows;
@@ -58,6 +59,7 @@ export class SideNavComponent implements OnInit, OnDestroy {
         this.WhiteboardActive = false;
         return;
       } 
+      this.BlackjackActive = false;
       this.WhiteboardActive = true;
     });
 
@@ -66,6 +68,7 @@ export class SideNavComponent implements OnInit, OnDestroy {
         return;
       }
       if (playBlackjack === true) {
+        this.WhiteboardActive = false;
         this.BlackjackActive = true;
       }
       if (playBlackjack === false) {
@@ -111,72 +114,68 @@ export class SideNavComponent implements OnInit, OnDestroy {
   }
 
   ToggleInput() {
-    if (this.showPlaylist) {
-      this.TogglePlaylist();
-    }
-    if (this.Threshhold) {
-      this.ToggleThreshhold();
-    }
-    if (this.showUsername) {
-      this.ToggleUsername();
-    }
     if (this.showInput) {
       this.showInput = false;
     } else {
+      this.ResetInputs();
       this.showInput = true;
     }
   }
 
   TogglePlaylist() {
-    if (this.showInput) {
-      this.ToggleInput();
-    }
-    if (this.Threshhold) {
-      this.ToggleThreshhold();
-    }
-    if (this.showUsername) {
-      this.ToggleUsername();
-    }
     if (this.showPlaylist) {
       this.showPlaylist = false;
     } else {
+      this.ResetInputs();
       this.showPlaylist = true;
     }
   }   
 
   ToggleThreshhold() {
-    if (this.showPlaylist) {
-      this.TogglePlaylist();
-    }
-    if (this.showInput) {
-      this.ToggleInput();
-    }
-    if (this.showUsername) {
-      this.ToggleUsername();
-    }
     if (this.Threshhold) {
       this.Threshhold = false;
     } else {
+      this.ResetInputs();
       this.Threshhold = true;
     }
   }   
 
   ToggleUsername() {
-    if (this.showPlaylist) {
-      this.TogglePlaylist();
+    if (this.showUsername) {
+      this.showUsername = false;
+    } else {
+      this.ResetInputs();
+      this.showUsername = true;
     }
+  }  
+
+  ToggleMemberlist() {
+    if (this.showMemberlist) {
+      this.showMemberlist = false;
+    } else {
+      this.ResetInputs();
+      this.showMemberlist = true;
+    }
+  }  
+
+  ResetInputs() {    
     if (this.showInput) {
       this.ToggleInput();
+    }
+    if (this.showPlaylist) {
+      this.TogglePlaylist();
     }
     if (this.Threshhold) {
       this.ToggleThreshhold();
     }
     if (this.showUsername) {
-      this.showUsername = false;
-    } else {
-      this.showUsername = true;
+      this.ToggleUsername();
     }
-  }  
+  }
+
+  ChangeHost(username) {    
+    this.userService.changeHost(username, this.UniqueId);   
+  }
   
   toggleTwitchChat() {
     this.toggleTwitch.emit();
@@ -226,6 +225,10 @@ export class SideNavComponent implements OnInit, OnDestroy {
   }
 
   quickPlay() {
+    if (!navigator||!navigator.clipboard||!navigator.clipboard.readText) {
+      this.showInput = true;
+      return;
+    }
     navigator.clipboard.readText()
     .then(text => {
       var playerinput = document.getElementById('videoinput') as HTMLInputElement;

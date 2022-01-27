@@ -8,12 +8,21 @@ import { hubConnection, SignalRService } from 'src/app/services/signal-r.service
   providedIn: 'root'
 })
 export class WhiteboardService {
-
+  gallowMember: BehaviorSubject<Member[]> = new BehaviorSubject(null);
+  gallowTimer: BehaviorSubject<number> = new BehaviorSubject(null);
+  gallowIsDrawing: BehaviorSubject<boolean> = new BehaviorSubject(null);
+  whiteboardUpdate: BehaviorSubject<any> = new BehaviorSubject(null);
+  whiteboardJoin: BehaviorSubject<any> = new BehaviorSubject(null);
+  whiteboardClear: BehaviorSubject<boolean> = new BehaviorSubject(null);
+  whiteboardUndo: BehaviorSubject<string> = new BehaviorSubject(null);
+  whiteboardRedo: BehaviorSubject<string> = new BehaviorSubject(null);
+  
   constructor(private signalRService: SignalRService) {
     signalRService.connectionClosed.subscribe(isClosed => {
       if (isClosed===false) {
         this.addGallowTimerListener();
         this.addGallowUserListener();
+        this.addGallowDrawingListener();
         this.addWhiteBoardClearListener();
         this.addWhiteBoardJoinListener();
         this.addWhiteBoardListener();
@@ -23,6 +32,7 @@ export class WhiteboardService {
       if (isClosed===true) {
         this.removeGallowTimerListener();
         this.removeGallowUserListener();
+        this.removeGallowDrawingListener();
         this.removeWhiteBoardClearListener();
         this.removeWhiteBoardJoinListener();
         this.removeWhiteBoardListener();
@@ -31,13 +41,16 @@ export class WhiteboardService {
       }
     });
    }
-  gallowMember: BehaviorSubject<Member[]> = new BehaviorSubject(null);
-  gallowTimer: BehaviorSubject<number> = new BehaviorSubject(null);
-  whiteboardUpdate: BehaviorSubject<any> = new BehaviorSubject(null);
-  whiteboardJoin: BehaviorSubject<any> = new BehaviorSubject(null);
-  whiteboardClear: BehaviorSubject<boolean> = new BehaviorSubject(null);
-  whiteboardUndo: BehaviorSubject<string> = new BehaviorSubject(null);
-  whiteboardRedo: BehaviorSubject<string> = new BehaviorSubject(null);
+
+  public NullAllSubs() {
+    this.gallowMember.next(null);
+    this.gallowTimer.next(null);
+    this.whiteboardJoin.next(null);
+    this.whiteboardUpdate.next(null);
+    this.whiteboardClear.next(null);
+    this.whiteboardUndo.next(null);
+    this.whiteboardRedo.next(null);
+  }
 
   public getWhiteBoard(UniqueId: string) {
     hubConnection.invoke('WhiteBoardJoin', UniqueId);
@@ -72,6 +85,17 @@ export class WhiteboardService {
   public removeGallowUserListener() {
     hubConnection.off('gallowusers');
     this.gallowMember.next(null);
+  }
+
+  public addGallowDrawingListener() {
+    hubConnection.on('isdrawingupdate', (data) => {
+      this.gallowIsDrawing.next(data);
+    });
+  }
+
+  public removeGallowDrawingListener() {
+    hubConnection.off('isdrawingupdate');
+    this.gallowIsDrawing.next(null);
   }
 
   public addGallowTimerListener() {

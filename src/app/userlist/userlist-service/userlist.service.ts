@@ -26,6 +26,12 @@ export class UserlistService {
     });
    }
 
+  public NullAllSubs() {
+    this.addUserFail.next(null);
+    this.members.next(null);
+    this.host.next(null);
+  }
+
   public addUser(username: string, UniqueId: string, password: string) {
     hubConnection.invoke('AddUser', username, UniqueId, password);
   }

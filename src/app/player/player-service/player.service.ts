@@ -34,6 +34,14 @@ export class PlayerService {
     });
    }
 
+   public NullAllSubs() {
+    this.player.next(null);
+    this.currentTime.next(null);
+    this.isplaying.next(null);
+    this.playingGallows.next(null);
+    this.playingBlackjack.next(null);
+   }
+
   public addPlayerListener() {
     hubConnection.on('videoupdate', (data) => {
       this.player.next(data);

@@ -39,6 +39,7 @@ export class UserlistComponent implements OnInit, OnDestroy {
     this.userFailUpdate.unsubscribe();
     this.memberUpdate.unsubscribe();
     this.hostUpdate.unsubscribe();
+    this.userService.NullAllSubs();
   }
 
   ngOnInit(): void {

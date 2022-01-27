@@ -22,6 +22,11 @@ export class TwitchService {
     });
    }
 
+  public NullAllSubs() {
+    this.Playing.next(null);
+    this.Time.next(null);
+  }
+
   
   public addPlayingListener() {
     hubConnection.on('twitchPlaying', (data) => {

@@ -7,11 +7,11 @@
             </div>
             <div class="modal-body explain-text">
                 <div class="col-12">
-                    <label class="mt-3">Username<span class="text-danger">*</span></label>
+                    <label class="mt-3">Username<span class="text-danger"> *</span></label>
                     <input [(ngModel)]="User.username" minlength="2" type="text" class="form-control bg-dark text-light" placeholder="Username" required>
-                    <label class="mt-3">Password (new)<span class="text-danger">*</span></label>
+                    <label class="mt-3">Password (new)<span class="text-danger"> *</span></label>
                     <input [(ngModel)]="User.password" minlength="2" type="password" class="form-control bg-dark text-light" placeholder="Password" required>    
-                    <label class="mt-3">Password (repeat new)<span class="text-danger">*</span></label>
+                    <label class="mt-3">Password (repeat new)<span class="text-danger"> *</span></label>
                     <input [(ngModel)]="RepeatPassword" minlength="2" type="password" class="form-control bg-dark text-light" placeholder="Password" required>  
                     <div class="text-danger">
                         <div *ngIf="RepeatPassword!==User.password">
@@ -19,7 +19,7 @@
                         </div>
                     </div>
                     <hr>
-                    <label class="mt-3">Password (confirmation)<span class="text-danger">*</span></label>
+                    <label class="mt-3">Password (confirmation)<span class="text-danger"> *</span></label>
                     <input [(ngModel)]="Password" minlength="2" type="password" class="form-control bg-dark text-light" placeholder="Password" required>                  
                 </div>
             </div>

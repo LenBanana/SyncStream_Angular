@@ -26,6 +26,11 @@ export class DreckchatService {
     });
    }
 
+   public NullAllSubs() {
+    this.messages.next(null);
+    this.message.next(null);
+   }
+
   public addMessagesListener() {
     hubConnection.on('sendmessages', (data) => {
       this.messages.next(data);
@@ -70,5 +75,13 @@ export class DreckchatService {
 
   public spectateBj(UniqueId: string) {
     hubConnection.invoke('SpectateBlackjack', UniqueId);
+  }
+
+  public AddBjAi(UniqueId: string) {
+    hubConnection.invoke('AddBlackjackAi', UniqueId);
+  }
+
+  public MakeAi(UniqueId: string) {
+    hubConnection.invoke('MakeAi', UniqueId);
   }
 }

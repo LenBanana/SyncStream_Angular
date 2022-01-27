@@ -124,12 +124,8 @@
 
 .animateBg {
   display: inline-block;
-  -webkit-animation: BlinkChat 2s infinite;
-  /* Safari 4+ */
-  -moz-animation: BlinkChat 2s infinite;
-  /* Fx 5+ */
-  -o-animation: BlinkChat 2s infinite;
-  /* Opera 12+ */
-  animation: BlinkChat 2s infinite;
-  /* IE 10+, Fx 29+ */
+  -webkit-animation: BlinkChat 2s ease infinite;
+  -moz-animation: BlinkChat 2s ease infinite;
+  -o-animation: BlinkChat 2s ease infinite;
+  animation: BlinkChat 2s ease infinite;
 }

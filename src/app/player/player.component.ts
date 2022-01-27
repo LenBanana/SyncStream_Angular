@@ -105,6 +105,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     clearInterval(this.TimeUpdate);
     clearInterval(this.PingInterval);
     this.removeListener();
+    this.playerService.NullAllSubs();
   }
 
   removeListener() { 

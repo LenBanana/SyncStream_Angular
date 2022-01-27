@@ -31,6 +31,10 @@ export class LoginModalComponent implements OnInit, OnDestroy {
       if (result == null) {
         return;
       }
+      if ( result.approved == -1) {
+        this.SaveLogin.emit(null);
+        return;
+      }
       if (result.username == null) {
         this.SaveLogin.emit(result);
         this.wrongPw = true;
@@ -51,7 +55,10 @@ export class LoginModalComponent implements OnInit, OnDestroy {
     });
 
     this.registerRequest = this.signalRService.registerRequest.subscribe(result => { 
-      if (result == null) {
+      if (result == null || result.approved == -1) {
+        return;
+      }
+      if (result.username == null) {
         this.userExist = true;
         setTimeout(() => {
           this.userExist = false;

@@ -16,7 +16,7 @@
         (isPlaying)="playPauseTwitch($event)"></app-twitch-player>
     </div>
     <div [class.none]="CurrentPlayerType!=playerType.Nothing" [class.vh-90]="!nav" class="nothing-playing">
-      <span><i class="fa fa-clock-o" aria-hidden="true"></i> Nothing playing</span>
+      <span><i class="fa fa-pause-circle" aria-hidden="true"></i> Nothing playing</span>
     </div>
     <iframe [class.none]="CurrentPlayerType!=playerType.YouTube" id="YTPlayer"
       style="min-height: 80vh; width: 100%; border: none;" [class.vh-90]="!nav"
