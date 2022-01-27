@@ -244,7 +244,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {
       this.IsPlaying = isplaying;
       this.isPlayingEvent.emit(isplaying);
-      if (!this.YTPlayer || !player) {
+      if (!this.YTPlayer || !player || !this.YTPlayer.getPlayerState) {
         return;
       }
       if (isplaying && !this.IsHost) {
@@ -259,6 +259,9 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
         } else {
           player.pause();
         }
+      }
+      if (this.CurrentPlayerType != PlayerType.YouTube && isplaying && this.YTPlayer.getPlayerState() != YT.PlayerState.PAUSED) {
+        this.YTPlayer.pauseVideo();
       }
     });
     this.timeUpdate = this.playerService.currentTime.subscribe(currentTime => {
