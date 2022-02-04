@@ -19,7 +19,8 @@
             </div>
             <div class="modal-body explain-text mb-4">
                 <label style="font-size: 1rem;">Room password</label>
-                <input [(ngModel)]="RoomPassword" type="password" class="form-control user-input bg-dark text-light" (keypress)="alphaKeys($event)" placeholder="(optional) password" />
+                <input [(ngModel)]="RoomPassword" type="password" class="form-control user-input bg-dark text-light" (keypress)="alphaKeys($event)" placeholder="Password" />
+                <small *ngIf="FailedPassword" class="text-danger">Password is incorrect</small>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-success px-3" (click)="AddUser()">Submit <i class="fa fa-check" aria-hidden="true"></i></button>

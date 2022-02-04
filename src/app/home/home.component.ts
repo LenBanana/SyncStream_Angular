@@ -79,26 +79,11 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   }
 
   refresh(): void {
-    //this.router.navigate([".."]);
     this.location.go("/");
     window.location.reload();
   }
 
-  ngOnInit() {    
-   /* this.loginRequest = this.signalRService.loginRequest.subscribe(result => { 
-      if (result == null) {
-        return;
-      }
-      if (!result.username||result.username.length==0) {
-        this.Username = 'Anon' + "#" + randomIntFromInterval(100, 10000);   
-        return;
-      }
-      this.Username = result.username;      
-      MainUser.approved = result.approved;
-      MainUser.userprivileges = result.userprivileges;
-      MainUser.username = result.username;
-      this.logout = true;
-    });  */
+  ngOnInit() { 
   }
 
   menuEnter(enter) {
@@ -119,7 +104,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   }
 
   ngOnDestroy() {   
-    //this.loginRequest.unsubscribe();
   }
 
   toggleNav() {

@@ -23,11 +23,12 @@ export class UserlistComponent implements OnInit, OnDestroy {
   @Output() userlistChange = new EventEmitter();
   @Output() userAdded = new EventEmitter();
   @Input() Username: string;
+  Initial = true;
   IsHost: boolean = false;
   Members: Member[] = [];
   UserUpdate;
   FailedPassword = false;
-  RoomPassword = "";
+  RoomPassword = "$null$";
   publicIP = "";
   Privileges = 0;
   userFailUpdate;
@@ -66,9 +67,19 @@ export class UserlistComponent implements OnInit, OnDestroy {
         }, 1500);
         return;
       }
-      if (room == -1 && this.FailedPassword == false) {
-        this.FailedPassword = true;
-          $('#roomPwModal').modal('show');       
+      if (room == -1) {
+        this.RoomPassword = "";
+        if (this.Initial) {
+          this.Initial = false;
+          $('#roomPwModal').modal('show');
+          return;
+        }
+        if (this.FailedPassword == false) {          
+          this.FailedPassword = true;
+        }
+        setTimeout(() => {
+          this.FailedPassword = false;
+        }, 2500);
       } else if (room == 1) {        
         this.FailedPassword = false;
         $('#roomPwModal').modal('hide');        
