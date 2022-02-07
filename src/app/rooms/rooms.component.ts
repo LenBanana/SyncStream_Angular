@@ -176,6 +176,11 @@ export class RoomsComponent implements OnInit {
     this.currentRoom = undefined;
   }
 
+  refresh(): void {
+    this.loc.go("/");
+    window.location.reload();
+  }
+
   public DeleteRoom(uniqueId: string, memberCount: number) {
     if (memberCount !== 0) {
       return;

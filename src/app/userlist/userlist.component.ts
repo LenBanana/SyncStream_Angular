@@ -4,6 +4,7 @@ import { Member } from '../Interfaces/Member';
 import { HttpClient } from '@angular/common/http';
 import { MainUser } from '../helper/Globals';
 import { Location } from '@angular/common';
+import { UserUpdate } from '../player/player.component';
 declare var $:any
 
 @Component({
@@ -59,15 +60,14 @@ export class UserlistComponent implements OnInit, OnDestroy {
       if (room == null) {
         return;
       }
-      if (room == -2) {
+      if (room == UserUpdate.Banned) {
         $('#bannedModal').modal('show');   
         setTimeout(() => {          
-          this.loc.go("/");
-          window.location.reload();
+          this.refresh();
         }, 1500);
         return;
       }
-      if (room == -1) {
+      else if (room == UserUpdate.WrongPassword) {
         this.RoomPassword = "";
         if (this.Initial) {
           this.Initial = false;
@@ -80,10 +80,14 @@ export class UserlistComponent implements OnInit, OnDestroy {
         setTimeout(() => {
           this.FailedPassword = false;
         }, 2500);
-      } else if (room == 1) {        
+      } else if (room == UserUpdate.Success) {        
         this.FailedPassword = false;
         $('#roomPwModal').modal('hide');        
         this.userAdded.emit();
+      }
+      else {        
+        console.log("test");
+        $('#dialogModal-RoomNotFoundModal').modal('show');   
       }
     });
     this.memberUpdate = this.userService.members.subscribe(members => {

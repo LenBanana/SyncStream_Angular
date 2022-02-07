@@ -109,6 +109,10 @@
     <div style="margin-top: 75px;"></div>
 </div>
 
+<app-text-dialog [Id]="'RoomNotFoundModal'" [Question]="'The room you are looking for does not exist'"
+  [AddInput]="false" [Header]="'Room not found'" [Answer1]="'Ok'"
+  (Yes)="refresh()">
+</app-text-dialog>
 <app-login-modal *ngIf="SignalR" (SaveLogin)="SaveLogin($event, false)" [user]="user" [logout]="logout"></app-login-modal>
 <span *ngIf="currentRoom&&SignalR&&logout!=undefined" class="badge badge-dreck my-2 block pointer leaveBtn" [class.fade-out]="!inMenu" title="Leave room" (click)="LeaveRoom()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>
 <app-home *ngIf="currentRoom&&SignalR&&logout!=undefined" [UniqueId]="currentRoom" [currentTime]="currentTime" [Username]="user.username" [DelInterval]="delInterval" [logout]="logout" (IntervalOff)="currentRoom=undefined; currentTime=undefined" (isInMenu)="inMenu=$event"></app-home>
