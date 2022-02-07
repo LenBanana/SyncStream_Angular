@@ -54,16 +54,11 @@
         <i *ngIf="!member.ishost" (click)="ChangeHost(member.username)" class="fa fa-user text-info"></i>
       </div>
       <div class="col-10">
-        <p style="position: relative; display: block; opacity: 1;">{{member.username}}</p>
+        <p title="{{member.username}}" style="position: relative; display: block; opacity: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{member.username}}</p>
       </div>
     </div>
   </span>
 
   <span class="badge badge-dreck my-2 block pointer" title="Toggles the chat" (click)="toggleTwitchChat()"><i
       class="fa fa-comment"></i></span>
-  <!--<hr>
-  <span class="badge badge-dreck mt-2 block"
-    title="{{ IsHost ? 'Time updates send to server (changes with ping): ' + ThreshholdNumber + 's' : 'Maximum time difference to host (changes with ping): ' + ThreshholdNumber + 's'}}">
-    <i class="fa fa-info"></i><br>
-  </span>-->
 </div>
