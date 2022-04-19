@@ -34,6 +34,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   @Input() logout: boolean;
   @Output() IntervalOff = new EventEmitter();  
   @Output() isInMenu = new EventEmitter();  
+  @Output() goBack = new EventEmitter();  
   Members: Member[] = [];
   inMenu = false;
   IsHost: boolean = false;
@@ -79,8 +80,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   }
 
   refresh(): void {
-    this.location.go("/");
-    window.location.reload();
+    this.goBack.emit();
   }
 
   ngOnInit() { 

@@ -25,7 +25,7 @@ export class SignalRService {
   loginRequest: BehaviorSubject<User> = new BehaviorSubject(null);
   registerRequest: BehaviorSubject<User> = new BehaviorSubject(null);
   pingStream: BehaviorSubject<number> = new BehaviorSubject(CurrentPing);
-  
+
   public AddLoginListener() {
     hubConnection.on('userlogin', (data) => {
       this.loginRequest.next(data);
@@ -47,7 +47,7 @@ export class SignalRService {
     hubConnection.off('userRegister');
     this.registerRequest.next(null);
   }
-  
+
   public LoginRequest(user: User) {
     hubConnection.invoke('LoginRequest', user);
   }
@@ -56,8 +56,8 @@ export class SignalRService {
     hubConnection.invoke('RegisterRequest', user);
   }
 
-  public async startConnection() {   
-    this.tokenUpdate.subscribe(result => {    
+  public async startConnection() {
+    this.tokenUpdate.subscribe(result => {
       if (result==null) {
         return;
       }
@@ -66,7 +66,7 @@ export class SignalRService {
       document.cookie = "login-token=" + result.token + "; expires=" + curDate.toUTCString() + "; path=/";
       document.cookie = "user-id=" + result.userID + "; expires=" + curDate.toUTCString() + "; path=/";
     });
-    
+
 
     hubConnection = new signalR.HubConnectionBuilder()
       .withUrl(baseUrl + 'server')
@@ -74,13 +74,13 @@ export class SignalRService {
 
     await this.connect().finally(() => {
       hubConnection.onclose(() => {
-        console.log("Connection closed... Attempting to reconnect");  
+        console.log("Connection closed... Attempting to reconnect");
         this.connectionClosed.next(true);
         this.removeRoomListener();
         this.RemoveLoginListener();
         this.RemoveRegisterListener();
         this.RemovePingListener();
-        this.RemoveTokenListener();   
+        this.RemoveTokenListener();
         setTimeout(() => {
           this.connect();
         }, 1000);
@@ -92,13 +92,13 @@ export class SignalRService {
     await hubConnection
       .start()
       .then(() => {
-        console.log('Connection started');        
+        console.log('Connection started');
         this.addRoomListener();
         this.AddLoginListener();
         this.AddRegisterListener();
         this.AddPingListener();
-        this.AddTokenListener();      
-        this.connectionClosed.next(false); 
+        this.AddTokenListener();
+        this.connectionClosed.next(false);
 
         var token = this.getCookie("login-token");
         var userId = this.getCookie("user-id");
@@ -122,7 +122,7 @@ export class SignalRService {
           })
           .catch(err => console.log('Error while stopping connection: ' + err))
       });
-  }  
+  }
 
   public getCookie(name) {
     const value = `; ${document.cookie}`;

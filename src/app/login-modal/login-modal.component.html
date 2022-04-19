@@ -9,7 +9,7 @@
                 <form class="mt-3">
                     <label for="userName">Username</label>
                     <div class="form-group">
-                        <input #userLoginInput type="text" (keyup.enter)="LoginRequest()" class="form-control" [class.is-invalid]="loginError||userExist||wrongPw" id="userName" placeholder="Username">
+                        <input #userLoginInput maxlength="20" type="text" (keyup.enter)="LoginRequest()" class="form-control" [class.is-invalid]="loginError||userExist||wrongPw" id="userName" placeholder="Username">
                         <small id="userHelp" class="text-danger" *ngIf="loginError">
                                     Must be 3-20 characters long.
                                 </small>
@@ -19,7 +19,7 @@
                     </div>
                     <label for="userPw">Password</label>
                     <div class="form-group">
-                        <input #pwLoginInput type="password" (keyup.enter)="LoginRequest()" class="form-control" [class.is-invalid]="loginError||userExist||wrongPw" id="userPw" placeholder="Password">
+                        <input #pwLoginInput maxlength="80" type="password" (keyup.enter)="LoginRequest()" class="form-control" [class.is-invalid]="loginError||userExist||wrongPw" id="userPw" placeholder="Password">
                         <small id="passwordHelp" class="text-danger" *ngIf="loginError">
                                     Must be at least 6 characters long.
                                 </small>

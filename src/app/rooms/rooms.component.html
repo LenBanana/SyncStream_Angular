@@ -6,10 +6,19 @@
 <div id="RoomView" *ngIf="!currentRoom&&SignalR&&logout!=undefined">    
     <div class="header text-center">
         <div class="center-content">
+           <!--<div class="fade-in-start">
+                <div class="header-img right-top">
+                    <img class="contained-img" src="assets/img/bg_right.png" >
+                </div>
+                <div class="header-img left-top">
+                    <img class="contained-img" src="assets/img/bg_left.png" >
+                </div>
+            </div>-->
             <span class="globe-icon"><i class="fa fa-globe mr-3" aria-hidden="true"></i></span>
             <span class="icon-text"><span style="color: #2980b9;">Dreck</span>Tube</span>
         </div>
     </div>
+    <div class="line"></div>
     <div *ngIf="filterRooms" class="container-fluid" style="padding-left: 5vw; padding-right: 5vw;">
         <div class="mt-4 row">
             <div class="col-4">
@@ -74,7 +83,7 @@
                                              <span class="PlaylistTitleText"> {{video.title}}</span>
                                         </span>
                                     </li>
-                                </ul>
+                                </ul>           
                             </div>
                             <div class="room-user-info">
                                 <p class="text-center font-weight-bold mt-2 counterSkew10" style="margin: 0;">Member</p>
@@ -115,4 +124,4 @@
 </app-text-dialog>
 <app-login-modal *ngIf="SignalR" (SaveLogin)="SaveLogin($event, false)" [user]="user" [logout]="logout"></app-login-modal>
 <span *ngIf="currentRoom&&SignalR&&logout!=undefined" class="badge badge-dreck my-2 block pointer leaveBtn" [class.fade-out]="!inMenu" title="Leave room" (click)="LeaveRoom()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>
-<app-home *ngIf="currentRoom&&SignalR&&logout!=undefined" [UniqueId]="currentRoom" [currentTime]="currentTime" [Username]="user.username" [DelInterval]="delInterval" [logout]="logout" (IntervalOff)="currentRoom=undefined; currentTime=undefined" (isInMenu)="inMenu=$event"></app-home>
+<app-home *ngIf="currentRoom&&SignalR&&logout!=undefined" [UniqueId]="currentRoom" [currentTime]="currentTime" [Username]="user.username" [DelInterval]="delInterval" [logout]="logout" (goBack)="refresh()" (IntervalOff)="currentRoom=undefined; currentTime=undefined" (isInMenu)="inMenu=$event"></app-home>

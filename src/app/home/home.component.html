@@ -3,12 +3,12 @@
         [class.fa-bars]="!nav" [class.fa-times]="nav" [class.fade-out]="fullscreen"></i>-->
     <i class="fa fa-sign-out btn fa-2x pointer text-danger fade menu-btn" *ngIf="nav" [class.resetbtn-left]="nav" aria-hidden="true" (click)="refresh()"></i>
     <app-side-nav *ngIf="UserAdded==true&&!nav" [logout]="logout" [ThreshholdNumber]="Threshhold" [Playlist]="Playlist" [nav]="nav" [IsHost]="IsHost" [fullscreen]="fullscreen" [isPlaying]="isPlaying" [UniqueId]="UniqueId" [Username]="Username" [Members]="Members"
-        [playerComp]="playerComp" (threshholdChange)="Threshhold=$event" (usernameChange)="Username=$event" (toggleTwitch)="twitchChat=!twitchChat" (menuEnter)="menuEnter($event)" (Draw)="DrawWhiteboard()"></app-side-nav>
+        [playerComp]="playerComp" (goBack)="refresh()" (threshholdChange)="Threshhold=$event" (usernameChange)="Username=$event" (toggleTwitch)="twitchChat=!twitchChat" (menuEnter)="menuEnter($event)" (Draw)="DrawWhiteboard()"></app-side-nav>
     <div class="row">
         <div [ngClass]="{'col-3': nav}">
             <div class="sidenav" [class.width-25]="nav">
                 <div class="leftbox mt-3" [class.hide]="!nav">
-                    <app-userlist [nav]="nav" [UniqueId]="UniqueId" [Username]="Username" [DelInterval]="DelInterval" (userAdded)="UserAdded=true;" (intervalOff)="userIntervalOff()" (isHost)="ChangeHost($event)" (userlistChange)="Members=$event"></app-userlist>
+                    <app-userlist [nav]="nav" [UniqueId]="UniqueId" [Username]="Username" [DelInterval]="DelInterval" (goBack)="refresh()" (userAdded)="UserAdded=true;" (intervalOff)="userIntervalOff()" (isHost)="ChangeHost($event)" (userlistChange)="Members=$event"></app-userlist>
                 </div>
             </div>
             <div class="sidenav" [class.width-25]="nav" style="margin-top: 20%;">

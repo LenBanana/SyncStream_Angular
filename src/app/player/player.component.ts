@@ -59,7 +59,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   @Output() threshholdChange = new EventEmitter();
   GallowWord = "";
   playingGallows;
-  
+
   playingBlackjack;
 
   YTPlayer: YT.Player;
@@ -108,7 +108,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.playerService.NullAllSubs();
   }
 
-  removeListener() { 
+  removeListener() {
     this.playerUpdate.unsubscribe();
     this.isPlayingUpdate.unsubscribe();
     this.timeUpdate.unsubscribe();
@@ -138,7 +138,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     ( < any > window).onYouTubePlayerAPIReady = () => {
       this.setInit();
     };
-    
+
   }
 
   setInit() {
@@ -227,7 +227,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       }
       if (playBlackjack === true) {
         this.LastPlayerType = this.CurrentPlayerType;
-        this.CurrentPlayerType = PlayerType.Blackjack;        
+        this.CurrentPlayerType = PlayerType.Blackjack;
         if (this.IsHost) {
           this.playerService.PlayPause(false, this.UniqueId);
         }
@@ -237,10 +237,10 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       }
       if (playBlackjack === false) {
-        this.ResetPlayerType();        
+        this.ResetPlayerType();
       }
     });
-    
+
     this.isPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {
       this.IsPlaying = isplaying;
       this.isPlayingEvent.emit(isplaying);
@@ -308,10 +308,15 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!file || !file.target || !file.target.files) {
       return;
     }
-    var url = window.URL.createObjectURL(file.target.files[0]);
-    this.CurrentPlayerType = PlayerType.External;
-    this.YTPlayer.pauseVideo();
-    this.setVideo(url);
+    if (this.CurrentPlayerType == PlayerType.Twitch) {
+      this.playlistService.nextVideo(this.UniqueId);
+    }
+    setTimeout(() => {
+      var url = window.URL.createObjectURL(file.target.files[0]);
+      this.CurrentPlayerType = PlayerType.External;
+      this.YTPlayer.pauseVideo();
+      this.setVideo(url);
+    }, 250);
   }
 
   YTStateChange(event) {

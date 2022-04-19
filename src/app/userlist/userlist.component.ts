@@ -19,11 +19,12 @@ export class UserlistComponent implements OnInit, OnDestroy {
   @Input() nav: boolean;
   @Input() UniqueId: string;
   @Input() DelInterval: boolean;
+  @Input() Username: string;
   @Output() intervalOff = new EventEmitter();
   @Output() isHost = new EventEmitter();
   @Output() userlistChange = new EventEmitter();
   @Output() userAdded = new EventEmitter();
-  @Input() Username: string;
+  @Output() goBack = new EventEmitter();
   Initial = true;
   IsHost: boolean = false;
   Members: Member[] = [];
@@ -109,8 +110,7 @@ export class UserlistComponent implements OnInit, OnDestroy {
   }
 
   refresh(): void {
-    this.loc.go("/");
-    window.location.reload();
+    this.goBack.emit();
   }
 
   alphaKeys(event: KeyboardEvent) {    

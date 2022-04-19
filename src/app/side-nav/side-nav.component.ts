@@ -33,6 +33,7 @@ export class SideNavComponent implements OnInit, OnDestroy {
   @Output() toggleTwitch = new EventEmitter();
   @Output() menuEnter = new EventEmitter();
   @Output() Draw = new EventEmitter();
+  @Output() goBack = new EventEmitter();
   Threshhold = false;
   showInput = false;
   showPlaylist = false;
@@ -83,8 +84,7 @@ export class SideNavComponent implements OnInit, OnDestroy {
   }
   
   refresh(): void {
-    this.location.go("/");
-    window.location.reload();
+    this.goBack.emit();
   }
 
   enterMenu(enter) {

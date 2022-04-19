@@ -178,7 +178,8 @@ export class RoomsComponent implements OnInit {
 
   refresh(): void {
     this.loc.go("/");
-    window.location.reload();
+    //window.location.reload();
+    this.currentRoom = null;
   }
 
   public DeleteRoom(uniqueId: string, memberCount: number) {
