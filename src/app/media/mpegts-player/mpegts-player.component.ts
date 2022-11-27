@@ -90,7 +90,7 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
     //Video update from server
     this.VideoUpdate = this.playerService.player.subscribe(async vid => {
       await delay(10);
-      if (!this.IsReady || this.CurrentPlayerType != PlayerType.Live) {
+      if (!this.IsReady || this.CurrentPlayerType != PlayerType.Live || !vid) {
         return;
       }
       if (vid.url.includes('//drecktu.be:8088/live') || vid.url.includes('live.drecktu.be')) {

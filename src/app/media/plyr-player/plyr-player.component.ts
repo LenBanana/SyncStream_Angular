@@ -104,7 +104,7 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
     //Video update from server
     this.VideoUpdate = this.playerService.player.subscribe(async vid => {
       await delay(10);
-      if (!this.IsReady || this.CurrentPlayerType != PlayerType.Vimeo) {
+      if (!this.IsReady || this.CurrentPlayerType != PlayerType.Vimeo || !vid) {
         return;
       }
       if (vid.url.startsWith(baseUrl)) {

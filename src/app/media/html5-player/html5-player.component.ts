@@ -89,7 +89,7 @@ export class Html5PlayerComponent implements OnInit, AfterViewInit, OnDestroy, O
     //Video update from server
     this.VideoUpdate = this.playerService.player.subscribe(async vid => {
       await delay(10);
-      if (!this.IsReady || this.CurrentPlayerType != PlayerType.External) {
+      if (!this.IsReady || this.CurrentPlayerType != PlayerType.External || !vid) {
         return;
       }
       if (vid.url.startsWith(baseUrl)) {

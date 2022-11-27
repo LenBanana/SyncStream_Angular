@@ -140,7 +140,7 @@ export class TwitchComponent implements OnInit, OnChanges, OnDestroy, AfterViewI
     //Video update from server
     this.VideoUpdate = this.playerService.player.subscribe(async vid => {
       await delay(10);
-      if (this.CurrentPlayerType != PlayerType.Twitch) {
+      if (this.CurrentPlayerType != PlayerType.Twitch || !vid) {
         return;
       }
       var twitchVodRegexpString = /^\d+$/;

@@ -22,6 +22,7 @@ export class LiveStreamViewComponent implements OnInit, OnDestroy {
   pageSize = 5;
   pageViewers = 1;
   pageSizeViewers = 5;
+  startDate = new Date();
 
   ngOnInit(): void {
     this.liveChannelSub = this.liveStreamService.liveChannels.subscribe(c => {
@@ -31,18 +32,18 @@ export class LiveStreamViewComponent implements OnInit, OnDestroy {
         return;
       }
       this.LiveUsers = c;
-      for (let i = 0; i < 20; i++) {
-        this.LiveUsers[0].watchMember.push(this.LiveUsers[0].watchMember[0]);
-      }
+      this.startDate = new Date();
       this.ref.detectChanges();
     });
     this.watchingUserSub = this.liveStreamService.watchingUser.subscribe(w => {
       if (w == null) {
         return;
       }
+      this.startDate = new Date();
       this.ref.detectChanges();
     });
     this.timeInterval = setInterval(() => {
+      this.startDate = new Date();
       this.ref.detectChanges();
     }, 1000)
   }

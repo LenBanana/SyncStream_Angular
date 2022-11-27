@@ -162,7 +162,7 @@ export class YoutubeComponent implements OnInit, OnDestroy, OnChanges {
     //Video update from server
     this.VideoUpdate = this.playerService.player.subscribe(async vid => {
       await delay(10);
-      if (!this.IsReady|| this.CurrentPlayerType != PlayerType.YouTube) {
+      if (!this.IsReady|| this.CurrentPlayerType != PlayerType.YouTube || !vid) {
         return;
       }
       this.YTPlayer.loadVideoById(this.youtube_parser(vid.url), 0, 'hd1080');

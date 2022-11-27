@@ -1,14 +1,12 @@
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
-  name: 'dateLive',
-  pure: false
+  name: 'dateLive'
 })
 export class DateLivePipe implements PipeTransform {
-
-  transform(value): any {
-    if(!value) return null;
-    var ms = Math.abs(new Date().getTime() - new Date(value).getTime()) + 10000;
+  transform(date1, date2): any {
+    if(!date1||!date2) return null;
+    var ms = new Date(date2).getTime() - new Date(date1).getTime() + 12000;
     return ms;
   }
 

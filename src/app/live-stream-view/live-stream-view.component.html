@@ -7,17 +7,17 @@
       </div>
       <div class="modal-body">
         <div class="card bg-secondary text-light mt-2" *ngFor="let live of LiveUsers | slice: (page-1) * pageSize : page * pageSize; let i = index;">
-          <div class="card-body pointer" data-toggle="collapse" [attr.data-target]="'#viewerInfo' + i">
-            <span class="badge badge-danger mr-2"><i class="fa fa-dot-circle-o" aria-hidden="true"></i> LIVE</span>
-            <span>{{live.userName}}</span>
+          <div class="card-header pointer" data-toggle="collapse" [attr.data-target]="'#viewerInfo' + i">
+            <span class="badge badge-danger mr-2 pull-left"><i class="fa fa-dot-circle-o" aria-hidden="true"></i> LIVE</span>
             <span *ngIf="UniqueId&&UniqueId.length>0" class="badge badge-info pull-right ml-2 pointer" (click)="AddLiveStream(live)"><i class="fa fa-plus" aria-hidden="true"></i></span>
             <span class="badge badge-light pull-right ml-2"> {{live.watchMember.length}} <i class="fa fa-eye" aria-hidden="true"></i></span>
           </div>
-          <div class="card-footer">
-            <span class="badge badge-light pull-right"><i class="fa fa-circle text-danger" aria-hidden="true"></i> {{live.created | dateLive |date:'HH:mm:ss':'+0000'}}</span>
+          <div class="card-body">
+            <span class="badge pull-left py-1" style="font-size: 1rem;"><b>{{live.userName}}</b></span>
+            <span class="badge badge-light pull-right py-1"><i class="fa fa-circle text-danger" aria-hidden="true"></i> {{live.created | dateLive: startDate |date:'HH:mm:ss':'+0000'}}</span>
             <div id="viewerInfo{{i}}" class="collapse">
               <div *ngIf="live.watchMember.length>0">
-                <label for="userList{{i}}"><h5>Watching</h5></label>
+                <p class="mt-4 text-center">Viewers</p>
                 <div class="border-dark col-12 mb-3 mr-4" style="height: 1px;"></div>
                 <ngb-pagination *ngIf="live.watchMember.length>pageSizeViewers" class="pull-right"
                   [(page)]="pageViewers"
