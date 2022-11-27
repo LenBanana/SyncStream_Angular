@@ -8,6 +8,7 @@ import {
   BlackjackDealer,
   BlackjackMember
 } from '../Interfaces/Games/blackjack';
+import { BlackjackSounds, dealCardAudio } from '../Interfaces/Sounds';
 import {
   PlayerService
 } from '../player/player-service/player.service';
@@ -47,15 +48,17 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
   playingBlackjack;
   autoBet = false;
   forSplitHand = undefined;
+  soundActivated = true;
+  dealCardAudio = dealCardAudio;
 
   filteredMembers(firstHalf) {
     if (firstHalf) {
       return this.members.slice(0,2).filter(x => !x.notPlaying)
     }
-    else {      
+    else {
       return this.members.slice(2,4).filter(x => !x.notPlaying)
     }
-  } 
+  }
 
   ngOnInit(): void {
     this.askBetUpdate = this.blackjackService.askBetUpdate.subscribe(askBet => {
@@ -63,7 +66,7 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
         this.ResetView();
         this.forSplitHand = undefined
         if (!this.autoBet) {
-          setTimeout(() => {            
+          setTimeout(() => {
             $('#BetCollapse').collapse('show');
           }, 250);
           this.betModalTimeout = setTimeout(() => {
@@ -72,7 +75,7 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
             clearTimeout(this.betModalTimeout);
           }, this.timeoutTime);
         } else {
-          setTimeout(() => {            
+          setTimeout(() => {
             this.SetBet();
           }, 250);
         }
@@ -84,7 +87,7 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
       }
       this.ResetView();
       this.doubleOption = askPull;
-      setTimeout(() => {            
+      setTimeout(() => {
         $('#PullCollapse').collapse('show');
       }, 250);
       this.pullModalTimeout = setTimeout(() => {
@@ -98,7 +101,7 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
       }
       this.ResetView();
       this.forSplitHand = forSplitHand;
-      setTimeout(() => {            
+      setTimeout(() => {
         $('#PullCollapse').collapse('show');
       }, 250);
       this.pullModalTimeout = setTimeout(() => {
@@ -129,11 +132,17 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
       if (dealer === null) {
         return;
       }
+      if (this.dealer && dealer.cards && dealer.cards.length > this.dealer.cards.length) {
+        this.playSound(BlackjackSounds.DealCard);
+      }
       this.dealer = dealer;
     });
     this.selfUpdate = this.blackjackService.selfUpdate.subscribe(self => {
       if (self === null) {
         return;
+      }
+      if (this.self && self.cards && self.cards.length > this.self.cards.length) {
+        this.playSound(BlackjackSounds.DealCard);
       }
       this.self = self;
     });
@@ -141,8 +150,22 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
       if (members === null) {
         return;
       }
+      members.forEach(member => {
+        var idx = this.members.findIndex(x => x.username == member.username);
+        if (idx >= 0 && member.cards.length > this.members[idx].cards.length) {
+          this.playSound(BlackjackSounds.DealCard);
+        }
+      });
       this.members = members;
     });
+  }
+
+  playSound(sound: BlackjackSounds) {
+    switch (sound) {
+      case BlackjackSounds.DealCard:
+        dealCardAudio.play();
+      break;
+    }
   }
 
   ngOnDestroy() {
@@ -164,10 +187,15 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
     this.PercentTimer = 0;
     clearTimeout(this.pullModalTimeout);
     clearTimeout(this.betModalTimeout);
-    setTimeout(() => {      
+    setTimeout(() => {
       $('#BetCollapse').collapse('hide');
       $('#PullCollapse').collapse('hide');
     }, 500);
+  }
+
+  checkChatClass() {
+    var hasClass = !($('#ChatCollapse').hasClass('show'));
+    return hasClass;
   }
 
   SetBet() {
@@ -200,11 +228,6 @@ export class BlackjackGameComponent implements OnInit, OnDestroy {
       }
       $('#PullCollapse').collapse('hide');
     }
-  }
-
-  checkChatClass() {
-    var hasClass = !($('#ChatCollapse').hasClass('show'));
-    return hasClass;
   }
 
   SetAutoBet() {

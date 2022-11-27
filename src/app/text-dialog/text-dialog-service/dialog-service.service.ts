@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { Dialog } from 'src/app/Interfaces/Dialog';
-import { hubConnection, SignalRService } from 'src/app/services/signal-r.service';
+import { Dialog } from '../../Interfaces/Dialog';
+import { hubConnection, SignalRService } from '../../services/signal-r.service';
 
 @Injectable({
   providedIn: 'root'
@@ -9,6 +9,7 @@ import { hubConnection, SignalRService } from 'src/app/services/signal-r.service
 export class DialogService {
 
   newDialog: BehaviorSubject<Dialog> = new BehaviorSubject(null);
+  newPreFill: BehaviorSubject<string> = new BehaviorSubject(null);
   constructor(private signalRService: SignalRService) {
     signalRService.connectionClosed.subscribe(isClosed => {
       if (isClosed===false) {
@@ -19,7 +20,7 @@ export class DialogService {
       }
     });
    }
-  
+
   public addDialogListener() {
     hubConnection.on('dialog', (data) => {
       this.newDialog.next(data);

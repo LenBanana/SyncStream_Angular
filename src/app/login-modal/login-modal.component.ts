@@ -25,9 +25,9 @@ export class LoginModalComponent implements OnInit, OnDestroy {
   wrongPw = false;
   loginRequest;
   registerRequest;
-  
-  ngOnInit(): void {  
-    this.loginRequest = this.signalRService.loginRequest.subscribe(result => { 
+
+  ngOnInit(): void {
+    this.loginRequest = this.signalRService.loginRequest.subscribe(result => {
       if (result == null) {
         return;
       }
@@ -44,7 +44,7 @@ export class LoginModalComponent implements OnInit, OnDestroy {
         return;
       }
       this.SaveLogin.emit(result);
-      this.user = result;  
+      this.user = result;
       MainUser.approved = result.approved;
       MainUser.userprivileges = result.userprivileges;
       MainUser.username = result.username;
@@ -54,7 +54,7 @@ export class LoginModalComponent implements OnInit, OnDestroy {
       $('#loginModal').modal('hide');
     });
 
-    this.registerRequest = this.signalRService.registerRequest.subscribe(result => { 
+    this.registerRequest = this.signalRService.registerRequest.subscribe(result => {
       if (result == null || result.approved == -1) {
         return;
       }
@@ -66,14 +66,14 @@ export class LoginModalComponent implements OnInit, OnDestroy {
         return;
       }
       this.SaveLogin.emit(result);
-      this.user = result;   
+      this.user = result;
       this.logout = true;
       this.userLoginElement.nativeElement.value = "";
       this.pwLoginElement.nativeElement.value = "";
       $('#loginModal').modal('hide');
       $('#registerModal').modal('show');
-    });    
-  } 
+    });
+  }
 
   ngOnDestroy() {
     this.loginRequest.unsubscribe();
@@ -83,7 +83,7 @@ export class LoginModalComponent implements OnInit, OnDestroy {
   public LoginRequest() {
     const user: User = this.validateUserRequest();
     if (user) {
-      this.signalRService.LoginRequest(user);
+      this.signalRService.LoginRequest(user, navigator.appVersion);
     }
   }
 
@@ -100,7 +100,7 @@ export class LoginModalComponent implements OnInit, OnDestroy {
     if (username && pw && username.length >= 3 && pw.length >= 6 && username.length <= 20 && pw.length <= 80) {
       const pwSha: string = sha512.sha512(pw);
       if (pwSha) {
-        const user: User = { username: username, password: pwSha, id: 0, approved: 0, userprivileges: 0};
+        const user: User = { username: username, password: pwSha, id: 0, approved: 0, userprivileges: 0, streamToken: ""};
         return user;
       }
     } else {

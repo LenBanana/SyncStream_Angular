@@ -1,40 +1,55 @@
 <div class="modal hide fade in" id="loginModal">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content bg-dark">
-            <div class="modal-header">
-                <h4>Login to <span class="text-main-color font-weight-bold">Sync</span>Stream</h4>
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content bg-dark">
+      <div class="modal-header">
+        <h4>Login to <span class="text-main-color font-weight-bold">Sync</span>Stream</h4>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body explain-text">
+        <form class="mt-3">
+          <label for="userName">Username</label>
+          <div class="form-group">
+            <div class="input-group">
+              <div class="input-group-prepend">
+                <div class="btn btn-dark"><i class="fa fa-user" aria-hidden="true"></i></div>
+              </div>
+              <input #userLoginInput maxlength="20" type="text" (keyup.enter)="LoginRequest()"
+                class="form-control bg-secondary text-light border-dark"
+                [class.is-invalid]="loginError||userExist||wrongPw" id="userName" placeholder="Username">
             </div>
-            <div class="modal-body explain-text">
-                <form class="mt-3">
-                    <label for="userName">Username</label>
-                    <div class="form-group">
-                        <input #userLoginInput maxlength="20" type="text" (keyup.enter)="LoginRequest()" class="form-control" [class.is-invalid]="loginError||userExist||wrongPw" id="userName" placeholder="Username">
-                        <small id="userHelp" class="text-danger" *ngIf="loginError">
-                                    Must be 3-20 characters long.
-                                </small>
-                        <small id="userHelp2" class="text-danger" *ngIf="userExist">
-                                    This username is already taken.
-                                </small>
-                    </div>
-                    <label for="userPw">Password</label>
-                    <div class="form-group">
-                        <input #pwLoginInput maxlength="80" type="password" (keyup.enter)="LoginRequest()" class="form-control" [class.is-invalid]="loginError||userExist||wrongPw" id="userPw" placeholder="Password">
-                        <small id="passwordHelp" class="text-danger" *ngIf="loginError">
-                                    Must be at least 6 characters long.
-                                </small>
-                        <small id="passwordHelp2" class="text-danger" *ngIf="wrongPw">
-                                    This user does not exist.
-                                </small>
-                    </div>
-                </form>
-                <p class="mt-5">No account? Just click the register button below!</p>
+            <small id="userHelp" class="text-danger" *ngIf="loginError">
+              Must be 3-20 characters long.
+            </small>
+            <small id="userHelp2" class="text-danger" *ngIf="userExist">
+              This username is already taken.
+            </small>
+          </div>
+          <label for="userPw">Password</label>
+          <div class="form-group">
+            <div class="input-group">
+              <div class="input-group-prepend">
+                <div class="btn btn-dark"><i class="fa fa-lock" aria-hidden="true"></i></div>
+              </div>
+              <input #pwLoginInput maxlength="80" type="password" (keyup.enter)="LoginRequest()"
+                class="form-control bg-secondary text-light border-dark"
+                [class.is-invalid]="loginError||userExist||wrongPw" id="userPw" placeholder="Password">
             </div>
-            <div class="modal-footer">
-                <button (click)="LoginRequest()" type="button" class="btn btn-success mr-auto font-weight-bold"><i class="fa ml-1 fa-check" aria-hidden="true"></i> Login</button>
-                <button (click)="RegisterRequest()" type="button" class="btn float-left btn-primary ml-2 font-weight-bold"><i class="fa ml-1 fa-check" aria-hidden="true"></i> Register</button>
-                <button type="button" class="btn btn-danger font-weight-bold" data-dismiss="modal">Close <i class="fa ml-1 fa-times-circle" aria-hidden="true"></i></button>
-            </div>
-        </div>
+            <small id="passwordHelp" class="text-danger" *ngIf="loginError">
+              Must be at least 6 characters long.
+            </small>
+            <small id="passwordHelp2" class="text-danger" *ngIf="wrongPw">
+              This user does not exist.
+            </small>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button (click)="LoginRequest()" type="button" class="btn btn-success mr-auto font-weight-bold">Login <i
+            class="fa ml-1 fa-check" aria-hidden="true"></i></button>
+        <button (click)="RegisterRequest()" type="button"
+          class="btn float-left btn-primary ml-2 font-weight-bold">Register <i class="fa ml-1 fa-sign-in"
+            aria-hidden="true"></i></button>
+      </div>
     </div>
+  </div>
 </div>

@@ -5,6 +5,9 @@ import { HttpClient } from '@angular/common/http';
 import { MainUser } from '../helper/Globals';
 import { Location } from '@angular/common';
 import { UserUpdate } from '../player/player.component';
+import { AlertType, Dialog } from '../Interfaces/Dialog';
+import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
+import * as sha512 from 'js-sha512';
 declare var $:any
 
 @Component({
@@ -14,7 +17,7 @@ declare var $:any
 })
 export class UserlistComponent implements OnInit, OnDestroy {
 
-  constructor(public userService: UserlistService, private http: HttpClient, private loc: Location) { }
+  constructor(public userService: UserlistService, private http: HttpClient, private loc: Location, private dialogService: DialogService) { }
 
   @Input() nav: boolean;
   @Input() UniqueId: string;
@@ -30,7 +33,7 @@ export class UserlistComponent implements OnInit, OnDestroy {
   Members: Member[] = [];
   UserUpdate;
   FailedPassword = false;
-  RoomPassword = "$null$";
+  RoomPassword = "";
   publicIP = "";
   Privileges = 0;
   userFailUpdate;
@@ -47,7 +50,6 @@ export class UserlistComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.Privileges = MainUser.userprivileges;
-    this.AddUser();    
     this.UserUpdate = setInterval(() => {
       if (this.DelInterval) {
         clearInterval(this.UserUpdate);
@@ -62,9 +64,10 @@ export class UserlistComponent implements OnInit, OnDestroy {
         return;
       }
       if (room == UserUpdate.Banned) {
-        $('#bannedModal').modal('show');   
-        setTimeout(() => {          
-          this.refresh();
+        const dialog: Dialog = { id: "banned-user", header: "Access restricted", question: "You have been removed from this room.", answer1: null, answer2: null, yes: null, no: null, alertType: AlertType.Danger };
+        this.dialogService.newDialog.next(dialog);
+        setTimeout(() => {
+          this.goBack.emit();
         }, 1500);
         return;
       }
@@ -75,20 +78,19 @@ export class UserlistComponent implements OnInit, OnDestroy {
           $('#roomPwModal').modal('show');
           return;
         }
-        if (this.FailedPassword == false) {          
+        if (this.FailedPassword == false) {
           this.FailedPassword = true;
         }
         setTimeout(() => {
           this.FailedPassword = false;
         }, 2500);
-      } else if (room == UserUpdate.Success) {        
+      } else if (room == UserUpdate.Success) {
         this.FailedPassword = false;
-        $('#roomPwModal').modal('hide');        
+        $('#roomPwModal').modal('hide');
         this.userAdded.emit();
       }
-      else {        
-        console.log("test");
-        $('#dialogModal-RoomNotFoundModal').modal('show');   
+      else {
+        $('#dialogModal-RoomNotFoundModal').modal('show');
       }
     });
     this.memberUpdate = this.userService.members.subscribe(members => {
@@ -107,21 +109,23 @@ export class UserlistComponent implements OnInit, OnDestroy {
         this.isHost.emit(false);
       }
     });
+    this.AddUser();
   }
 
   refresh(): void {
     this.goBack.emit();
   }
 
-  alphaKeys(event: KeyboardEvent) {    
+  alphaKeys(event: KeyboardEvent) {
     var key = event.key;
     if (key == "Enter" && this.RoomPassword.length>0) {
       this.AddUser();
-    } 
+    }
   }
 
-  AddUser() {    
-    this.userService.addUser(this.Username, this.UniqueId, this.RoomPassword);
+  AddUser() {
+    const pwSha: string =this.RoomPassword && this.RoomPassword.length > 0 ? sha512.sha512(this.RoomPassword) : null;
+    this.userService.addUser(this.Username, this.UniqueId, pwSha);
   }
 
   BanUser(username: string) {
@@ -133,7 +137,7 @@ export class UserlistComponent implements OnInit, OnDestroy {
   }
 
   public ChangeHost(username: string) {
-    this.userService.changeHost(username, this.UniqueId);    
+    this.userService.changeHost(username, this.UniqueId);
   }
 
 }

@@ -2,8 +2,8 @@ import { Injectable } from '@angular/core';
 import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
 import { BehaviorSubject, from } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { User } from 'src/app/Interfaces/User';
-import { RememberToken } from 'src/app/Interfaces/RememberToken';
+import { User } from '../../Interfaces/User';
+import { RememberToken } from '../../Interfaces/RememberToken';
 
 @Injectable({
   providedIn: 'root'

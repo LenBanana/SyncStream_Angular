@@ -7,6 +7,12 @@ import { Member } from '../Interfaces/Member';
 import { PlayerComponent } from '../player/player.component';
 import { Location } from '@angular/common';
 import { PlayerService } from '../player/player-service/player.service';
+import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
+import { AlertType, Dialog } from '../Interfaces/Dialog';
+import { BrowserSettings, changeSettings } from '../Interfaces/BrowserSettings';
+import { DreckchatService } from '../dreckchat/dreckchat-service/dreckchat.service';
+import { ChatMessage } from '../Interfaces/Chatmessage';
+declare var $: any;
 
 @Component({
   selector: 'app-side-nav',
@@ -15,7 +21,7 @@ import { PlayerService } from '../player/player-service/player.service';
 })
 export class SideNavComponent implements OnInit, OnDestroy {
 
-  constructor(public playlistService: PlaylistService, public playerService: PlayerService, public userService: UserlistService, private location: Location) { }
+  constructor(public chatService: DreckchatService, public playlistService: PlaylistService, public playerService: PlayerService, public userService: UserlistService, private location: Location, private dialogService: DialogService) { }
 
   @Input() logout: boolean;
   @Input() nav: boolean;
@@ -28,6 +34,9 @@ export class SideNavComponent implements OnInit, OnDestroy {
   @Input() Playlist: VideoDTO[] = [];
   @Input() playerComp: PlayerComponent;
   @Input() ThreshholdNumber: number = 0.5;
+  @Input() Privileges: number;
+  @Input() BrowserSettings: BrowserSettings;
+  @Input() ChatOpen: boolean;
   @Output() threshholdChange = new EventEmitter();
   @Output() usernameChange = new EventEmitter();
   @Output() toggleTwitch = new EventEmitter();
@@ -43,25 +52,84 @@ export class SideNavComponent implements OnInit, OnDestroy {
   BlackjackActive = false;
   playingGallows;
   playingBlackjack;
+  message;
+  playFile;
+  Messages: ChatMessage[];
+  pasteFn = (event) => {
+    if ($('#downloadManagerModal').hasClass('show')) {
+      return;
+    }
+    const data = event.clipboardData.items;
+    for (let i = 0; i < data.length; i += 1) {
+      if (data[i].kind === 'file' && data[i].type.match('^image/')) {
+      } else {
+        data[i].getAsString((str) => {
+          this.PlayVideo(str)
+          $('#add-video-success').addClass('grow-in');
+          $('#add-video-success').removeClass('none');
+          setTimeout(() => {
+            setTimeout(() => {
+              $('#add-video-success').removeClass('grow-in');
+              $('#add-video-success').addClass('grow-out');
+              setTimeout(() => {
+                $('#add-video-success').addClass('none');
+                $('#add-video-success').removeClass('grow-out');
+              }, 500);
+            }, 500);
+          }, 10);
+        });
+      }
+    }
+  };
+
+  openDownloadManager() {
+    $('#downloadManagerModal').modal('show');
+  }
 
   ngOnInit(): void {
-    if (this.IsHost) {      
+    if (this.BrowserSettings.layoutSettings.bigSideNav) {
+      setTimeout(() => {
+        $('.menu-msg').toggleClass('menu-hide');
+        $('.menu-msg').toggleClass('menu-show');
+        $('.badge-dreck').toggleClass('text-left');
+      }, 10);
+    }
+    if (this.IsHost) {
       this.ThreshholdNumber = 2;
       this.threshholdChange.emit(this.ThreshholdNumber);
-    } else {      
+    } else {
       this.ThreshholdNumber = .5;
       this.threshholdChange.emit(this.ThreshholdNumber);
-    }    
+    }
     this.playingGallows = this.playerService.playingGallows.subscribe(playGallows => {
       if (playGallows == null||!playGallows) {
         return;
-      }      
-      if (playGallows=="$clearboard$") {        
+      }
+      if (playGallows=="$clearboard$") {
         this.WhiteboardActive = false;
         return;
-      } 
+      }
       this.BlackjackActive = false;
       this.WhiteboardActive = true;
+    });
+    this.playFile = this.playerService.playFile.subscribe(x => {
+      if (x && x.length > 0) {
+        this.PlayVideo(x);
+      }
+    });
+    this.message = this.chatService.message.subscribe(result => {
+      if (result == null || this.ChatOpen) {
+        this.Messages = [];
+        return;
+      }
+      if (this.Messages==null) {
+        this.Messages = [];
+      }
+      this.Messages.push(result);
+      if (this.Messages.length >= 100) {
+        this.Messages.shift();
+      }
+      setTimeout(() => $('#messagebox').scrollTop($('#messagebox')[0]?.scrollHeight), 100);
     });
 
     this.playingBlackjack = this.playerService.playingBlackjack.subscribe(playBlackjack => {
@@ -76,13 +144,25 @@ export class SideNavComponent implements OnInit, OnDestroy {
         this.BlackjackActive = false;
       }
     });
-  } 
+    setTimeout(() => {
+      document.addEventListener('paste', this.pasteFn);
+      var iframe = document.getElementById('YTPlayer') as HTMLIFrameElement;
+      iframe.contentDocument.body.addEventListener('paste', this.pasteFn);
+    }, 100);
+  }
+
+  changeSettings() {
+    changeSettings(this.BrowserSettings);
+  }
 
   ngOnDestroy() {
     this.playingGallows.unsubscribe();
     this.playingBlackjack.unsubscribe();
+    this.message.unsubscribe();
+    this.playFile.unsubscribe();
+    document.removeEventListener('paste', this.pasteFn);
   }
-  
+
   refresh(): void {
     this.goBack.emit();
   }
@@ -91,8 +171,16 @@ export class SideNavComponent implements OnInit, OnDestroy {
     this.menuEnter.emit(enter);
   }
 
-  SetHost() {    
-    this.userService.changeHost(this.Username, this.UniqueId);    
+  showMenu() {
+    this.BrowserSettings.layoutSettings.bigSideNav = !this.BrowserSettings.layoutSettings.bigSideNav;
+    $('.menu-msg').toggleClass('menu-hide');
+    $('.menu-msg').toggleClass('menu-show');
+    $('.badge-dreck').toggleClass('text-left');
+    changeSettings(this.BrowserSettings);
+  }
+
+  SetHost() {
+    this.userService.changeHost(this.Username, this.UniqueId);
   }
 
   SetThreshhold() {
@@ -129,7 +217,7 @@ export class SideNavComponent implements OnInit, OnDestroy {
       this.ResetInputs();
       this.showPlaylist = true;
     }
-  }   
+  }
 
   ToggleThreshhold() {
     if (this.Threshhold) {
@@ -138,7 +226,7 @@ export class SideNavComponent implements OnInit, OnDestroy {
       this.ResetInputs();
       this.Threshhold = true;
     }
-  }   
+  }
 
   ToggleUsername() {
     if (this.showUsername) {
@@ -147,7 +235,7 @@ export class SideNavComponent implements OnInit, OnDestroy {
       this.ResetInputs();
       this.showUsername = true;
     }
-  }  
+  }
 
   ToggleMemberlist() {
     if (this.showMemberlist) {
@@ -156,9 +244,9 @@ export class SideNavComponent implements OnInit, OnDestroy {
       this.ResetInputs();
       this.showMemberlist = true;
     }
-  }  
+  }
 
-  ResetInputs() {    
+  ResetInputs() {
     if (this.showInput) {
       this.ToggleInput();
     }
@@ -173,13 +261,14 @@ export class SideNavComponent implements OnInit, OnDestroy {
     }
   }
 
-  ChangeHost(username) {    
-    this.userService.changeHost(username, this.UniqueId);   
+  ChangeHost(username) {
+    this.userService.changeHost(username, this.UniqueId);
   }
-  
+
   toggleTwitchChat() {
     this.toggleTwitch.emit();
-    setTimeout(() => {      
+    this.Messages = [];
+    setTimeout(() => {
       var videourl = document.getElementById('textmessage') as HTMLInputElement;
       videourl.focus();
     }, 25);
@@ -207,41 +296,51 @@ export class SideNavComponent implements OnInit, OnDestroy {
     }
     moveItemInArray(this.Playlist, event.previousIndex, event.currentIndex);
     this.playlistService.moveVideo(event.previousIndex, event.currentIndex, this.UniqueId);
-  }  
+  }
 
   PlayURL() {
     var videourl = document.getElementById('video-tooltip-input') as HTMLInputElement;
     if (!videourl || videourl.value.length === 0) {
       return;
     }
-    var playerinput = document.getElementById('videoinput') as HTMLInputElement;
-    if (!playerinput) {
-      return;
-    }
-    playerinput.value = videourl.value;
+    //var playerinput = document.getElementById('videoinput') as HTMLInputElement;
+    //if (!playerinput) {
+    //  return;
+    //}
+    //playerinput.value = videourl.value;
+    //videourl.value = "";
+    //this.playerComp.PlayURL();
+    this.playlistService.addVideo({title: "", url: videourl.value}, this.UniqueId);
     videourl.value = "";
-    this.playerComp.PlayURL();
     this.showInput = false;
   }
 
   quickPlay() {
     if (!navigator||!navigator.clipboard||!navigator.clipboard.readText) {
-      this.showInput = true;
+      this.showInput = !this.showInput;
       return;
     }
     navigator.clipboard.readText()
     .then(text => {
-      var playerinput = document.getElementById('videoinput') as HTMLInputElement;
-      if (!playerinput) {
+      this.PlayVideo(text);
+    })
+    .catch(async err => {
+      const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' as PermissionName});
+      if (permissionStatus.state !== "granted") {
+        const dialog: Dialog = { id: "clipboard-perm", header: "Permission error", question: "Please grant clipboard permissions.", answer1: null, answer2: null, yes: null, no: null, alertType: AlertType.Warning };
+        this.dialogService.newDialog.next(dialog);
         return;
       }
-      playerinput.value = text;
-      this.playerComp.PlayURL();
-      this.showInput = false;
-    })
-    .catch(err => {
-      console.error('Failed to read clipboard contents: ', err);
     });
+  }
+
+  PlayVideo(url: string) {
+    var videourl = document.getElementById('video-tooltip-input') as HTMLInputElement;
+    if (!videourl) {
+      return;
+    }
+    videourl.value = url;
+    this.PlayURL();
   }
 
   PlayFile() {
@@ -250,6 +349,10 @@ export class SideNavComponent implements OnInit, OnDestroy {
       return;
     }
     filebtn.click();
+  }
+
+  BanUser(username: string) {
+    this.userService.banUser(username, this.UniqueId);
   }
 
 }

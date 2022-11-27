@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { CanvasWhiteboardUpdate } from 'ng2-canvas-whiteboard';
 import { BehaviorSubject } from 'rxjs';
-import { Member } from 'src/app/Interfaces/Member';
-import { hubConnection, SignalRService } from 'src/app/services/signal-r.service';
+import { Member } from '../../Interfaces/Member';
+import { hubConnection, SignalRService } from '../../services/signal-r.service';
 
 @Injectable({
   providedIn: 'root'
@@ -16,7 +16,7 @@ export class WhiteboardService {
   whiteboardClear: BehaviorSubject<boolean> = new BehaviorSubject(null);
   whiteboardUndo: BehaviorSubject<string> = new BehaviorSubject(null);
   whiteboardRedo: BehaviorSubject<string> = new BehaviorSubject(null);
-  
+
   constructor(private signalRService: SignalRService) {
     signalRService.connectionClosed.subscribe(isClosed => {
       if (isClosed===false) {

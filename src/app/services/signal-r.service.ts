@@ -10,6 +10,7 @@ import { randomIntFromInterval } from '../helper/generic';
 import { User } from '../Interfaces/User';
 import { Room } from '../Interfaces/Room';
 import { Token } from '../helper/Globals';
+import { getCookie } from '../global.settings';
 export var hubConnection: signalR.HubConnection;
 export var CurrentPing: number = 0.5;
 export var baseUrl: string = "https://sync.dreckbu.de/";
@@ -48,8 +49,8 @@ export class SignalRService {
     this.registerRequest.next(null);
   }
 
-  public LoginRequest(user: User) {
-    hubConnection.invoke('LoginRequest', user);
+  public LoginRequest(user: User, userInfo: string) {
+    hubConnection.invoke('LoginRequest', user, userInfo);
   }
 
   public RegisterRequest(user: User) {
@@ -100,15 +101,17 @@ export class SignalRService {
         this.AddTokenListener();
         this.connectionClosed.next(false);
 
-        var token = this.getCookie("login-token");
-        var userId = this.getCookie("user-id");
+        var token = getCookie("login-token");
+        var userId = getCookie("user-id");
         if (token==undefined) {
           token = "";
         }
-        if (userId == undefined) {
+        var userNo = Number.parseInt(userId);
+        if (!userId || userId == undefined || isNaN(userNo)) {
           userId = "-1";
         }
-        this.ValidateToken(token, Number.parseInt(userId));
+        var numberId = Number.parseInt(userId);
+        this.ValidateToken(token, numberId);
       })
       .catch(async err => {
         console.log('Error while starting connection: ' + err + '... Attempting to reconnect');
@@ -122,12 +125,6 @@ export class SignalRService {
           })
           .catch(err => console.log('Error while stopping connection: ' + err))
       });
-  }
-
-  public getCookie(name) {
-    const value = `; ${document.cookie}`;
-    const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) return parts.pop().split(';').shift();
   }
 
   public async stopConnection() {

@@ -1,0 +1,15 @@
+.short-text {
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 90%;
+  display: inline-flex;
+}
+.bg-secondary {
+  background-color: #45465c !important;
+}
+.bg-dark {
+  background-color: #323342 !important;
+}
+.fa {
+  transition: all .3s ease;
+}

@@ -1,7 +1,4 @@
 import {
-  ThrowStmt
-} from '@angular/compiler';
-import {
   Component,
   Input,
   OnChanges,
@@ -45,8 +42,8 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
   get RemainingGallowTime():number {
     return this._RemainingGallowTime;
   }
-  set RemainingGallowTime(theBar:number) {    
-    this._RemainingGallowTime = theBar;    
+  set RemainingGallowTime(theBar:number) {
+    this._RemainingGallowTime = theBar;
     if (this.RemainingGallowTime>60&&this.NotHidden.length>0) {
       this.NotHidden = [];
     }
@@ -80,9 +77,9 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     clearButtonEnabled: false,
     clearButtonText: '',
     undoButtonText: 'Undo',
-    undoButtonEnabled: false,
+    undoButtonEnabled: true,
     redoButtonText: 'Redo',
-    redoButtonEnabled: false,
+    redoButtonEnabled: true,
     colorPickerEnabled: false,
     shapeSelectorEnabled: false,
     strokeColorPickerEnabled: false,
@@ -93,7 +90,7 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     lineWidth: this.lineWidth,
     scaleFactor: 1,
     startingColor: '#EEEEEE',
-    strokeColor: '#333333',        
+    strokeColor: '#333333',
   };
   Colors = [
     "#333333",
@@ -124,21 +121,20 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     }
     if (this.LastGallowWord!=this.GallowWord) {
       this.ChangeWord = true;
-      setTimeout(() => {     
+      setTimeout(() => {
         this.LastGallowWord = this.GallowWord;
         this.AnonGallowWord = this.getAnonWord(this.LastGallowWord);
-        this.ChangeWord = false;   
+        this.ChangeWord = false;
       }, 250);
     }
     if (this.LastIsDrawing!=this.IsDrawing) {
-      setTimeout(() => {    
+      setTimeout(() => {
         this.LastIsDrawing = this.IsDrawing;
-        this.ReloadWhiteboard();
         if (this.IsDrawing) {
           this.ChangeStrokeColor('#333333');
         }
         this.ShowLeaderboard(true);
-        setTimeout(() => {        
+        setTimeout(() => {
           this.ShowLeaderboard(false);
         }, 2500);
       }, 250);
@@ -163,6 +159,7 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
         return;
       }
       this.IsDrawing = isdrawing;
+      this.ReloadWhiteboard();
     });
     this.whiteboardJoin = this.whiteBoardSerive.whiteboardJoin.subscribe(update => {
       if (update == null) {
@@ -212,15 +209,15 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
 
   getAnonWord(GallowWord: string, numsToPush = 0) {
     var AnonWord = "";
-    for (let i = 0; i < numsToPush; i++) {      
+    for (let i = 0; i < numsToPush; i++) {
       if (this.NotHidden.length>i) {
         continue;
       }
       var rndInt = -1;
-      while (rndInt<0||this.NotHidden.includes(rndInt)||GallowWord.charAt(rndInt).trim().length==0) {        
+      while (rndInt<0||this.NotHidden.includes(rndInt)||GallowWord.charAt(rndInt).trim().length==0) {
         rndInt = randomIntFromInterval(0, GallowWord.length-1);
       }
-      this.NotHidden.push(rndInt);      
+      this.NotHidden.push(rndInt);
     }
     const regex = new RegExp("[a-zA-ZäöüÄÖÜß]");
     for (var i = 0; i < GallowWord.length; i++) {
@@ -235,7 +232,7 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ShowLeaderboard(show) {
-    setTimeout(() => {        
+    setTimeout(() => {
       if (show) {
         $('#LeaderboardCollapse').collapse("show")
       } else {
@@ -260,11 +257,11 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
           lineWidth: this.lineWidth,
           drawingEnabled: this.IsDrawing,
           strokeColor: this.SelectedColor
-        };   
+        };
         if (this.IsDrawing) {
           this.ClearCanvas();
         }
-      }, 1);
+      }, 10);
   }
 
   ChangeStrokeColor(color) {
@@ -278,7 +275,7 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   changeStrokeThickness(thickness) {
-    if (thickness >= 3 && thickness <= 50) {   
+    if (thickness >= 3 && thickness <= 50) {
       this.lineWidth = thickness;
       this.canvasOptions = {
         ...this.canvasOptions,

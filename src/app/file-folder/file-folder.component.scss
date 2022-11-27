@@ -1,0 +1,63 @@
+
+.bg-secondary {
+  background-color: #45465c !important;
+}
+.actionable:hover {
+  background-color: #45465cd3 !important;
+}
+.center-vertically {
+  display: flex;
+  justify-content: center;
+  align-content: center;
+  flex-direction: column;
+}
+.flex {
+  margin: 0 auto;
+}
+.center {
+  display: table;
+  width:100%;
+}
+.fa-times-circle {
+  transition: all .25s ease;
+}
+.folderContainer:hover>.card-body>.fa-times-circle {
+  opacity: 1;
+}
+.folderContainer>.card-body>.fa-times-circle, .fa-plus-circle {
+  position: absolute;
+  right: -5px;
+  top: 6px;
+}
+.back-container {
+  display: flex;
+  align-items: center;
+}
+.hidden {
+  opacity: 0;
+}
+.short-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 85%;
+}
+.bg-dark {
+  background-color: #5d5e7c !important;
+}
+.badge-dark {
+  background-color: #5d5e7c !important;
+}
+.badge-secondary {
+  background-color: #45465c !important;
+}
+.disabled {
+  opacity: .75;
+  background: rgba(0, 0, 0, .25);
+}
+.font-weight-bold {
+  font-weight: bold;
+}
+.inline {
+  display: inline-block;
+}

@@ -1,0 +1,19 @@
+
+.bg-dark {
+  background-color: #323342 !important;
+}
+
+.border-dark {
+  background-color: #454658d9 !important;
+}
+
+ngb-pagination ::ng-deep ul > li:not(.active) > a {
+  background-color: #454658d9 !important;
+  border: #5d5e7c !important;
+  color: #fff !important;
+}
+ngb-pagination ::ng-deep ul > li.active > a {
+  background-color: #5d5e7c !important;
+  border: #454658d9 !important;
+  color: #fff !important;
+}

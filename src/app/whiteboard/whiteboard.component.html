@@ -1,8 +1,8 @@
-<span *ngIf="LastGallowWord" class="DrawWord no-pointer-events" [class.fade-out]="ChangeWord"><span class="no-pointer-events unselectable" [class.letter-space]="!LastIsDrawing">{{LastIsDrawing ? LastGallowWord : AnonGallowWord}}</span></span>
+<span *ngIf="LastGallowWord" class="DrawWord no-pointer-events" [class.fade-out]="ChangeWord"><span class="no-pointer-events unselectable" [class.letter-space]="!IsDrawing">{{IsDrawing ? LastGallowWord : AnonGallowWord}}</span></span>
 
 <div class="GallowBoard" (mouseenter)="ShowLeaderboard(true)" (mouseleave)="ShowLeaderboard(false)">
-  <p class="text-center">Leaderboard<br><span class="badge badge-primary badge-info">{{RemainingGallowTime}}s left</span></p>  
-  <div id="LeaderboardCollapse" class="collapse">    
+  <p class="text-center">Leaderboard<br><span class="badge badge-primary badge-info">{{RemainingGallowTime}}s left</span></p>
+  <div id="LeaderboardCollapse" class="collapse">
     <ul class="list-group list-group-flush">
       <li class="list-group-item bg-dark d-flex justify-content-between align-items-center" style="padding-top: 1%; padding-bottom: 1%;" *ngFor="let member of GallowMembers">
         {{member.username}}

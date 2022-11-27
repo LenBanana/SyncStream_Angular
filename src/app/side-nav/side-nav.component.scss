@@ -24,8 +24,19 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
-    display: inline-block;
+    line-height: 40px;
     width: 100%;
+    text-decoration: none;
+    color: #fff;
+    display: block;
+}
+
+.first-playlist-element {
+  background-color: rgba(55,65,81, .75);
+}
+
+.second-playlist-element {
+  background-color: rgba(41, 48, 59, 0.75);
 }
 
 .playlist-element {
@@ -34,7 +45,12 @@
     min-width: 400px;
     font-size: 14px;
     margin: 0;
-    background: #222;
+    margin-bottom: 5px;
+}
+
+.delete-playlist-item {
+  font-size: 150%;
+  line-height: 40px;
 }
 
 .dreck-tooltip:hover>.dreck-tooltiptext {
@@ -49,11 +65,16 @@
     text-align: center;
 }
 
+.divider-line {
+  height: 1px;
+  background-color: rgba(55,65,81, .75);
+}
+
 .dreck-tooltiptext {
     transition: opacity 0.5s ease;
     opacity: 0;
     box-shadow: 0px 0px 5px 0.5px rgba(0, 0, 0, 0.8);
-    background-color: #2c2f33;
+    background-color: rgba(17,24,39, .75);
     color: #fff;
     border-radius: 6px;
     padding: 5px;
@@ -67,26 +88,31 @@
     transition: opacity 0.5s ease;
     opacity: 1;
     position: absolute;
-    margin-left: 35px;
-    margin-top: -35px;
+    margin-left: 44px;
+    margin-top: -75px;
     z-index: 1;
+    background-color: rgba(17,24,39, .75);
 }
 
 .add-playlist-fade {
     transition: opacity 0.5s ease;
     opacity: 1;
     box-shadow: 0px 0px 5px 0.5px rgba(0, 0, 0, 0.8);
-    background: #222;
+    background-color: rgba(17,24,39, .75);
     border-radius: 6px;
     padding: 5px;
     position: absolute;
-    margin-left: 35px;
+    margin-left: 44px;
     margin-top: -40px;
     z-index: 1;
     width: 500px;
     max-height: 100%;
     overflow: hidden auto;
     z-index: 200;
+}
+
+.left-tooltip {
+  margin-left: 94px !important;
 }
 
 .playlist-btn:hover~.playlist-preview {
@@ -102,13 +128,74 @@
     opacity: 0.75;
 }
 
+.menu-hide {
+  opacity: 0;
+  width: 0;
+  display: inline-block;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+.messages-count {
+  pointer-events: none;
+  position: absolute;
+  font-size: 0.715rem;
+  left: 8px;
+  color: #c0c3ee;
+  font-weight: bold;
+  border-radius: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 2px 5px 2px 5px;
+  transform: translate(-50%, -50%);
+}
+
+.left-user-count {
+  left: 14px;
+}
+
+.menu-show {
+  opacity: 1;
+}
+
+.menu-show~.fa {
+  text-align: left;
+}
+
+.menu-msg {
+  transition: opacity .3s ease, margin .5s ease;
+  display: inline-block;
+  font-size: 80%;
+  margin-left: .5rem;
+}
+
+.badge-counter {
+  display: none;
+}
+
 .badge-dreck {
-    background-color: #2c2f33;
-    box-shadow: 0px 0px 5px 0.5px rgba(0, 0, 0, 0.8)
+  font-size: 90%;
+  text-align: center;
+  margin-bottom: 0.35rem!important;
+}
+
+.badge-dreck>.fa {
+  text-align: right;
+}
+.badge-dreck:hover>.badge-counter {
+  display: contents;
+}
+
+.badge-dreck:hover {
+  background-color: rgba(55,65,81, .75);
+  box-shadow: 0px 0px 5px 0.5px rgba(0, 0, 0, 0.8)
 }
 
 .block {
     display: block;
+}
+
+.bg-gray-900 {
+  background-color: rgba(17,24,39, .75);
 }
 
 .status-box {

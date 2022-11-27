@@ -1,0 +1,120 @@
+<div class="modal hide fade in" id="downloadManagerModal">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content bg-dark">
+      <div class="modal-header">
+        <h4><span class="text-main-color font-weight-bold">Dreck</span>Tube Files</h4>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-12">
+            <div class="input-group mb-3">
+              <div class="input-group-prepend">
+                <button class="btn" [class.btn-dark]="!CleanUp" [class.btn-danger]="CleanUp" (click)="CleanUpFiles()"><i class="fa fa-trash-o"
+                    aria-hidden="true"></i></button>
+              </div>
+              <input [(ngModel)]="downloadUrl" (keyup.enter)="DownloadFile()" type="text" class="form-control bg-dark text-light border-dark"
+                placeholder="https://...">
+              <div class="input-group-append">
+                <input [(ngModel)]="downloadName" (keyup.enter)="DownloadFile()" type="text" class="form-control rounded-0 bg-dark text-light border-dark"
+                  placeholder="Name...">
+              </div>
+              <div class="input-group-append">
+                <select [(ngModel)]="CurrentPreset" class="form-control px-4 rounded-0 bg-dark text-light border-dark">
+                  <option value="0">Very Slow</option>
+                  <option value="1">Slower</option>
+                  <option value="2">Slow</option>
+                  <option value="3">Medium</option>
+                  <option value="4">Fast</option>
+                  <option value="5">Faster</option>
+                  <option value="6">Very Fast</option>
+                  <option value="7">Super Fast</option>
+                  <option value="8">Ultra Fast</option>
+                </select>
+              </div>
+              <div class="input-group-append">
+                <button class="btn btn-dark" (click)="DownloadFile()"><i class="fa fa-download"
+                    aria-hidden="true"></i></button>
+              </div>
+              <div class="input-group-append">
+                <button id="dropZone" class="btn btn-dark" (click)="SelectFile()"><i class="fa fa-upload"
+                    aria-hidden="true"></i></button>
+              </div>
+            </div>
+            <input type="file" id="fileSelect" style="display: none;" (change)="FileSelected($event)"
+              accept="image/*,video/*" #fileSelect />
+          </div>
+          <div class="border-dark col-12 mb-3 mr-4" style="height: 1px;"></div>
+          <div class="col-6">
+            <input class="form-control bg-dark text-light border-dark" placeholder="Search..."
+            [(ngModel)]="filterName" (keyup)="Filter()">
+          </div>
+          <div class="col-6">
+            <ul class="nav nav-pills">
+              <li class="nav-item mr-2">
+                <a class="nav-link pointer px-3" style="display: inline-block;" [class.active]="sortType=='name'" [class.border-dark]="sortType!='name'"
+                  (click)="sortType='name';sortFilesBy()">Name</a>
+              </li>
+              <li class="nav-item mr-2">
+                <a class="nav-link pointer px-3" style="display: inline-block;" [class.active]="sortType=='created'" [class.border-dark]="sortType!='created'"
+                  (click)="sortType='created';sortFilesBy()">Date</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link pointer px-3" style="display: inline-block;" [class.active]="sortType=='size'" [class.border-dark]="sortType!='size'"
+                  (click)="sortType='size';sortFilesBy()">Size</a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="border-dark mb-3 mt-3 mr-4" style="height: 1px;"
+          [class.hasProgresses]="progresses&&progresses.length>0"></div>
+        <i class="fa progressIcons pointer" *ngIf="progresses&&progresses.length>0" (click)="CollapseProgresses()"
+          [class.fa-chevron-down]="!collapseProgress" [class.fa-chevron-up]="collapseProgress"></i>
+        <div id="progressCards" class="collapse">
+          <div class="card text-white bg-secondary mb-3 mr-4" *ngFor="let p of progresses">
+            <div class="card-body p-2 mt-2">
+              <h6 class="card-title ml-3">
+                <p class="short-text" title="{{p.name}}">{{p.name}}</p>
+                <span>{{p.type}}</span>
+              </h6>
+            </div>
+            <div class="card-footer"
+              [style.background]="'linear-gradient(90deg, #656778 0%, #656778 ' + p.progress + '%, rgba(0,0,0,0) ' + p.progress + '%)'">
+              <div class="pull-left">
+                Progress {{p.progress}}%
+              </div>
+              <div class="pull-right">
+                <i [id]="'download' + p.id + 'cancel'" class="fa fa-ban text-danger pointer" aria-hidden="true"
+                  (click)="CancelDownload(p.id)"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="!collapseProgress" class="row justify-content-start">
+          <div *ngFor="let p of progresses; let first = first;" class="progressBadges col-4 col-lg-1 m-0 px-1" title="{{p.name}}" [class.ml-1]="!first" [class.ml-3]="first">
+            <span
+              [style.background]="'linear-gradient(90deg, #656778 0%, #656778 ' + p.progress + '%, rgba(69, 70, 88, 0.8509803922) ' + p.progress + '%)'"
+              class="badge badge-dark p-2"> <span class="badge">{{p.progress}}%</span>
+              {{p.name}}</span>
+          </div>
+        </div>
+        <div *ngIf="progresses&&progresses.length>0" class="border-dark mb-3 mt-3 mr-4" style="height: 1px;"></div>
+        <!--<app-file-view [filterFiles]="filterFiles" [page]="page" [pageSize]="pageSize"></app-file-view>-->
+        <div cdkDropListGroup>
+          <app-file-folder *ngIf="currentFolder" [UniqueId]="UniqueId" [folder]="currentFolder" [IsInRoom]="IsInRoom" [prevFolder]="prevFolder" [currentFolder]="currentFolder" [filterFiles]="filterFiles" [page]="page" [pageSize]="pageSize" (goDeeper)="UpdateFolder($event)"></app-file-folder>
+        </div>
+        <div class="pull-left mt-2">
+          <ngb-pagination *ngIf="filterFiles.length>pageSize" [(page)]="page" [pageSize]="pageSize" [collectionSize]="filterFiles.length" [maxSize]="10">
+          </ngb-pagination>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div>
+          <button type="button" class="btn btn-danger font-weight-bold" data-dismiss="modal">Close <i
+              class="fa ml-1 fa-times-circle" aria-hidden="true"></i></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<app-browser-result-modal (copyFile)="downloadUrl=$event"></app-browser-result-modal>
+<app-text-dialog [AlertType]="AlertType.Warning" [Answer1]="'Yes'" [Answer2]="'No'" [Header]="'Delete files?'" [Id]="'delete-files'" [Question]="'Are you sure you want to clean up these files?'" (Yes)="CleanUpFiles(true)" (No)="CleanUp=false;"></app-text-dialog>

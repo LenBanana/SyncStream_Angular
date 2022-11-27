@@ -7,12 +7,24 @@
             </div>
             <div class="modal-body explain-text">
                 <div class="col-12">
+                  <ul class="nav nav-tabs border-0">
+                    <li class="nav-item mr-1" (click)="CurrentSettings=SettingsMenu.User">
+                      <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.User}">User settings</a>
+                    </li>
+                    <li class="nav-item mr-1" (click)="CurrentSettings=SettingsMenu.Layout">
+                      <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Layout}">Layout</a>
+                    </li>
+                    <li class="nav-item" (click)="CurrentSettings=SettingsMenu.Stream">
+                      <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Stream}">Streaming</a>
+                    </li>
+                  </ul>
+                  <div *ngIf="CurrentSettings==SettingsMenu.User">
                     <label class="mt-3">Username<span class="text-danger"> *</span></label>
-                    <input [(ngModel)]="User.username" minlength="2" type="text" class="form-control bg-dark text-light" placeholder="Username" required>
+                    <input [(ngModel)]="User.username" minlength="2" type="text" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Username" required>
                     <label class="mt-3">Password (new)<span class="text-danger"> *</span></label>
-                    <input [(ngModel)]="User.password" minlength="2" type="password" class="form-control bg-dark text-light" placeholder="Password" required>    
+                    <input [(ngModel)]="User.password" minlength="2" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
                     <label class="mt-3">Password (repeat new)<span class="text-danger"> *</span></label>
-                    <input [(ngModel)]="RepeatPassword" minlength="2" type="password" class="form-control bg-dark text-light" placeholder="Password" required>  
+                    <input [(ngModel)]="RepeatPassword" minlength="2" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
                     <div class="text-danger">
                         <div *ngIf="RepeatPassword!==User.password">
                             Make sure your password matches
@@ -20,11 +32,44 @@
                     </div>
                     <hr>
                     <label class="mt-3">Password (confirmation)<span class="text-danger"> *</span></label>
-                    <input [(ngModel)]="Password" minlength="2" type="password" class="form-control bg-dark text-light" placeholder="Password" required>                  
+                    <input [(ngModel)]="Password" minlength="2" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
+                  </div>
+                  <div *ngIf="CurrentSettings==SettingsMenu.Layout" class="container-fluid py-3">
+                    <h3>Frontpage</h3>
+                    <div class="custom-control custom-checkbox pt-2">
+                      <input [(ngModel)]="BrowserSettings.layoutSettings.showCountInfo" type="checkbox" class="custom-control-input" id="countInfoCheck" (change)="changeSettings()">
+                      <label class="custom-control-label" for="countInfoCheck">Always show user/playlist information</label>
+                    </div>
+                    <h3 class="pt-3">In room</h3>
+                    <div class="custom-control custom-checkbox pt-2">
+                      <input [(ngModel)]="BrowserSettings.layoutSettings.bigSideNav" type="checkbox" class="custom-control-input" id="sideNavCheck" (change)="changeSettings()">
+                      <label class="custom-control-label" for="sideNavCheck">Show large menu</label>
+                    </div>
+                  </div>
+                  <div *ngIf="CurrentSettings==SettingsMenu.Stream" class="container-fluid py-3">
+                    <h3>Live Stream</h3>
+                    <div class="custom-control custom-checkbox pt-2 pl-0">
+                      <label class="mt-3">Server<span class="text-danger"> *</span></label>
+                      <div class="input-group">
+                        <input [value]="'rtmp://drecktu.be/live'" type="text" class="form-control bg-dark text-light border-dark bg-secondary">
+                        <div class="input-group-append">
+                          <button class="btn btn-dark border-dark border" (click)="CopyStreamServer()"><i class="fa fa-clipboard" id="clipboardStreamServerIcon"></i></button>
+                        </div>
+                      </div>
+                      <label class="mt-3">Key<span class="text-danger"> *</span></label>
+                      <div class="input-group">
+                        <input [value]="User.username.toLowerCase() + '?token=' + User.streamToken" [type]="ShowStreamKey ? 'text' : 'password'" class="form-control bg-dark text-light border-dark bg-secondary">
+                        <div class="input-group-append">
+                          <button class="btn btn-dark border-dark border" (click)="CopyStreamKey()"><i class="fa fa-clipboard" id="clipboardStreamKeyIcon"></i></button>
+                          <button class="btn btn-dark border-dark border" (click)="ShowStreamKey=!ShowStreamKey"><i class="fa" [class.fa-eye]="ShowStreamKey" [class.fa-eye-slash]="!ShowStreamKey"></i></button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-success font-weight-bold" (click)="Save()">Save <i class="fa ml-1 fa-check-circle" aria-hidden="true"></i></button>
+                <button type="button" *ngIf="CurrentSettings==SettingsMenu.User" class="btn btn-success font-weight-bold" (click)="Save()">Save <i class="fa ml-1 fa-check-circle" aria-hidden="true"></i></button>
                 <button type="button" class="btn btn-danger font-weight-bold" data-dismiss="modal">Close <i class="fa ml-1 fa-times-circle" aria-hidden="true"></i></button>
             </div>
         </div>

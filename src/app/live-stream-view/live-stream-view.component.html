@@ -1,0 +1,15 @@
+<div class="modal hide fade in" id="liveViewModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content bg-dark">
+      <div class="modal-header">
+        <h4><span class="text-main-color font-weight-bold">Live</span>Streams</h4>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="alert alert-success" *ngFor="let live of LiveUsers">
+          <strong><span class="badge badge-light">{{live.userName}}</span></strong> {{live.watchMember.length}}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

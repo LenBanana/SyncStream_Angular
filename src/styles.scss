@@ -1,38 +1,95 @@
+
+// Custom Theming for Angular Material
+// For more information: https://material.angular.io/guide/theming
+@use '@angular/material' as mat;
+// Plus imports for other components in your app.
+
+// Include the common styles for Angular Material. We include this here so that you only
+// have to load a single css file for Angular Material in your app.
+// Be sure that you only ever include this mixin once!
+@include mat.core();
+
+// Define the palettes for your theme using the Material Design palettes available in palette.scss
+// (imported above). For each palette, you can optionally specify a default, lighter, and darker
+// hue. Available color palettes: https://material.io/design/color/
+$SyncStream-primary: mat.define-palette(mat.$indigo-palette);
+$SyncStream-accent: mat.define-palette(mat.$pink-palette, A200, A100, A400);
+
+// The warn palette is optional (defaults to red).
+$SyncStream-warn: mat.define-palette(mat.$red-palette);
+
+// Create the theme object. A theme consists of configurations for individual
+// theming systems such as "color" or "typography".
+$SyncStream-theme: mat.define-light-theme((
+  color: (
+    primary: $SyncStream-primary,
+    accent: $SyncStream-accent,
+    warn: $SyncStream-warn,
+  )
+));
+
+// Include theme styles for core and each component used in your app.
+// Alternatively, you can import and @include the theme mixins for each component
+// that you are using.
+@include mat.all-component-themes($SyncStream-theme);
+
 /* You can add global styles to this file, and also import other style files */
 
 //@import "~bootstrap/dist/css/bootstrap.css";
 @import "~plyr/dist/plyr.css";
+.video-js .vjs-menu-button-inline.vjs-slider-active,.video-js .vjs-menu-button-inline:focus,.video-js .vjs-menu-button-inline:hover,.video-js.vjs-no-flex .vjs-menu-button-inline{width:10em}.video-js .vjs-controls-disabled .vjs-big-play-button{display:none!important}.video-js .vjs-control{width:3em}.video-js .vjs-menu-button-inline:before{width:1.5em}.vjs-menu-button-inline .vjs-menu{left:3em}.video-js.vjs-paused .vjs-big-play-button,.vjs-paused.vjs-has-started.video-js .vjs-big-play-button{display:block}.video-js .vjs-load-progress div,.vjs-seeking .vjs-big-play-button,.vjs-waiting .vjs-big-play-button{display:none!important}.video-js .vjs-mouse-display:after,.video-js .vjs-play-progress:after{padding:0 .4em .3em!important}.video-js.vjs-ended .vjs-loading-spinner{display:none}.video-js.vjs-ended .vjs-big-play-button{display:block!important}.video-js *,.video-js:after,.video-js:before{box-sizing:inherit;font-size:inherit;color:inherit;line-height:inherit}.video-js.vjs-fullscreen,.video-js.vjs-fullscreen .vjs-tech{width:100%!important;height:100%!important}.video-js{font-size:14px;overflow:hidden}.video-js .vjs-control{color:inherit}.video-js .vjs-menu-button-inline:hover,.video-js.vjs-no-flex .vjs-menu-button-inline{width:8.35em}.video-js .vjs-volume-menu-button.vjs-volume-menu-button-horizontal:hover .vjs-menu .vjs-menu-content{height:3em;width:6.35em}.video-js .vjs-control:focus:before,.video-js .vjs-control:hover:before{text-shadow:0 0 1em #fff,0 0 1em #fff,0 0 1em #fff}.video-js .vjs-spacer,.video-js .vjs-time-control{display:-webkit-box;display:-moz-box;display:-ms-flexbox;display:-webkit-flex;display:flex;-webkit-box-flex:1 1 auto;-moz-box-flex:1 1 auto;-webkit-flex:1 1 auto;-ms-flex:1 1 auto;flex:1 1 auto}.video-js .vjs-time-control{-webkit-box-flex:0 1 auto;-moz-box-flex:0 1 auto;-webkit-flex:0 1 auto;-ms-flex:0 1 auto;flex:0 1 auto;width:auto}.video-js .vjs-time-control.vjs-time-divider{width:14px}.video-js .vjs-time-control.vjs-time-divider div{width:100%;text-align:center}.video-js .vjs-time-control.vjs-current-time{margin-left:1em}.video-js .vjs-time-control .vjs-current-time-display,.video-js .vjs-time-control .vjs-duration-display{width:100%}.video-js .vjs-time-control .vjs-current-time-display{text-align:right}.video-js .vjs-time-control .vjs-duration-display{text-align:left}.video-js .vjs-play-progress:before,.video-js .vjs-progress-control .vjs-play-progress:before,.video-js .vjs-remaining-time,.video-js .vjs-volume-level:after,.video-js .vjs-volume-level:before,.video-js.vjs-live .vjs-time-control.vjs-current-time,.video-js.vjs-live .vjs-time-control.vjs-duration,.video-js.vjs-live .vjs-time-control.vjs-time-divider,.video-js.vjs-no-flex .vjs-time-control.vjs-remaining-time{display:none}.video-js.vjs-no-flex .vjs-time-control{display:table-cell;width:4em}.video-js .vjs-progress-control{position:absolute;left:0;right:0;width:100%;height:.5em;top:-.5em}.video-js .vjs-progress-control .vjs-load-progress,.video-js .vjs-progress-control .vjs-play-progress,.video-js .vjs-progress-control .vjs-progress-holder{height:100%}.video-js .vjs-progress-control .vjs-progress-holder{margin:0}.video-js .vjs-progress-control:hover{height:1.5em;top:-1.5em}.video-js .vjs-control-bar{-webkit-transition:-webkit-transform .1s ease 0s;-moz-transition:-moz-transform .1s ease 0s;-ms-transition:-ms-transform .1s ease 0s;-o-transition:-o-transform .1s ease 0s;transition:transform .1s ease 0s}.video-js.not-hover.vjs-has-started.vjs-paused.vjs-user-active .vjs-control-bar,.video-js.not-hover.vjs-has-started.vjs-paused.vjs-user-inactive .vjs-control-bar,.video-js.not-hover.vjs-has-started.vjs-playing.vjs-user-active .vjs-control-bar,.video-js.not-hover.vjs-has-started.vjs-playing.vjs-user-inactive .vjs-control-bar,.video-js.vjs-has-started.vjs-playing.vjs-user-inactive .vjs-control-bar{visibility:visible;opacity:1;-webkit-backface-visibility:hidden;-webkit-transform:translateY(3em);-moz-transform:translateY(3em);-ms-transform:translateY(3em);-o-transform:translateY(3em);transform:translateY(3em);-webkit-transition:-webkit-transform 1s ease 0s;-moz-transition:-moz-transform 1s ease 0s;-ms-transition:-ms-transform 1s ease 0s;-o-transition:-o-transform 1s ease 0s;transition:transform 1s ease 0s}.video-js.not-hover.vjs-has-started.vjs-paused.vjs-user-active .vjs-progress-control,.video-js.not-hover.vjs-has-started.vjs-paused.vjs-user-inactive .vjs-progress-control,.video-js.not-hover.vjs-has-started.vjs-playing.vjs-user-active .vjs-progress-control,.video-js.not-hover.vjs-has-started.vjs-playing.vjs-user-inactive .vjs-progress-control,.video-js.vjs-has-started.vjs-playing.vjs-user-inactive .vjs-progress-control{height:.25em;top:-.25em;pointer-events:none;-webkit-transition:height 1s,top 1s;-moz-transition:height 1s,top 1s;-ms-transition:height 1s,top 1s;-o-transition:height 1s,top 1s;transition:height 1s,top 1s}.video-js.not-hover.vjs-has-started.vjs-paused.vjs-user-active.vjs-fullscreen .vjs-progress-control,.video-js.not-hover.vjs-has-started.vjs-paused.vjs-user-inactive.vjs-fullscreen .vjs-progress-control,.video-js.not-hover.vjs-has-started.vjs-playing.vjs-user-active.vjs-fullscreen .vjs-progress-control,.video-js.not-hover.vjs-has-started.vjs-playing.vjs-user-inactive.vjs-fullscreen .vjs-progress-control,.video-js.vjs-has-started.vjs-playing.vjs-user-inactive.vjs-fullscreen .vjs-progress-control{opacity:0;-webkit-transition:opacity 1s ease 1s;-moz-transition:opacity 1s ease 1s;-ms-transition:opacity 1s ease 1s;-o-transition:opacity 1s ease 1s;transition:opacity 1s ease 1s}.video-js.vjs-live .vjs-live-control{margin-left:1em}.video-js .vjs-big-play-button{top:50%;left:50%;margin-left:-1em;width:2em;border:none;color:#fff;-webkit-transition:border-color .4s,outline .4s,background-color .4s;-moz-transition:border-color .4s,outline .4s,background-color .4s;-ms-transition:border-color .4s,outline .4s,background-color .4s;-o-transition:border-color .4s,outline .4s,background-color .4s;transition:border-color .4s,outline .4s,background-color .4s;background-color:rgba(0,0,0,.5);font-size:2.5em;border-radius:50%;height:2em!important;line-height:2em!important;margin-top:-1em!important}.video-js .vjs-menu-button-popup .vjs-menu{left:-3em}.video-js .vjs-menu-button-popup .vjs-menu .vjs-menu-content{background-color:transparent;width:12em;left:-1.5em;padding-bottom:.5em}.video-js .vjs-menu-button-popup .vjs-menu .vjs-menu-item,.video-js .vjs-menu-button-popup .vjs-menu .vjs-menu-title{background-color:#151b17;margin:.3em 0;padding:.5em;border-radius:.3em}.video-js .vjs-menu-button-popup .vjs-menu .vjs-menu-item.vjs-selected{background-color:#2483d5}.video-js .vjs-big-play-button:active,.video-js .vjs-big-play-button:focus,.video-js:hover .vjs-big-play-button{background-color:#626d96}.video-js .vjs-loading-spinner{border-color:#626d96}.video-js .vjs-control-bar2{background-color:#000}.video-js .vjs-control-bar{background-color:rgba(0,0,0,.3)!important;color:#fff;font-size:12px}.video-js .vjs-play-progress,.video-js .vjs-volume-level{background-color:#626d96}.video-js .vjs-load-progress{background:rgba(255,255,255,.3)}
+
 html,
 body {
     max-width: 100%;
     overflow-x: hidden;
 }
+.vjs-seek-to-live-control { display: none !important;}
 
 body {
     padding-right: 0 !important
 }
 
+.table-dark {
+  background-color: #323342 !important;
+}
+.border-dark {
+  background-color: #454658d9 !important;
+}
+.table-dark td, .table-dark th, .table-dark thead th {
+  border-color: #454658d9 !important;
+}
+.btn-dark {
+  background-color: #4d5678 !important;
+}
+.modal-header {
+  border-bottom: 1px solid #454658d9 !important;
+}
+.modal-footer {
+  border-top: 1px solid #454658d9 !important;
+}
 /* width */
 ::-webkit-scrollbar {
     width: 10px;
+    scrollbar-width: none; /* For Firefox */
   }
-  
+
   /* Track */
   ::-webkit-scrollbar-track {
-    background: transparent; 
+    background: transparent;
     border: 1px solid rgba(34, 34, 34, 0.25);
     border-radius: 5px;
   }
-   
+
   /* Handle */
   ::-webkit-scrollbar-thumb {
-    background: #333; 
+    background: #333;
     border-radius: 5px;
   }
-  
+
   /* Handle on hover */
   ::-webkit-scrollbar-thumb:hover {
-    background: #444; 
+    background: #444;
   }
 
 .pointer {
@@ -57,7 +114,13 @@ body {
     -ms-user-select: none;
     user-select: none;
 }
-
+.media-player {
+  min-height: 80vh;
+  width: 100vw;
+  border: none;
+  height: 100vh;
+  background-color: #000;
+}
 .fade-in {
     opacity: 1;
     transition: 0.5s opacity ease;
@@ -89,9 +152,10 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
+    margin: auto;
 }
 
-.border-left-dark {    
+.border-left-dark {
     border-left: 1px solid #333;
 }
 
@@ -102,11 +166,27 @@ body {
 .text-center {
     text-align: center;
 }
+.bg-dark {
+  background-color: #323342 !important;
+}
+.bg-secondary {
+  background-color: #45465c !important;
+}
 
 .footer {
     margin-bottom: 25px;
 }
-
+.cdk-overlay-container {
+  z-index: 10000 !important;
+}
+.mat-menu-panel,.cdk-focused,.cdk-program-focused {
+  background-color: #464a5e !important;
+  border: none !important;
+  outline:none !important;
+}
+.mat-menu-content {
+  padding: 0 !important;
+}
 .sidenav {
     height: 100%;
     /* 100% Full-height */
@@ -129,6 +209,14 @@ body {
     left: 0;
 }
 
+.short-text-file {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-flex;
+  width: 75%;
+}
+
 
 /* Style page content - use this if you want to push the page content to the right when you open the side navigation */
 
@@ -147,6 +235,18 @@ body {
     .sidenav a {
         font-size: 18px;
     }
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }
 
 .pointer {
@@ -229,3 +329,6 @@ body {
 }
 /* Importing Bootstrap SCSS file. */
 @import '~bootstrap/scss/bootstrap';
+
+html, body { height: 100%; }
+body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }

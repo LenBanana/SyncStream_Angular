@@ -12,8 +12,12 @@ import {
 import {
   ChatMessage
 } from '../Interfaces/Chatmessage';
-import $ from 'jquery';
 import { Language } from '../Interfaces/Language';
+import { Observable, OperatorFunction } from 'rxjs';
+import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
+import { UserlistService } from '../userlist/userlist-service/userlist.service';
+import { Member } from '../Interfaces/Member';
+declare var $: any;
 
 @Component({
   selector: 'app-dreckchat',
@@ -22,7 +26,7 @@ import { Language } from '../Interfaces/Language';
 })
 export class DreckchatComponent implements OnInit, OnDestroy {
 
-  constructor(public chatService: DreckchatService) {}
+  constructor(public chatService: DreckchatService, public userlistService: UserlistService) {}
 
   @Input() UniqueId: string;
   @Input() Username: string;
@@ -37,8 +41,32 @@ export class DreckchatComponent implements OnInit, OnDestroy {
   showSmileys: boolean = false;
   messages: any;
   message: any;
+  memberUpdate: any;
+  members: Member[];
+  public chatBoxModel: any;
+
+  search: OperatorFunction<string, readonly string[]> = (
+    text$: Observable<string>
+  ) =>
+    text$.pipe(
+      debounceTime(200),
+      distinctUntilChanged(),
+      map((term) =>
+        term.length < 2
+          ? []
+          : this.members.filter(x => x.username != this.Username).map(x => "/w " + x.username + " ")
+              .filter((v) => v.toLowerCase().indexOf(term.toLowerCase()) > -1)
+              .slice(0, 10)
+      )
+    );
 
   ngOnInit(): void {
+    this.memberUpdate = this.userlistService.members.subscribe(m => {
+      if (!m || m == null) {
+        return;
+      }
+      this.members = m;
+    });
     this.messages = this.chatService.messages.subscribe(result => {
       this.Messages = result;
       setTimeout(() => $('#messagebox').scrollTop($('#messagebox')[0]?.scrollHeight), 100);
@@ -73,50 +101,8 @@ export class DreckchatComponent implements OnInit, OnDestroy {
     textelement.value = '';
     if (msg.length === 0)
       return;
-
-    if (lowCase.startsWith('/')) {
-      if (lowCase == '/clear' || lowCase == '/c') {
-        if (this.logout) {
-          this.ClearChat();
-        }
-      }
-      if ((lowCase.startsWith('/playgallows') || lowCase.startsWith('/playgallow') || lowCase.startsWith('/gallows') || lowCase.startsWith('/gallow') || lowCase.startsWith('/galgenraten') || lowCase.startsWith('/galgen') || lowCase.startsWith('/g'))) {
-        var lang = lowCase.split(' ')[1]
-        var gameTimeString = lowCase.split(' ')[2]
-        var gameLanguage = Language.German;
-        var gameTime = 90;
-        if (lang) {
-          lang = lang.trim();
-          if (lang.startsWith("e")) {
-            gameLanguage = Language.English;
-          }
-        }
-        var langAsTime = Number.parseInt(lang);
-        if (!isNaN(langAsTime)) {
-          gameTime = langAsTime;
-        }
-        if (gameTimeString&&gameTime==90) {
-          gameTimeString = gameTimeString.trim();
-          gameTime = Number.parseInt(gameTimeString);
-          if (isNaN(gameTime)) {
-            gameTime = 90;
-          }
-        }
-        this.chatService.playGallows(this.UniqueId, gameLanguage, gameTime);        
-      }
-      if ((lowCase.startsWith('/playblackjack') || lowCase.startsWith('/playbj') || lowCase.startsWith('/blackjack') || lowCase.startsWith('/bj') || lowCase.startsWith('/b'))) {
-        this.chatService.playBlackjack(this.UniqueId);
-      }
-      if ((lowCase.startsWith('/s') || lowCase.startsWith('/spectate'))) {
-        this.chatService.spectateBj(this.UniqueId);
-      }
-      if ((lowCase.startsWith('/ai'))) {
-        this.chatService.AddBjAi(this.UniqueId);
-      }
-      if ((lowCase.startsWith('/mai'))) {
-        this.chatService.MakeAi(this.UniqueId);
-        this.ChangeToAi.emit();
-      }
+    if (msg.startsWith("/dm")) {
+      $('#downloadManagerModal').modal('show');
       return;
     }
     const chatmessage: ChatMessage = {

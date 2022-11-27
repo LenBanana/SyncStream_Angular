@@ -1,10 +1,9 @@
 <app-text-dialog [Id]="'Sync'" [Question]="'Do you want to share this URL with other viewers, or only sync the time?'"
   [AddInput]="true" [Header]="'Share URL'" [Answer1]="'Share URL'" [Answer2]="'Sync time'"
-  (Yes)="PlayExternalVideo($event)" (No)="setVideo(LastAddedExternalSource)">
+  (Yes)="PlayExternalVideo($event)" (No)="setVideo(LastAddedExternalSource)" [Closeable]="true">
 </app-text-dialog>
-<div class="row" [class.no-margin]="(!nav&&(!twitchChat && CurrentPlayerType != playerType.WhiteBoard))||(CurrentPlayerType==playerType.Twitch&&twitchChat)">
-  <div class="transition PlayerWindow" [class.vh-semi]="nav" [class.vh-big]="!nav"
-    [class.col-10]="(twitchChat||CurrentPlayerType==playerType.WhiteBoard)&&CurrentPlayerType!=playerType.Twitch&&!nav"  [class.BlackjackBg]="CurrentPlayerType==playerType.Blackjack">
+<div class="row"><!--[class.no-margin]="(!nav&&(!twitchChat && CurrentPlayerType != playerType.WhiteBoard))||(CurrentPlayerType==playerType.Twitch&&twitchChat)"-->
+  <div class="transition PlayerWindow" [class.vh-semi]="nav" [class.vh-big]="!nav"  [class.BlackjackBg]="CurrentPlayerType==playerType.Blackjack"> <!--[class.col-10]="(twitchChat||CurrentPlayerType==playerType.WhiteBoard)&&CurrentPlayerType!=playerType.Twitch&&!nav"-->
     <div [class.none]="CurrentPlayerType!=playerType.External&&CurrentPlayerType!=playerType.Vimeo"
       [class.vh-90]="!nav">
       <video id="VideoPlayer" playsinline controls>
@@ -27,15 +26,19 @@
       <app-whiteboard [UniqueId]="UniqueId" [IsDrawing]="IsHost" [class.vh-90]="!nav" [GallowWord]="GallowWord">
       </app-whiteboard>
     </div>
-    
+
     <div *ngIf="CurrentPlayerType==playerType.Blackjack">
       <app-blackjack-game [UniqueId]="UniqueId" [logout]="logout" [class.vh-90]="!nav">
       </app-blackjack-game>
     </div>
+
+    <div class="center-content" [class.none]="CurrentPlayerType!=playerType.Chess">
+      <app-chess-game class="center-mid" [UniqueId]="UniqueId" [Username]="Username"></app-chess-game>
+    </div>
   </div>
-  <div *ngIf="CurrentPlayerType!=playerType.Blackjack" class="transition vh-big col-2 border-left-dark" [class.none]="(!twitchChat && CurrentPlayerType != playerType.WhiteBoard) || CurrentPlayerType==playerType.Twitch">
+  <!--<div *ngIf="CurrentPlayerType!=playerType.Blackjack" class="transition vh-big col-2 border-left-dark" [class.none]="(!twitchChat && CurrentPlayerType != playerType.WhiteBoard) || CurrentPlayerType==playerType.Twitch">
     <app-dreckchat [nav]="nav" [logout]="logout" [UniqueId]="UniqueId" [Username]="Username" [WhiteBoard]="CurrentPlayerType==playerType.WhiteBoard"></app-dreckchat>
-  </div>
+  </div>-->
   <div class="col-12">
     <div class="row" [ngClass]="{'none': !nav}">
       <div class="transition pb-4 pt-2 col-12">
@@ -58,5 +61,12 @@
     </div>
     <app-playlist [nav]="nav" [UniqueId]="UniqueId" (nowPlaying)="setVideoDTO($event, currentTime)"
       [ready]="readyEvent.asObservable()" (playlistChange)="playlistChange.emit($event)"></app-playlist>
+  </div>
+</div>
+<div *ngIf="Username" class="ChatView col-3 CardBack border-around-nobot rounded-left" [class.hideChat]="!twitchChat">
+  <div class="chat-height">
+    <div class="chat-height ml-1">
+      <app-dreckchat [nav]="false" [logout]="logout" [UniqueId]="UniqueId" [Username]="Username" [WhiteBoard]="false" (NewMessage)="newMessage=true;"></app-dreckchat>
+    </div>
   </div>
 </div>

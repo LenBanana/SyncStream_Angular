@@ -1,0 +1,57 @@
+.text-total-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999999;
+  overflow: hidden;
+}
+
+.dark-bg {
+  background-color: #000000ef;
+}
+
+.bg-dark {
+  background-color: #323342 !important;
+}
+.bg-secondary {
+  background-color: #45465c !important;
+}
+
+.text-total-overlay>.center-content>p {
+  font-size: 2vw;
+  opacity: .85;
+}
+
+.text-total-overlay>.center-content>p>.fa-youtube {
+  font-size: 2.25vw;
+}
+
+.text-total-overlay>.center-content>p>.bottom-text {
+  font-size: 5vw;
+  opacity: .65;
+}
+
+.grow-in {
+  animation: growIn .35s;
+}
+.grow-out {
+  animation: growOut .5s;
+}
+@keyframes growIn {
+  from {
+    transform: scale(0) rotate(0deg);
+  }
+  to {
+    transform: scale(1) rotate(360deg);
+  }
+}
+@keyframes growOut {
+  from {
+    transform: scale(1) rotate(360deg);
+  }
+  to {
+    transform: scale(0) rotate(0deg);
+  }
+}

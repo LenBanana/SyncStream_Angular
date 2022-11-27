@@ -9,7 +9,7 @@ import {
   Output,
   OnChanges
 } from '@angular/core';
-import * as Plyr from 'plyr';
+import Plyr from 'plyr';
 import {
   PlayerService
 } from './player-service/player.service';
@@ -26,11 +26,16 @@ import {
   PingService
 } from '../services/pingservice.service';
 import {
+  baseUrl,
   SignalRService
 } from '../services/signal-r.service';
 import {
   ReadVarExpr
 } from '@angular/compiler';
+import { ChessService } from '../chess-game/chess-service/chess.service';
+import { TouchSequence } from 'selenium-webdriver';
+import { NgxChessBoardService } from 'ngx-chess-board';
+import { getCookie } from '../global.settings';
 declare var $: any
 
 export var player: Plyr;
@@ -40,9 +45,9 @@ export var player: Plyr;
   templateUrl: './player.component.html',
   styleUrls: ['./player.component.scss']
 })
-export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
+export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChanges {
 
-  constructor(public playerService: PlayerService, public playlistService: PlaylistService, public signalrService: SignalRService, private _pingService: PingService) {}
+  constructor(public playerService: PlayerService, private ngxChessBoardService: NgxChessBoardService, public playlistService: PlaylistService, public chessService: ChessService, public signalrService: SignalRService, private _pingService: PingService) {}
 
   @Input() nav: boolean;
   @Input() logout: boolean;
@@ -59,7 +64,8 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   @Output() threshholdChange = new EventEmitter();
   GallowWord = "";
   playingGallows;
-
+  playingChess;
+  endChess;
   playingBlackjack;
 
   YTPlayer: YT.Player;
@@ -87,6 +93,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   Init = false;
   CurrentPing = 0;
   PingInterval;
+  newMessage = false;
 
   ngAfterViewInit(): void {
     player = new Plyr('#VideoPlayer', {
@@ -101,11 +108,20 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.InitPlayer();
   }
 
+  ngOnChanges() {
+    if($('#PlayerChatCollapse').hasClass('show') && !this.twitchChat) {
+      $('#PlayerChatCollapse').collapse('hide');
+    } else if (this.twitchChat) {
+      $('#PlayerChatCollapse').collapse('show');
+    }
+  }
+
   ngOnDestroy() {
     clearInterval(this.TimeUpdate);
     clearInterval(this.PingInterval);
     this.removeListener();
     this.playerService.NullAllSubs();
+    player.destroy();
   }
 
   removeListener() {
@@ -113,6 +129,8 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isPlayingUpdate.unsubscribe();
     this.timeUpdate.unsubscribe();
     this.playingGallows.unsubscribe();
+    this.playingChess.unsubscribe();
+    this.endChess.unsubscribe();
     this.playlistUpdate.unsubscribe();
     this.pingUpdate.unsubscribe();
     this.playingBlackjack.unsubscribe();
@@ -141,6 +159,11 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
 
   }
 
+  checkChatClass() {
+    var hasClass = !($('#PlayerChatCollapse').hasClass('show'));
+    return hasClass;
+  }
+
   setInit() {
     const YTElement = document.getElementById('YTPlayer');
     this.YTPlayer = new YT.Player(YTElement, {
@@ -149,6 +172,12 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
           this.Init = true;
           this.readyEvent.next();
           this.TimeUpdate = setInterval(() => {
+            if (this.CurrentPlayerType != PlayerType.YouTube) {
+              if (playerState == YT.PlayerState.PLAYING) {
+                this.YTPlayer.pauseVideo();
+              }
+              return;
+            }
             var playerState = this.YTPlayer.getPlayerState();
             if (!this.IsHost) {
               if (this.IsPlaying && playerState == YT.PlayerState.PAUSED) {
@@ -158,9 +187,9 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
               }
               return;
             }
-            if (playerState != YT.PlayerState.PAUSED) {
+            if (playerState != YT.PlayerState.BUFFERING) {
               const ytTime = this.YTPlayer.getCurrentTime();
-              if (ytTime && ytTime > 0) {
+              if (ytTime && ytTime >= 0) {
                 this.SetTime(this.YTPlayer.getCurrentTime());
               }
             }
@@ -168,7 +197,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
         },
         onStateChange: (event) => {
           this.YTStateChange(event);
-        }
+        },
       },
       width: '100%',
       height: '100%'
@@ -197,6 +226,29 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
           this.Threshhold = (this.CurrentPing < 2 ? 2 : Number.parseFloat(ping.toFixed(2))) * 2;
         }
         this.threshholdChange.emit(this.Threshhold);
+      }
+    });
+    //Listener for chess games
+    this.playingChess = this.chessService.chessPlay.subscribe(playChess => {
+      if (playChess == null) {
+        return;
+      }
+      this.LastPlayerType = this.CurrentPlayerType;
+      setTimeout(() => {
+        this.CurrentPlayerType = PlayerType.Chess;
+      }, 100);
+    });
+    this.endChess = this.chessService.chessEnd.subscribe(end => {
+      if (end == null) {
+        return;
+      }
+      if (this.CurrentPlayerType == PlayerType.Chess) {
+        if (this.LastPlayerType != PlayerType.Chess) {
+          this.CurrentPlayerType = this.LastPlayerType;
+        } else {
+          this.CurrentPlayerType = PlayerType.Nothing;
+          this.chessService.NullAllSubs();
+        }
       }
     });
     //Listener for gallow games
@@ -248,20 +300,11 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
         return;
       }
       if (isplaying && !this.IsHost) {
-        if (this.CurrentPlayerType == PlayerType.YouTube) {
-          this.YTPlayer.playVideo();
-        } else {
-          player.play();
-        }
+        this.YTPlayer.playVideo();
+        player.play();
       } else if (!isplaying && !this.IsHost) {
-        if (this.CurrentPlayerType == PlayerType.YouTube) {
-          this.YTPlayer.pauseVideo();
-        } else {
-          player.pause();
-        }
-      }
-      if (this.CurrentPlayerType != PlayerType.YouTube && isplaying && this.YTPlayer.getPlayerState() != YT.PlayerState.PAUSED) {
         this.YTPlayer.pauseVideo();
+        player.pause();
       }
     });
     this.timeUpdate = this.playerService.currentTime.subscribe(currentTime => {
@@ -271,14 +314,12 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       if (!this.IsHost) {
         if (this.CurrentPlayerType == PlayerType.YouTube) {
           let playerTime = 0;
-          if (player.playing) {
-            player.pause();
-          }
           try {
             playerTime = this.YTPlayer.getCurrentTime();
-          } catch {
-            return;
-          }
+            if (player.playing) {
+              player.pause();
+            }
+          } catch {}
           if ((currentTime > (playerTime + this.Threshhold) || currentTime < (playerTime - this.Threshhold))) {
             if (this.YTPlayer.getPlayerState() == YT.PlayerState.PAUSED) {
               this.YTPlayer.playVideo();
@@ -289,9 +330,10 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
           let playerTime = 0;
           try {
             playerTime = player.currentTime;
-          } catch {
-            return;
-          }
+            if (this.YTPlayer.getPlayerState() != YT.PlayerState.PAUSED) {
+              this.YTPlayer.pauseVideo();
+            }
+          } catch {}
           if ((currentTime > (playerTime + this.Threshhold) || currentTime < (playerTime - this.Threshhold))) {
             if (player.paused) {
               player.play();
@@ -299,7 +341,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
             player.currentTime = currentTime;
           }
         }
-
       }
     });
   }
@@ -320,6 +361,9 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   YTStateChange(event) {
+    if (this.CurrentPlayerType != PlayerType.YouTube) {
+      return;
+    }
     const state = event.data as YT.PlayerState;
     switch (state) {
       case YT.PlayerState.PAUSED:
@@ -351,11 +395,8 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       player.play();
     }
     if (!this.IsHost && this.IsPlaying === false) {
-      if (this.CurrentPlayerType == PlayerType.YouTube) {
-        this.YTPlayer.pauseVideo();
-      } else {
-        player.pause();
-      }
+      this.YTPlayer.pauseVideo();
+      player.pause();
     }
     if (this.IsHost) {
       this.playerService.PlayPause(true, this.UniqueId);
@@ -399,10 +440,11 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       this.SetTime(currentTime);
     });
     player.on("ended", end => {
-      if (!this.IsHost) {
+      if (!this.IsHost||player.currentTime==0) {
         return;
       }
-      //this.playlistService.nextVideo(this.UniqueId);
+      player.restart();
+      this.playlistService.nextVideo(this.UniqueId);
     });
   }
 
@@ -456,7 +498,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     if (!key || !key.url || key.url.length == 0) {
-      if (this.CurrentPlayerType != PlayerType.WhiteBoard && this.CurrentPlayerType != PlayerType.Blackjack) {
+      if (this.CurrentPlayerType != PlayerType.WhiteBoard && this.CurrentPlayerType != PlayerType.Blackjack && this.CurrentPlayerType != PlayerType.Chess) {
         this.CurrentPlayerType = PlayerType.Nothing;
         setTimeout(() => {
           this.YTPlayer.pauseVideo();
@@ -464,6 +506,12 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
         }, 100);
       }
       return;
+    }
+    if (key.url.startsWith(baseUrl)) {
+      var Token = getCookie("login-token");
+      if (Token) {
+        key.url += "&token=" + Token;
+      }
     }
     this.currentKey = key.url;
     if (key.url.includes('youtube') || key.url.includes('youtu.be')) {
@@ -608,6 +656,10 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit {
     this.LatestGuess = event;
   }
 
+  CollapseChat() {
+    $('#PlayerChatCollapse').collapse('toggle');
+  }
+
 }
 
 export enum PlayerType {
@@ -616,8 +668,10 @@ export enum PlayerType {
   Twitch,
   Vimeo,
   External,
+  Live,
   WhiteBoard,
-  Blackjack
+  Blackjack,
+  Chess
 }
 
 export enum UserUpdate {

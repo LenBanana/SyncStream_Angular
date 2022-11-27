@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { ChatMessage } from 'src/app/Interfaces/Chatmessage';
-import { BlackjackDealer, BlackjackMember } from 'src/app/Interfaces/Games/blackjack';
-import { hubConnection, SignalRService } from 'src/app/services/signal-r.service';
+import { BlackjackDealer, BlackjackMember } from '../../Interfaces/Games/blackjack';
+import { hubConnection, SignalRService } from '../../services/signal-r.service';
 
 @Injectable({
   providedIn: 'root'
@@ -35,7 +34,7 @@ export class BlackjackService {
       }
     });
    }
-   
+
   public pushAllNull() {
     this.askBetUpdate.next(null);
     this.askPullUpdate.next(null);
@@ -113,7 +112,7 @@ export class BlackjackService {
 
   public setBet(UniqueId: string, bet: number) {
     hubConnection.invoke('SetBet', UniqueId, bet);
-  }  
+  }
 
   public pull(UniqueId: string, pull: boolean, doubleOption: boolean, splitOption: boolean) {
     hubConnection.invoke('TakePull', UniqueId, pull, doubleOption, splitOption);

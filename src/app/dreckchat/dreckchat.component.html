@@ -2,22 +2,22 @@
     <ul class="chatstyle pt-4 pr-4" id="messagebox">
         <li>Hello <span class="username" [class.text-warning]="logout">{{Username}}</span>. You connected <span class="text-success">@{{CurrentDate | date: 'HH:mm:ss'}}</span></li>
         <li *ngFor="let Message of Messages; let i=index;" tabindex="{{i}}">
-            {{Message.time | date: 'HH:mm:ss'}} 
-            <span class="username" [ngStyle]="{'color': Message.usercolor.length > 0 ? Message.usercolor : ''}" [class.text-warning]="logout&&Message.usercolor.length==0&&Message.username==Username" [class.other-user]="Message.usercolor.length==0&&Message.username!=Username">{{Message.username}}</span>: 
+            {{Message.time | date: 'HH:mm:ss'}}
+            <span class="username" [ngStyle]="{'color': Message.usercolor.length > 0 ? Message.usercolor : ''}" [class.text-warning]="logout&&Message.usercolor.length==0&&Message.username==Username" [class.other-user]="Message.usercolor.length==0&&Message.username!=Username">{{Message.username}}</span>:
             <span [ngStyle]="{'color': Message.color.length > 0 ? Message.color : '#FFFFFF'}">{{Message.message}}</span></li>
     </ul>
 </div>
-<div class="d-flex pr-4">
-    <div class="smileyBox" [class.fade-out]="!showSmileys" [class.nopointer]="!showSmileys" id="smileyId"><span *ngFor="let smiley of smileys" class="pointer unselectable" (click)="AddSmiley(smiley)">{{smiley}}</span></div>
+<div class="d-flex pt-1">
+    <div class="smileyBox p-2" [class.fade-out]="!showSmileys" [class.nopointer]="!showSmileys" id="smileyId"><span *ngFor="let smiley of smileys" class="pointer unselectable" (click)="AddSmiley(smiley)">{{smiley}}</span></div>
     <div class="input-group input-group-sm">
         <!-- Disable chrome autofill -->
         <input type="text" class="form-control" autocomplete="off chrome-off" style="display: none;" />
-        <input type="text" tabindex="-1" placeholder="Chatmessage..." list="autocompleteOff" style="z-index: 1000;" (keyup.enter)="SendMessage()" class="form-control" id="textmessage" maxlength="500">
+        <input class="form-control bg-dark border-dark text-light highlight-none" type="text" tabindex="-1" placeholder="Chatmessage..." list="autocompleteOff" style="z-index: 1000; border-bottom-left-radius: 0.2rem; border-top-left-radius: 0.2rem;" (keyup.enter)="SendMessage()" id="textmessage" maxlength="500" [(ngModel)]="chatBoxModel" [ngbTypeahead]="search"/>
         <div class="input-group-append">
-            <button type="button" class="btn btn-light" (click)="showSmileys=!showSmileys"><i class="fa fa-smile-o" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-dark" (click)="showSmileys=!showSmileys"><i class="fa fa-smile-o" aria-hidden="true"></i></button>
         </div>
         <div class="input-group-append">
-            <button type="button" class="btn btn-primary px-3" (click)="SendMessage()"><i class="fa fa-paper-plane" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-dark px-3" (click)="SendMessage()"><i class="fa fa-paper-plane" aria-hidden="true"></i></button>
         </div>
     </div>
 </div>

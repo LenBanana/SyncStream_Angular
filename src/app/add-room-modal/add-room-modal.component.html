@@ -11,12 +11,12 @@
                 <input type="password" class="form-control" autocomplete="off chrome-off" style="display: none;" />
 
                 <label style="font-size: 1rem;">Room name</label>
-                <input [(ngModel)]="NewRoomName" type="text" class="form-control user-input bg-dark text-light mb-4" (keypress)="alphaKeys($event)" placeholder="Any room name" autocomplete="off" />
+                <input [(ngModel)]="NewRoomName" type="text" class="form-control user-input bg-dark text-light mb-4 border-dark" (keypress)="alphaKeys($event)" placeholder="Any room name" autocomplete="off" />
                 <label style="font-size: 1rem;">Room password</label>
-                <input [(ngModel)]="NewRoomPassword" type="password" class="form-control user-input bg-dark text-light" (keypress)="alphaKeys($event)" placeholder="(optional) password" autocomplete="off" />
+                <input [(ngModel)]="NewRoomPassword" type="password" class="form-control user-input bg-dark text-light border-dark" (keypress)="alphaKeys($event)" placeholder="(optional) password" autocomplete="off" />
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-success px-3" (click)="CreateRoom(NewRoomName, NewRoomPassword)">Create <i class="fa fa-check" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-success px-3 font-weight-bold" (click)="CreateRoom(NewRoomName, NewRoomPassword)">Create <i class="fa fa-check" aria-hidden="true"></i></button>
                 <button type="button" class="btn btn-danger font-weight-bold" data-dismiss="modal">Close <i class="fa ml-1 fa-times-circle" aria-hidden="true"></i></button>
             </div>
         </div>

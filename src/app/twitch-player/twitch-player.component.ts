@@ -1,4 +1,3 @@
-import { THIS_EXPR } from '@angular/compiler/src/output/output_ast';
 import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, SimpleChanges } from '@angular/core';
 import { TwitchPlayer, TwitchPlayerEvent } from 'twitch-player';
 import { PlayerService } from '../player/player-service/player.service';
@@ -45,12 +44,12 @@ export class TwitchPlayerComponent implements OnChanges, OnInit, OnDestroy {
       if (time===null||this.IsHost) {
         return;
       }
-      const playerTime = this.player.getCurrentTime();      
+      const playerTime = this.player.getCurrentTime();
       if ((playerTime > (time + 2) || playerTime < (time - 2))) {
         this.player.seek(time);
       }
     });
-    
+
     this.TimeInterval = setInterval(() => {
         if (this.player && this.IsHost) {
           const time = this.player.getCurrentTime();
@@ -69,27 +68,27 @@ export class TwitchPlayerComponent implements OnChanges, OnInit, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges) {
-    setTimeout(() => {      
+    setTimeout(() => {
       if (changes.channel !== undefined && changes.channel.currentValue.length !== 0) {
           this.LiveStream = true;
-          setTimeout(() => {            
+          setTimeout(() => {
             var player = document.getElementById('twitchPlayer') as HTMLIFrameElement;
             const newStream = "https://player.twitch.tv/?channel=" + this.channel + "&parent=drecktu.be";
             player.src = newStream;
           }, 10);
       }
       if (this.chat==true) {
-        var chat = document.getElementById('twitchChat') as HTMLIFrameElement;      
+        var chat = document.getElementById('twitchChat') as HTMLIFrameElement;
         const newChat = "https://www.twitch.tv/embed/" + this.channel + "/chat?parent=drecktu.be&darkpopout";;
-        if (chat.src !== newChat) {      
+        if (chat.src !== newChat) {
           chat.src = newChat;
-        }  
+        }
       }
-    }, 10); 
-    
+    }, 10);
+
     if (changes.videoID !== undefined && changes.videoID.currentValue && changes.videoID.currentValue.length !== 0) {
       this.LiveStream = false;
-      setTimeout(() => {       
+      setTimeout(() => {
       this.player = TwitchPlayer.FromOptions('twitchVODPlayer', {
         width: "100%",
         height: "100%",
@@ -102,8 +101,6 @@ export class TwitchPlayerComponent implements OnChanges, OnInit, OnDestroy {
         }
         this.isPlaying.emit(true);
       });
-
-      
       this.player.addEventListener(TwitchPlayerEvent.PAUSE, () => {
         if (!this.IsHost && this.IsPlaying) {
           this.player.play();

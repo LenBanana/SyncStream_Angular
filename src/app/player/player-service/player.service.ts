@@ -2,8 +2,9 @@ import { Injectable } from '@angular/core';
 import * as signalR from "@aspnet/signalr";
 import { VideoDTO } from '../../Interfaces/VideoDTO';
 import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
-import { BehaviorSubject } from 'rxjs'; 
+import { BehaviorSubject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
+import { PlayerType } from '../player.component';
 
 @Injectable({
   providedIn: 'root'
@@ -12,9 +13,11 @@ export class PlayerService {
 
   player: BehaviorSubject<VideoDTO> = new BehaviorSubject(null);
   isplaying: BehaviorSubject<boolean> = new BehaviorSubject(null);
+  playerType: BehaviorSubject<PlayerType> = new BehaviorSubject(null);
   playingGallows: BehaviorSubject<string> = new BehaviorSubject(null);
   playingBlackjack: BehaviorSubject<boolean> = new BehaviorSubject(null);
   currentTime: BehaviorSubject<number> = new BehaviorSubject(null);
+  playFile: BehaviorSubject<string> = new BehaviorSubject(null);
   constructor(private http: HttpClient, private signalRService: SignalRService) {
     signalRService.connectionClosed.subscribe(isClosed => {
       if (isClosed===false) {
@@ -23,6 +26,7 @@ export class PlayerService {
         this.addPauseListener();
         this.addPlayerListener();
         this.addTimeListener();
+        this.addPlayerTypeListener();
       }
       if (isClosed===true) {
         this.removeBlackjackListener();
@@ -30,17 +34,29 @@ export class PlayerService {
         this.removePauseListener();
         this.removePlayerListener();
         this.removeTimeListener();
+        this.removePlayerTypeListener();
       }
     });
    }
 
-   public NullAllSubs() {
+  public NullAllSubs() {
     this.player.next(null);
     this.currentTime.next(null);
     this.isplaying.next(null);
     this.playingGallows.next(null);
     this.playingBlackjack.next(null);
-   }
+  }
+
+  public addPlayerTypeListener() {
+    hubConnection.on('playertype', (data: number) => {
+      this.playerType.next(data);
+    });
+  }
+
+  public removePlayerTypeListener() {
+    hubConnection.off('playertype');
+    this.playerType.next(PlayerType.Nothing);
+  }
 
   public addPlayerListener() {
     hubConnection.on('videoupdate', (data) => {

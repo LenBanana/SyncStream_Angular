@@ -1,0 +1,2 @@
+<ngx-chess-board *ngIf="chessGame&&chessGame.lightPlayer&&chessGame.darkPlayer" #chessboard [lightTileColor]="'#eeeed2'" [pieceIcons]="icons" [darkTileColor]="'#769656'" [size]="maxSize" (moveChange)="moveChange($event)" [darkDisabled]="chessGame.darkPlayer.username!=Username" [lightDisabled]="chessGame.lightPlayer.username!=Username"></ngx-chess-board>
+

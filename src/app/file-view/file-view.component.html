@@ -1,0 +1,52 @@
+<div *ngIf="filterFiles&&filterFiles.length>0" cdkDropListSortingDisabled="true" cdkDropList [cdkDropListData]="filterFiles" class="col-12">
+  <div (dblclick)="ToggleEdit(f)" (click)="$event.stopPropagation();" cdkDrag [cdkDragDisabled]="f.editing" [class.no-events]="f.editing" (contextmenu)="$event.preventDefault();menuTrigger.openMenu();getEvent()" *ngFor="let f of filterFiles | slice: (page-1) * pageSize : page * pageSize; let i = index;">
+    <div class="card text-white bg-secondary mb-2 pointer no-events" [cdkDragData]="f" [matMenuTriggerFor]="menu" #menuTrigger="matMenuTrigger">
+      <div class="card-body p-2" data-toggle="collapse" [attr.data-target]="'#collapseFileFooter-' + f.id" aria-expanded="false" [attr.aria-controls]="'#collapseFileFooter-' + f.id">
+        <i class="fa fa-file ml-3 mr-2" aria-hidden="true"></i>
+        <div class="m-0 w-50" style="display: inline-flex;" *ngIf="!f.editing">
+          <p class="card-title short-text m-0" [class.normal-events]="f.editing">
+            <span class="pointer no-events" (click)="$event.stopPropagation();" (dblclick)="ToggleEdit(f)"> {{f.name}}<span *ngIf="!f.name.endsWith(f.fileEnding)">{{f.fileEnding}}</span></span>
+          </p>
+        </div>
+        <span *ngIf="f.editing"><input id="editFileInput{{f.id}}" class="form-control bg-secondary text-light w-50 border-dark filename-input border-0 rounded-0 m-0 p-0" style="display: inline;" [(ngModel)]="f.name" (keyup.enter)="$event.target.blur();" (focusout)="$event.stopPropagation();ToggleEdit(f)" (click)="$event.stopPropagation();"/></span>
+        <span class="pointer short-text pull-right mr-3" style="max-width: 25%;">{{f.created | date: 'dd.MM.yyyy HH:mm'}}</span>
+      </div>
+      <mat-menu #menu="matMenu" style="z-index: 10000;">
+        <button mat-menu-item (click)="CopyToClip(f)" class="text-light">
+          <i class="fa fa-clipboard mr-1 pointer" aria-hidden="true"></i>
+          <span> Copy</span>
+        </button>
+        <hr class="m-0 p-0">
+        <button mat-menu-item (click)="ToggleEdit(f)" class="text-light">
+          <i class="fa fa-pen mr-1 pointer text-secondary" aria-hidden="true"></i>
+          <span> Rename</span>
+        </button>
+        <hr class="m-0 p-0">
+        <button mat-menu-item (click)="DownloadDbFile(f)" class="text-light">
+          <i class="fa fa-download mr-1 pointer text-success" aria-hidden="true"></i>
+          <span> Download</span>
+        </button>
+        <hr *ngIf="IsInRoom&&UniqueId.length>0" class="m-0 p-0">
+        <button *ngIf="IsInRoom&&UniqueId.length>0" mat-menu-item (click)="SendToRoom(f)" class="text-light">
+          <i class="fa fa-plus mr-1 pointer text-success" aria-hidden="true"></i>
+          <span> Add</span>
+        </button>
+        <hr class="m-0 p-0">
+        <button mat-menu-item (click)="GetFileInfo(f.id);" class="text-light">
+          <i class="fa fa-info-circle mr-1 pointer text-info" aria-hidden="true"></i>
+          <span> Info</span>
+        </button>
+        <hr class="m-0 p-0">
+        <button mat-menu-item (click)="RemoveFile(f.id);" class="text-light">
+          <i class="fa fa-times-circle mr-1 pointer text-danger" aria-hidden="true"></i>
+          <span> Delete</span>
+        </button>
+        <hr class="m-0">
+        <p *ngIf="f.length / 1024 / 1024<=1" class="text-center m-0 my-1"><b>{{f.length / 1024 | number:'1.0-2'}}KB</b></p>
+        <p *ngIf="f.length / 1024 / 1024<1000&&f.length / 1024 / 1024>1" class="text-center m-0 my-1"><b>{{f.length / 1024 / 1024 | number:'1.0-2'}}MB</b></p>
+        <p *ngIf="f.length / 1024 / 1024>=1000" class="text-center m-0 my-1"><b>{{f.length / 1024 / 1024 / 1024 | number:'1.0-2'}}GB</b></p>
+      </mat-menu>
+    </div>
+  </div>
+</div>
+<app-text-dialog [Id]="serverDialog.id" [Question]="serverDialog.question" [AddInput]="false" [Header]="serverDialog.header" [Answer1]="serverDialog.answer1" [Answer2]="serverDialog.answer2" [AlertType]="serverDialog.alertType" (Yes)="DeleteFile()" (No)="ShowDeleteModal(false)"></app-text-dialog>

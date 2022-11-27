@@ -4,7 +4,7 @@ import { ChatMessage } from '../../Interfaces/Chatmessage';
 import { BehaviorSubject } from 'rxjs';
 import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
 import { HttpClient } from '@angular/common/http';
-import { Language } from 'src/app/Interfaces/Language';
+import { Language } from '../../Interfaces/Language';
 
 @Injectable({
   providedIn: 'root'

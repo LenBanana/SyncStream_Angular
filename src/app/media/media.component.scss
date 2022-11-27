@@ -1,0 +1,59 @@
+.vh-big {
+  height: 100vh;
+  width: 100%;
+}
+.BlackjackBg {
+  background-image: url(/assets/img/bg_green.jpg);
+}
+.PlayerWindow {
+  padding-right: 0;
+  overflow: hidden;
+}
+.nothing-playing {
+  text-align: center;
+  display: table;
+  background-color: rgba($color: #000000, $alpha: 0.5);
+}
+.none {
+    display: none !important;
+}
+
+.nothing-playing>span {
+  display: table-cell;
+  vertical-align: middle;
+  font-size: 50px;
+}
+
+.ChatView {
+  position: fixed;
+  width: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 0;
+  z-index: 10;
+  text-align: left !important;
+  transition: all 0.5s ease;
+}
+
+.chatBtn {
+  position: relative;
+  border: none;
+  transition: all 0.5s ease;
+  background-color: #4d5678 !important;
+}
+
+.hideChat {
+  right: -25%;
+}
+
+.chat-height {
+  height: 50vh;
+}
+
+.CardBack {
+  padding: 10px;
+  background: rgba($color: #000000, $alpha: 0.25);
+  text-align: center;
+  border: 1px solid #4d5678;
+  border-right: 0;
+}

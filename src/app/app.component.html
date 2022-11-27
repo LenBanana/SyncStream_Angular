@@ -1,6 +1,6 @@
 <router-outlet></router-outlet>
 
-<app-text-dialog [Id]="serverDialog.id" [Question]="serverDialog.question" [AddInput]="false" [Header]="serverDialog.header" [Answer1]="serverDialog.answer1" [Answer2]="serverDialog.answer2"></app-text-dialog>
+<app-text-dialog [Id]="serverDialog.id" [Question]="serverDialog.question" [AddInput]="false" [Header]="serverDialog.header" [Answer1]="serverDialog.answer1" [Answer2]="serverDialog.answer2" [AlertType]="serverDialog.alertType"></app-text-dialog>
 <div class="modal hide fade in" id="contactModal">
     <div class="modal-dialog modal-lg">
         <div class="modal-content bg-dark">
@@ -33,4 +33,16 @@
             </div>
         </div>
     </div>
+</div>
+
+<div class="text-total-overlay hide fade in none dark-bg" id="text-total-overlay">
+  <div class="center-content text-center">
+    <p>Add <i class="fa-brands fa-youtube"></i><br><span class="bottom-text">CTRL + V</span></p>
+  </div>
+</div>
+
+<div class="text-total-overlay none" id="add-video-success">
+  <div class="center-content text-center">
+    <div class="bg-success center-content" style="width: 5vw; height: 5vw; opacity: .95; border-radius: 100%; font-size: 2vw;"><i class="fa-solid fa-check"></i></div>
+  </div>
 </div>

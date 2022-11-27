@@ -1,0 +1,22 @@
+<div class="transition PlayerWindow vh-big" [class.BlackjackBg]="CurrentPlayerType==PlayerType.Blackjack">
+  <div class="row m-0">
+    <div [class.none]="CurrentPlayerType!=PlayerType.Nothing" class="nothing-playing vh-big">
+      <span><i class="fa fa-pause-circle" aria-hidden="true"></i> Nothing playing</span>
+    </div>
+    <app-mpegts-player *ngIf="CurrentPlayerType==PlayerType.Live" [class.none]="CurrentPlayerType!=PlayerType.Live" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-mpegts-player>
+    <app-youtube [class.none]="CurrentPlayerType!=PlayerType.YouTube" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-youtube>
+    <app-videojs-player [class.none]="CurrentPlayerType!=PlayerType.External" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-videojs-player>
+    <app-plyr-player [class.none]="CurrentPlayerType!=PlayerType.Vimeo" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-plyr-player>
+    <app-twitch *ngIf="CurrentPlayerType==PlayerType.Twitch" [class.none]="CurrentPlayerType!=PlayerType.Twitch" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-twitch>
+  </div>
+  <div *ngIf="Username" class="ChatView col-3 CardBack border-around-nobot rounded-left" [class.hideChat]="!twitchChat">
+    <div class="chat-height">
+      <div class="chat-height ml-1">
+        <app-dreckchat [nav]="false" [logout]="logout" [UniqueId]="UniqueId" [Username]="Username" [WhiteBoard]="false"></app-dreckchat>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-playlist [UniqueId]="UniqueId" (nowPlaying)="nowPlaying($event)"
+[ready]="readyEvent.asObservable()" (playlistChange)="playlistChange.emit($event)"></app-playlist>

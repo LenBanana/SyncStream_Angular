@@ -22,12 +22,62 @@
 
 .BlackjackBg {
     background-image: url(/assets/img/bg_green.jpg);
-    //border: 30px solid transparent;
-    //border-image: url(/assets/img/bg_brown.png) 26% round;
 }
 
 .PlayerWindow {
     padding-right: 0;
+}
+
+.ChatView {
+  position: fixed;
+  width: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 0;
+  z-index: 10;
+  text-align: left !important;
+  transition: all 0.5s ease;
+}
+
+.chatBtn {
+  position: relative;
+  border: none;
+  transition: all 0.5s ease;
+  background-color: #4d5678 !important;
+}
+
+.hideChat {
+  right: -25%;
+}
+
+.chat-height {
+  height: 50vh;
+}
+
+.CardBack {
+  padding: 10px;
+  background: rgba($color: #000000, $alpha: 0.25);
+  text-align: center;
+  border: 1px solid #4d5678;
+  border-right: 0;
+}
+
+@keyframes BlinkChat {
+  0% {
+    background-color: #626e9b !important;
+  }
+
+  100% {
+    background-color: #4d5678 !important;
+  }
+}
+
+.animateBg {
+  display: inline-block;
+  -webkit-animation: BlinkChat 2s ease infinite;
+  -moz-animation: BlinkChat 2s ease infinite;
+  -o-animation: BlinkChat 2s ease infinite;
+  animation: BlinkChat 2s ease infinite;
 }
 
 .CanvasStyle {
@@ -54,4 +104,10 @@
     display: table-cell;
     vertical-align: middle;
     font-size: 50px;
+}
+
+.center-mid {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, 0);
 }

@@ -1,0 +1,23 @@
+<div class="modal hide fade in" id="browserResultModal">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content bg-dark border-dark">
+          <div class="modal-header">
+              <h4>Browser result</h4>
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+          </div>
+          <div class="modal-body explain-text mb-4">
+            <div  *ngIf="results&&results.length>0">
+              <div class="alert alert-success bg-secondary text-light" *ngFor="let result of results; let i = index;">
+                <p title="{{result}}"><span class="short-text">{{result}}</span> <i id="url-copy-{{i}}" class="fa fa-clipboard pull-right mt-2 pointer text-info" style="display: inline-flex;" aria-hidden="true" (click)="emitText(result)"></i></p>
+              </div>
+            </div>
+            <div *ngIf="!results||results.length==0">
+              <p class="text-center">Nothing found</p>
+            </div>
+          </div>
+          <div class="modal-footer">
+              <button type="button" class="btn btn-danger font-weight-bold" data-dismiss="modal">Close <i class="fa ml-1 fa-times-circle" aria-hidden="true"></i></button>
+          </div>
+      </div>
+  </div>
+</div>
