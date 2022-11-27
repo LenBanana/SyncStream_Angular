@@ -141,7 +141,7 @@
       <span class="pointer ml-4 text-info" data-toggle="modal" data-target="#downloadManagerModal"
           *ngIf="user.username&&logout&&user.userprivileges>2">Download Manager</span>
       <span class="pointer ml-4 text-info" data-toggle="modal" data-target="#liveViewModal"
-          *ngIf="user.username&&logout&&user.userprivileges>0">Live Channels</span>
+          *ngIf="user.username&&logout&&user.userprivileges>0&&LiveUsers&&LiveUsers.length>0">Live Channels ({{LiveUsers.length}})</span>
     </p>
   </div>
   <app-help-modal (AddRoom)="AddRoom()"></app-help-modal>
@@ -161,4 +161,4 @@
 <app-home *ngIf="currentRoom&&SignalR&&logout!=undefined" [UniqueId]="currentRoom" [BrowserSettings]="browserSettings" [currentTime]="currentTime"
   [Username]="user.username" [Privileges]="user.userprivileges" [DelInterval]="delInterval" [logout]="logout" (goBack)="LeaveRoom()"
   (IntervalOff)="currentRoom=undefined; currentTime=undefined" (isInMenu)="inMenu=$event"></app-home>
-<app-live-stream-view></app-live-stream-view>
+<app-live-stream-view [UniqueId]="currentRoom" (Users)="LiveUsers=$event"></app-live-stream-view>

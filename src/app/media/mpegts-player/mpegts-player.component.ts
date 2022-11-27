@@ -128,6 +128,9 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
   }
 
   InitPlayer() {
+    this.player.on("stalled", event => {
+      console.log(event)
+    });
     this.player.on("play", event => {
       if (this.IsHost) {
         this.playerService.PlayPause(true, this.UniqueId);

@@ -12,6 +12,9 @@ import { AlertType, Dialog } from '../Interfaces/Dialog';
 import { BrowserSettings, changeSettings } from '../Interfaces/BrowserSettings';
 import { DreckchatService } from '../dreckchat/dreckchat-service/dreckchat.service';
 import { ChatMessage } from '../Interfaces/Chatmessage';
+import { Subscription } from 'rxjs';
+import { LiveStreamService } from '../live-stream-view/live-stream-service/live-stream.service';
+import { LiveUser } from '../Interfaces/liveStream';
 declare var $: any;
 
 @Component({
@@ -21,7 +24,7 @@ declare var $: any;
 })
 export class SideNavComponent implements OnInit, OnDestroy {
 
-  constructor(public chatService: DreckchatService, public playlistService: PlaylistService, public playerService: PlayerService, public userService: UserlistService, private location: Location, private dialogService: DialogService) { }
+  constructor(public chatService: DreckchatService, private liveStreamService: LiveStreamService, private playlistService: PlaylistService, private playerService: PlayerService, private userService: UserlistService, private location: Location, private dialogService: DialogService) { }
 
   @Input() logout: boolean;
   @Input() nav: boolean;
@@ -50,11 +53,13 @@ export class SideNavComponent implements OnInit, OnDestroy {
   showMemberlist = false;
   WhiteboardActive = false;
   BlackjackActive = false;
+  liveChannelSub: Subscription;
   playingGallows;
   playingBlackjack;
   message;
   playFile;
   Messages: ChatMessage[];
+  LiveUsers: LiveUser[] = [];
   pasteFn = (event) => {
     if ($('#downloadManagerModal').hasClass('show')) {
       return;
@@ -84,6 +89,10 @@ export class SideNavComponent implements OnInit, OnDestroy {
 
   openDownloadManager() {
     $('#downloadManagerModal').modal('show');
+  }
+
+  openLiveChannels() {
+    $('#liveViewModal').modal('show');
   }
 
   ngOnInit(): void {
@@ -131,7 +140,13 @@ export class SideNavComponent implements OnInit, OnDestroy {
       }
       setTimeout(() => $('#messagebox').scrollTop($('#messagebox')[0]?.scrollHeight), 100);
     });
-
+    this.liveChannelSub = this.liveStreamService.liveChannels.subscribe(c => {
+      if (c == null) {
+        this.LiveUsers = [];
+        return;
+      }
+      this.LiveUsers = c;
+    });
     this.playingBlackjack = this.playerService.playingBlackjack.subscribe(playBlackjack => {
       if (playBlackjack == null) {
         return;
@@ -160,6 +175,7 @@ export class SideNavComponent implements OnInit, OnDestroy {
     this.playingBlackjack.unsubscribe();
     this.message.unsubscribe();
     this.playFile.unsubscribe();
+    this.liveChannelSub.unsubscribe();
     document.removeEventListener('paste', this.pasteFn);
   }
 

@@ -88,6 +88,7 @@
   <span class="badge badge-dreck p-2 block pointer" title="Toggles the chat" (click)="toggleTwitchChat()" style="position: relative;"><i
       class="fa fa-comment "></i> <span class="menu-hide menu-msg unselectable"> Chat</span><span *ngIf="Messages&&Messages.length>0" class="messages-count font-weight-bold">{{Messages.length < 99 ? Messages.length : '...'}}</span></span>
   <span *ngIf="Privileges>=3" class="badge badge-dreck p-2 block add-video-btn pointer" title="Download Manager" (click)="openDownloadManager()"><i class="fa fa-tasks"></i><span class="menu-hide menu-msg unselectable"> Files</span></span>
+  <span *ngIf="Privileges>0&&LiveUsers&&LiveUsers.length>0" class="badge badge-dreck p-2 block add-video-btn pointer" title="Live Channels" (click)="openLiveChannels()"><i class="fa fa-dot-circle-o"></i><span class="menu-hide menu-msg unselectable"> Live</span></span>
   <div class="divider-line m-1"></div>
   <span class="badge badge-dreck p-2  block add-video-btn pointer" title="Menu" (click)="showMenu()"><i class="fa" [class.fa-bars]="BrowserSettings.layoutSettings.bigSideNav" [class.fa-times-circle]="!BrowserSettings.layoutSettings.bigSideNav" aria-hidden="true"></i><span class="menu-hide menu-msg unselectable"> Menu</span></span>
 </div>

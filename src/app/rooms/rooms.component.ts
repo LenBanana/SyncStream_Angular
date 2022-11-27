@@ -21,6 +21,7 @@ import { NgxChessBoardService } from 'ngx-chess-board';
 import { getCookie } from '../global.settings';
 import { DownloadManagerService } from '../download-manager/download-manger-service/download-manager.service';
 import { PlayerService } from '../player/player-service/player.service';
+import { LiveUser } from '../Interfaces/liveStream';
 
 
 @Component({
@@ -45,6 +46,7 @@ export class RoomsComponent implements OnInit {
   page = 1;
   pageSize = 9;
   browserSettings: BrowserSettings = new BrowserSettings();
+  LiveUsers: LiveUser[] = [];
 
   @HostListener('window:resize', ['$event'])
   onResize(event?) {
