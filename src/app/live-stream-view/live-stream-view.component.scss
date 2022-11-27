@@ -7,6 +7,12 @@
 .border-dark {
   background-color: #4d5678 !important;
 }
+.text-secondary {
+  color: #7380b1 !important;
+}
+.text-dark {
+  color: #4d5678 !important;
+}
 
 ngb-pagination ::ng-deep ul > li:not(.active) > a {
   background-color: #4d5678 !important;

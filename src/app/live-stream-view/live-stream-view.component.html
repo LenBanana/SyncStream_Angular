@@ -24,7 +24,7 @@
                   [pageSize]="pageSizeViewers"
                   [collectionSize]="live.watchMember.length"></ngb-pagination>
                 <ul class="p-0 ml-1" id="userList{{i}}" style="list-style: none;">
-                  <li class="mb-2" *ngFor="let user of live.watchMember | slice: (pageViewers-1) * pageSizeViewers : pageViewers * pageSizeViewers"><span class="badge badge-light border-dark text-light pr-2 w-25 text-left"><i class="fa fa-circle text-success py-2 mx-1" style="font-size: .5rem; vertical-align: middle;" aria-hidden="true"></i> {{user.username}}</span></li>
+                  <li class="mb-2" *ngFor="let user of live.watchMember | slice: (pageViewers-1) * pageSizeViewers : pageViewers * pageSizeViewers"><span class="badge badge-light border-dark text-light pr-2 w-25 text-left"><span class="pull-left py-2 pl-2">{{user.username}}</span><span class="pull-right py-2 pr-1"><i class="fa fa-eye text-secondary" aria-hidden="true"></i></span></span></li>
                 </ul>
               </div>
             </div>

@@ -56,7 +56,7 @@ export class LiveStreamViewComponent implements OnInit, OnDestroy {
 
   AddLiveStream(stream: LiveUser) {
     if (this.UniqueId && this.UniqueId.length > 0) {
-      this.playlistService.addVideo({title: stream.userName, url: 'https://live.drecktu.be/live?stream=' + stream.userName}, this.UniqueId);
+      this.playlistService.addVideo({title: stream.userName, url: 'https://live.drecktu.be/live?stream=' + stream.userName.toLowerCase()}, this.UniqueId);
     }
   }
 }
