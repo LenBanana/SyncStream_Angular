@@ -110,6 +110,7 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
   setVideo(vid: VideoDTO) {
     if (mpegts.getFeatureList().mseLivePlayback) {
       var videoElement = document.getElementById('MpegtsPlayer') as HTMLMediaElement;
+      this.player?.unload();
       this.player = mpegts.createPlayer({
           type: 'flv',
           isLive: true,

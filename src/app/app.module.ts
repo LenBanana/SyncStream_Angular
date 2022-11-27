@@ -47,6 +47,7 @@ import { Html5PlayerComponent } from './media/html5-player/html5-player.componen
 import { VideojsPlayerComponent } from './media/videojs-player/videojs-player.component';
 import { MpegtsPlayerComponent } from './media/mpegts-player/mpegts-player.component';
 import { LiveStreamViewComponent } from './live-stream-view/live-stream-view.component';
+import { DateLivePipe } from './live-stream-view/date-live-pipe/date-live.pipe';
 const DragConfig = {
   dragStartThreshold: 0,
   pointerDirectionChangeThreshold: 5,
@@ -89,7 +90,8 @@ const DragConfig = {
     Html5PlayerComponent,
     VideojsPlayerComponent,
     MpegtsPlayerComponent,
-    LiveStreamViewComponent
+    LiveStreamViewComponent,
+    DateLivePipe
   ],
   imports: [
     MatMenuModule,

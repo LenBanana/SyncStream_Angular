@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { LiveUser, timeDifference } from '../Interfaces/liveStream';
+import { LiveUser } from '../Interfaces/liveStream';
 import { PlaylistService } from '../playlist/playlist-service/playlist.service';
 import { LiveStreamService } from './live-stream-service/live-stream.service';
 
@@ -18,10 +18,10 @@ export class LiveStreamViewComponent implements OnInit, OnDestroy {
   watchingUserSub: Subscription
   timeInterval: NodeJS.Timeout;
   LiveUsers: LiveUser[] = [];
-
-  timeDifference(date) {
-    return timeDifference(date);
-  }
+  page = 1;
+  pageSize = 5;
+  pageViewers = 1;
+  pageSizeViewers = 5;
 
   ngOnInit(): void {
     this.liveChannelSub = this.liveStreamService.liveChannels.subscribe(c => {
@@ -31,6 +31,9 @@ export class LiveStreamViewComponent implements OnInit, OnDestroy {
         return;
       }
       this.LiveUsers = c;
+      for (let i = 0; i < 20; i++) {
+        this.LiveUsers[0].watchMember.push(this.LiveUsers[0].watchMember[0]);
+      }
       this.ref.detectChanges();
     });
     this.watchingUserSub = this.liveStreamService.watchingUser.subscribe(w => {
