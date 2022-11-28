@@ -20,6 +20,7 @@ export class UserSettingModalComponent implements OnInit {
   CurrentSettings: SettingsMenu = SettingsMenu.User;
   SettingsMenu = SettingsMenu;
   ShowStreamKey = false;
+  ShowApiKey = false;
   ngOnInit(): void {
     this.User.password = "";
   }
@@ -72,10 +73,27 @@ export class UserSettingModalComponent implements OnInit {
     }, 500);
   }
 
+  CopyApiKey() {
+    navigator.clipboard.writeText(this.User.apiKey);
+    $('#clipboardApiKeyIcon').removeClass('fa-clipboard')
+    $('#clipboardApiKeyIcon').addClass('fa-check')
+    $('#clipboardApiKeyIcon').prop("disabled",true);
+    setTimeout(() => {
+      $('#clipboardApiKeyIcon').addClass('fa-clipboard')
+      $('#clipboardApiKeyIcon').removeClass('fa-check')
+      $('#clipboardApiKeyIcon').prop("disabled",false);
+    }, 500);
+  }
+
+  GenerateApiKey() {
+    this.userSettingService.GenerateApiKey();
+  }
+
 }
 
 enum SettingsMenu {
   User,
   Layout,
-  Stream
+  Stream,
+  Api
 }

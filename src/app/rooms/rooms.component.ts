@@ -40,7 +40,7 @@ export class RoomsComponent implements OnInit {
   currentTime: number;
   delInterval: boolean;
   SignalR: boolean = false;
-  user: User = { username: "", password: "", id: 0, approved: 0, userprivileges: 0, streamToken: "" };
+  user: User = { username: "", password: "", id: 0, approved: 0, userprivileges: 0, streamToken: "", apiKey: "" };
   logout;
   inMenu = true;
   page = 1;
@@ -220,7 +220,8 @@ export class RoomsComponent implements OnInit {
   public LeaveRoom() {
     this.userService.removeUser(this.currentRoom);
     this.loc.go('/');
-    this.currentRoom = undefined;
+    //this.currentRoom = undefined;
+    window.location.reload();
   }
 
   refresh(): void {

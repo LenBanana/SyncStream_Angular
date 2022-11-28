@@ -6,5 +6,6 @@ export interface User {
     password: string,
     approved: number,
     userprivileges: UserPrivileges,
-    streamToken: string
+    streamToken: string,
+    apiKey: string
 }

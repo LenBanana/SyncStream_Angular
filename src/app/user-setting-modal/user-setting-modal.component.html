@@ -14,8 +14,11 @@
                     <li class="nav-item mr-1" (click)="CurrentSettings=SettingsMenu.Layout">
                       <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Layout}">Layout</a>
                     </li>
-                    <li class="nav-item" (click)="CurrentSettings=SettingsMenu.Stream">
+                    <li class="nav-item mr-1" (click)="CurrentSettings=SettingsMenu.Stream">
                       <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Stream}">Streaming</a>
+                    </li>
+                    <li class="nav-item mr-1" (click)="CurrentSettings=SettingsMenu.Api">
+                      <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Api}">API</a>
                     </li>
                   </ul>
                   <div *ngIf="CurrentSettings==SettingsMenu.User">
@@ -51,17 +54,31 @@
                     <div class="custom-control custom-checkbox pt-2 pl-0">
                       <label class="mt-3">Server<span class="text-danger"> *</span></label>
                       <div class="input-group">
-                        <input [value]="'rtmp://drecktu.be/live'" type="text" class="form-control bg-dark text-light border-dark bg-secondary">
+                        <input readonly [value]="'rtmp://drecktu.be/live'" type="text" class="form-control bg-dark text-light border-dark bg-secondary">
                         <div class="input-group-append">
                           <button class="btn btn-dark border-dark border" (click)="CopyStreamServer()"><i class="fa fa-clipboard" id="clipboardStreamServerIcon"></i></button>
                         </div>
                       </div>
                       <label class="mt-3">Key<span class="text-danger"> *</span></label>
                       <div class="input-group">
-                        <input [value]="User.username.toLowerCase() + '?token=' + User.streamToken" [type]="ShowStreamKey ? 'text' : 'password'" class="form-control bg-dark text-light border-dark bg-secondary">
+                        <input readonly [value]="User.username.toLowerCase() + '?token=' + User.streamToken" [type]="ShowStreamKey ? 'text' : 'password'" class="form-control bg-dark text-light border-dark bg-secondary">
                         <div class="input-group-append">
                           <button class="btn btn-dark border-dark border" (click)="CopyStreamKey()"><i class="fa fa-clipboard" id="clipboardStreamKeyIcon"></i></button>
                           <button class="btn btn-dark border-dark border" (click)="ShowStreamKey=!ShowStreamKey"><i class="fa" [class.fa-eye]="ShowStreamKey" [class.fa-eye-slash]="!ShowStreamKey"></i></button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div *ngIf="CurrentSettings==SettingsMenu.Api" class="container-fluid py-3">
+                    <h3>API</h3>
+                    <div class="custom-control custom-checkbox pt-2 pl-0">
+                      <label class="mt-3">Key<span class="text-danger"> *</span></label>
+                      <div class="input-group">
+                        <input placeholder="key..." [value]="User.apiKey" [type]="ShowApiKey ? 'text' : 'password'" class="form-control bg-dark text-light border-dark bg-secondary" readonly>
+                        <div class="input-group-append">
+                          <button *ngIf="!User.apiKey||User.apiKey.length==0" class="btn btn-dark border-dark border" (click)="GenerateApiKey()"><i class="fa fa-key"></i></button>
+                          <button *ngIf="User.apiKey&&User.apiKey.length>0" class="btn btn-dark border-dark border" (click)="CopyApiKey()"><i class="fa fa-clipboard" id="clipboardApiKeyIcon"></i></button>
+                          <button *ngIf="User.apiKey&&User.apiKey.length>0" class="btn btn-dark border-dark border" (click)="ShowApiKey=!ShowApiKey"><i class="fa" [class.fa-eye]="ShowApiKey" [class.fa-eye-slash]="!ShowApiKey"></i></button>
                         </div>
                       </div>
                     </div>

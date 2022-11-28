@@ -35,6 +35,10 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
   VideoUpdate: Subscription;
   ServerTimeUpdate: Subscription;
   player: mpegts.Player;
+  currentVid: VideoDTO;
+  waitTimeout: NodeJS.Timeout;
+  errorCount = 0;
+  maxErrorCount = 24; // 1 minute of retries
   ngOnInit(): void {
     this.IsReady = true;
     this.AddSubscriptions();
@@ -63,30 +67,6 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
   }
 
   AddSubscriptions() {
-    //Time update from server
-    this.ServerTimeUpdate = this.playerService.currentTime.subscribe(t => {
-      if (!this.IsReady || !t || t == null || this.IsHost || this.CurrentPlayerType != PlayerType.Live) {
-        return;
-      }
-      let playerTime = this.player.currentTime;
-      if (playerTime >= 0 && ((t > (playerTime + this.Threshhold) || t < (playerTime - this.Threshhold)))) {
-        this.player.currentTime = t + this.CurrentPing;
-      }
-    });
-    //Play/Pause update from server
-    this.IsPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {
-      if (isplaying != null) {
-        this.IsPlaying = isplaying;
-      }
-      if (!this.IsReady || this.IsHost || this.CurrentPlayerType != PlayerType.Live) {
-        return;
-      }
-      if (isplaying) {
-        this.player.play();
-      } else if (!isplaying) {
-        this.player.pause();
-      }
-    });
     //Video update from server
     this.VideoUpdate = this.playerService.player.subscribe(async vid => {
       await delay(10);
@@ -108,6 +88,7 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
   }
 
   setVideo(vid: VideoDTO) {
+    this.currentVid = vid;
     if (mpegts.getFeatureList().mseLivePlayback) {
       var videoElement = document.getElementById('MpegtsPlayer') as HTMLMediaElement;
       this.player?.unload();
@@ -125,49 +106,39 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
       this.player.attachMediaElement(videoElement);
       this.player.load();
       this.player.play();
+      this.InitPlayer();
     }
   }
 
   InitPlayer() {
-    this.player.on("stalled", event => {
-      console.log(event)
-    });
-    this.player.on("play", event => {
-      if (this.IsHost) {
-        this.playerService.PlayPause(true, this.UniqueId);
-      } else {
-        if (!this.IsPlaying && this.CurrentPlayerType == PlayerType.Live) {
-          this.player.pause();
-        }
-      }
-    });
-    this.player.on("pause", event => {
-      if (this.IsHost) {
-        this.playerService.PlayPause(false, this.UniqueId);
-      } else {
-        if (this.IsPlaying && this.CurrentPlayerType == PlayerType.Live) {
-          this.player.play();
-        }
-      }
-    });
-    this.player.on("timeupdate", timeupdated => {
-      if (!this.IsHost || this.CurrentPlayerType != PlayerType.Live) {
-        return;
-      }
-      //const currentTime: number = timeupdated.detail.plyr.currentTime;
-      //this.mediaService.playerTime.next(currentTime);
-    });
-    this.player.on("ended", end => {
-      this.player.pause();
+    var videoElement = document.getElementById('MpegtsPlayer') as HTMLMediaElement;
+    this.player.on(mpegts.Events.ERROR, event => {
       if (!this.IsHost) {
         return;
       }
-      this.playlistService.nextVideo(this.UniqueId);
+      if (event == "NetworkError") {
+        if (!this.IsPlaying || this.errorCount >= this.maxErrorCount) {
+          this.playlistService.nextVideo(this.UniqueId);
+        }
+        else {
+          this.errorCount++;
+        }
+      }
     });
-    this.player.on("ready", ready => {
-      if (!this.IsReady) {
-        this.IsReady = true;
-        this.AddSubscriptions();
+    videoElement.addEventListener("canplay", ready => {
+      this.player.play();
+      if (this.IsPlaying) {
+        this.errorCount = 0;
+        clearTimeout(this.waitTimeout);
+      }
+      this.IsPlaying = true;
+    })
+    videoElement.addEventListener("waiting", ready => {
+      if (this.IsPlaying) {
+        clearTimeout(this.waitTimeout);
+        this.waitTimeout = setTimeout(() => {
+          this.setVideo(this.currentVid);
+        }, 2500);
       }
     })
   }

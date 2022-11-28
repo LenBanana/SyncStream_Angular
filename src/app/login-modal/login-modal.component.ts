@@ -100,7 +100,7 @@ export class LoginModalComponent implements OnInit, OnDestroy {
     if (username && pw && username.length >= 3 && pw.length >= 6 && username.length <= 20 && pw.length <= 80) {
       const pwSha: string = sha512.sha512(pw);
       if (pwSha) {
-        const user: User = { username: username, password: pwSha, id: 0, approved: 0, userprivileges: 0, streamToken: ""};
+        const user: User = { username: username, password: pwSha, id: 0, approved: 0, userprivileges: 0, streamToken: "", apiKey: ""};
         return user;
       }
     } else {

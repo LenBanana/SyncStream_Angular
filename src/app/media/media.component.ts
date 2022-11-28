@@ -37,6 +37,8 @@ export class MediaComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.PlayerTypeListener.unsubscribe();
     this.IsPlayingListener.unsubscribe();
+    this.PlaylistUpdate.unsubscribe();
+    this.PlayerTimeListener.unsubscribe();
   }
 
   ngOnInit(): void {
