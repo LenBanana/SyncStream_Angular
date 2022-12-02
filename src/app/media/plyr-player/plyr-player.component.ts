@@ -61,9 +61,9 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
   }
 
   ngOnDestroy() {
-    this.IsPlayingUpdate.unsubscribe();
-    this.VideoUpdate.unsubscribe();
-    this.ServerTimeUpdate.unsubscribe();
+    this.IsPlayingUpdate?.unsubscribe();
+    this.VideoUpdate?.unsubscribe();
+    this.ServerTimeUpdate?.unsubscribe();
     player.off("play", () => {});
     player.off("pause", () => {});
     player.off("timeupdate", () => {});

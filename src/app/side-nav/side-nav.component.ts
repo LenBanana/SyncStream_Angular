@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, ViewChild, Output, EventEmitter, OnDestroy } from '@angular/core';
+import { Component, OnInit, Input, ViewChild, Output, EventEmitter, OnDestroy, AfterViewInit } from '@angular/core';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PlaylistService } from '../playlist/playlist-service/playlist.service';
 import { UserlistService } from '../userlist/userlist-service/userlist.service';
@@ -22,7 +22,7 @@ declare var $: any;
   templateUrl: './side-nav.component.html',
   styleUrls: ['./side-nav.component.scss']
 })
-export class SideNavComponent implements OnInit, OnDestroy {
+export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
 
   constructor(public chatService: DreckchatService, private liveStreamService: LiveStreamService, private playlistService: PlaylistService, private playerService: PlayerService, private userService: UserlistService, private location: Location, private dialogService: DialogService) { }
 
@@ -95,6 +95,10 @@ export class SideNavComponent implements OnInit, OnDestroy {
     $('#liveViewModal').modal('show');
   }
 
+  ngAfterViewInit(): void {
+    document.addEventListener('paste', this.pasteFn);
+  }
+
   ngOnInit(): void {
     if (this.BrowserSettings.layoutSettings.bigSideNav) {
       setTimeout(() => {
@@ -159,11 +163,6 @@ export class SideNavComponent implements OnInit, OnDestroy {
         this.BlackjackActive = false;
       }
     });
-    setTimeout(() => {
-      document.addEventListener('paste', this.pasteFn);
-      var iframe = document.getElementById('YTPlayer') as HTMLIFrameElement;
-      iframe.contentDocument.body.addEventListener('paste', this.pasteFn);
-    }, 100);
   }
 
   changeSettings() {

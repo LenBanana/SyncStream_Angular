@@ -220,8 +220,9 @@ export class RoomsComponent implements OnInit {
   public LeaveRoom() {
     this.userService.removeUser(this.currentRoom);
     this.loc.go('/');
-    //this.currentRoom = undefined;
-    window.location.reload();
+    this.currentRoom = undefined;
+    this.delInterval = true;
+    //window.location.reload();
   }
 
   refresh(): void {

@@ -1,4 +1,5 @@
 import {
+  AfterViewInit,
   Component,
   EventEmitter,
   Input,
@@ -25,7 +26,7 @@ import { MediaService } from '../media-service/media.service';
   templateUrl: './youtube.component.html',
   styleUrls: ['./youtube.component.scss']
 })
-export class YoutubeComponent implements OnInit, OnDestroy, OnChanges {
+export class YoutubeComponent implements OnInit, OnDestroy, OnChanges, AfterViewInit {
   constructor(private playlistService: PlaylistService, private playerService: PlayerService, private mediaService: MediaService) {}
   @Input() CurrentPlayerType = PlayerType.Nothing;
   @Input() IsHost = false;
@@ -46,9 +47,9 @@ export class YoutubeComponent implements OnInit, OnDestroy, OnChanges {
 
   ngOnDestroy() {
     clearInterval(this.TimeUpdate);
-    this.IsPlayingUpdate.unsubscribe();
-    this.VideoUpdate.unsubscribe();
-    this.ServerTimeUpdate.unsubscribe();
+    this.IsPlayingUpdate?.unsubscribe();
+    this.VideoUpdate?.unsubscribe();
+    this.ServerTimeUpdate?.unsubscribe();
   }
 
   ngOnChanges() {
@@ -59,16 +60,23 @@ export class YoutubeComponent implements OnInit, OnDestroy, OnChanges {
     }
   }
 
-  ngOnInit(): void {
+  ngAfterViewInit(): void {
     if (typeof (YT) == 'undefined' || typeof (YT.Player) == 'undefined') {
       var tag = document.createElement('script');
       tag.src = "https://www.youtube.com/iframe_api";
       var firstScriptTag = document.getElementsByTagName('script')[0];
       firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
     }
-    ( < any > window).onYouTubePlayerAPIReady = () => {
+    if (( < any > window).onYouTubePlayerAPIReady == undefined) {
+      ( < any > window).onYouTubePlayerAPIReady = () => {
+        this.setInit();
+      };
+    } else {
       this.setInit();
-    };
+    }
+  }
+
+  ngOnInit(): void {
   }
 
 

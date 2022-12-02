@@ -40,11 +40,11 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
   errorCount = 0;
   maxErrorCount = 24; // 1 minute of retries
   ngOnInit(): void {
-    this.IsReady = true;
-    this.AddSubscriptions();
   }
 
   ngAfterViewInit(): void {
+    this.IsReady = true;
+    this.AddSubscriptions();
   }
 
 
@@ -55,9 +55,9 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
   }
 
   ngOnDestroy() {
-    this.IsPlayingUpdate.unsubscribe();
-    this.VideoUpdate.unsubscribe();
-    this.ServerTimeUpdate.unsubscribe();
+    this.IsPlayingUpdate?.unsubscribe();
+    this.VideoUpdate?.unsubscribe();
+    this.ServerTimeUpdate?.unsubscribe();
     this.player?.unload();
     this.player?.off("play", () => {});
     this.player?.off("pause", () => {});
@@ -112,6 +112,9 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
 
   InitPlayer() {
     var videoElement = document.getElementById('MpegtsPlayer') as HTMLMediaElement;
+    this.player.off(mpegts.Events.ERROR, e => {});
+    videoElement.removeEventListener("canplay", e => {});
+    videoElement.removeEventListener("waiting", e => {});
     this.player.on(mpegts.Events.ERROR, event => {
       if (!this.IsHost) {
         return;
