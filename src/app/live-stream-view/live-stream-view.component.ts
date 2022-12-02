@@ -21,7 +21,7 @@ export class LiveStreamViewComponent implements OnInit, OnDestroy {
   page = 1;
   pageSize = 5;
   pageViewers = 1;
-  pageSizeViewers = 5;
+  pageSizeViewers = 10;
   startDate = new Date();
 
   ngOnInit(): void {

@@ -100,7 +100,7 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
       }, {
         enableStashBuffer: false,
         isLive: true,
-        liveBufferLatencyChasing: true,
+        liveBufferLatencyChasing: true
       }
       );
       this.player.attachMediaElement(videoElement);
@@ -112,9 +112,9 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
 
   InitPlayer() {
     var videoElement = document.getElementById('MpegtsPlayer') as HTMLMediaElement;
-    this.player.off(mpegts.Events.ERROR, e => {});
     videoElement.removeEventListener("canplay", e => {});
     videoElement.removeEventListener("waiting", e => {});
+    this.player.off(mpegts.Events.ERROR, e => {});
     this.player.on(mpegts.Events.ERROR, event => {
       if (!this.IsHost) {
         return;

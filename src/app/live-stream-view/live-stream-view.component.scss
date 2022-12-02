@@ -13,6 +13,26 @@
 .text-dark {
   color: #4d5678 !important;
 }
+.user-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 75%;
+}
+.blink {
+  animation: blink 3s infinite both;
+}
+@keyframes blink {
+  0%,
+  50%,
+  100% {
+    opacity: 1;
+  }
+  25%,
+  75% {
+    opacity: 0;
+  }
+}
 
 ngb-pagination ::ng-deep ul > li:not(.active) > a {
   background-color: #4d5678 !important;

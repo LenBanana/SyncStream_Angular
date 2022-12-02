@@ -6,36 +6,46 @@
         <button type="button" class="close" data-dismiss="modal">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="card bg-secondary text-light mt-2" *ngFor="let live of LiveUsers | slice: (page-1) * pageSize : page * pageSize; let i = index;">
-          <div class="card-header pointer" data-toggle="collapse" [attr.data-target]="'#viewerInfo' + i">
-            <span class="badge badge-danger mr-2 pull-left"><i class="fa fa-dot-circle-o" aria-hidden="true"></i> LIVE</span>
-            <span *ngIf="UniqueId&&UniqueId.length>0" class="badge badge-info pull-right ml-2 pointer" (click)="AddLiveStream(live)"><i class="fa fa-plus" aria-hidden="true"></i></span>
-            <span class="badge badge-light pull-right ml-2"> {{live.watchMember.length}} <i class="fa fa-eye" aria-hidden="true"></i></span>
-          </div>
-          <div class="card-body">
+        <div class="card bg-secondary text-light mt-2"
+          *ngFor="let live of LiveUsers | slice: (page-1) * pageSize : page * pageSize; let i = index;">
+          <div class="card-header" data-toggle="collapse" [attr.data-target]="'#viewerInfo' + i" [class.pointer]="live.watchMember.length>0">
             <span class="badge pull-left py-1" style="font-size: 1rem;"><b>{{live.userName}}</b></span>
-            <span class="badge badge-light pull-right py-1"><i class="fa fa-circle text-danger" aria-hidden="true"></i> {{live.created | dateLive: startDate |date:'HH:mm:ss':'+0000'}}</span>
-            <div id="viewerInfo{{i}}" class="collapse">
-              <div *ngIf="live.watchMember.length>0">
-                <p class="mt-4 text-center">Viewers</p>
-                <div class="border-dark col-12 mb-3 mr-4" style="height: 1px;"></div>
-                <ngb-pagination *ngIf="live.watchMember.length>pageSizeViewers" class="pull-right"
-                  [(page)]="pageViewers"
-                  [pageSize]="pageSizeViewers"
-                  [collectionSize]="live.watchMember.length"></ngb-pagination>
-                <ul class="p-0 ml-1" id="userList{{i}}" style="list-style: none;">
-                  <li class="mb-2" *ngFor="let user of live.watchMember | slice: (pageViewers-1) * pageSizeViewers : pageViewers * pageSizeViewers"><span class="badge badge-light border-dark text-light pr-2 w-25 text-left"><span class="pull-left py-2 pl-2">{{user.username}}</span><span class="pull-right py-2 pr-1"><i class="fa fa-eye text-secondary" aria-hidden="true"></i></span></span></li>
-                </ul>
+            <span class="badge badge-light pull-right py-1"><i class="fa fa-circle text-danger blink" aria-hidden="true"></i>
+              {{live.created | dateLive: startDate |date:'HH:mm:ss':'+0000'}}</span>
+          </div>
+          <div id="viewerInfo{{i}}" class="card-body collapse p-0">
+            <div class="p-4" *ngIf="live.watchMember.length>0">
+              <p><span class="border-bottom border-dark rounded shadow font-weight-bold py-2 px-4">Community<i class="fa fa-users ml-2" aria-hidden="true"></i></span></p>
+              <div class="border-dark col-4 mb-3 mr-4" style="height: 1px;"></div>
+              <ngb-pagination *ngIf="live.watchMember.length>pageSizeViewers" [(page)]="pageViewers"
+                [pageSize]="pageSizeViewers" [collectionSize]="live.watchMember.length">
+              </ngb-pagination>
+              <div *ngIf="live.watchMember.length>pageSizeViewers" class="border-dark col-12 mb-3 mr-4"
+                style="height: 1px;"></div>
+              <div class="row">
+                <div class="col-6 col-lg-3"
+                  *ngFor="let user of live.watchMember | slice: (pageViewers-1) * pageSizeViewers : pageViewers * pageSizeViewers">
+                  <span class="badge badge-light border-dark text-light pr-2 w-100 text-left shadow-sm"><span
+                      [title]="user.username" class="pull-left py-2 pl-2 user-text">{{user.username}}</span><span
+                      class="pull-right py-2 pr-1"><i class="fa fa-user-o text-secondary"
+                        aria-hidden="true"></i></span></span>
+                </div>
               </div>
             </div>
+          </div>
+          <div class="card-footer">
+            <span class="badge badge-danger mr-2 pull-left"><i class="fa fa-dot-circle-o" aria-hidden="true"></i>
+              LIVE</span>
+            <span *ngIf="UniqueId&&UniqueId.length>0" class="badge badge-info pull-right ml-2 pointer"
+              (click)="AddLiveStream(live)"><i class="fa fa-plus" aria-hidden="true"></i></span>
+            <span class="badge badge-light pull-right ml-2"> {{live.watchMember.length}} <i class="fa fa-user pl-1"
+                aria-hidden="true"></i></span>
           </div>
         </div>
       </div>
       <div *ngIf="LiveUsers.length>pageSize" class="modal-footer">
-        <ngb-pagination class="pull-right"
-                [(page)]="page"
-                [pageSize]="pageSize"
-                [collectionSize]="LiveUsers.length"></ngb-pagination>
+        <ngb-pagination class="pull-right" [(page)]="page" [pageSize]="pageSize" [collectionSize]="LiveUsers.length">
+        </ngb-pagination>
       </div>
     </div>
   </div>
