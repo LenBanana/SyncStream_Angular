@@ -13,15 +13,12 @@
               <div class="input-group-prepend">
                 <div class="btn btn-dark"><i class="fa fa-user" aria-hidden="true"></i></div>
               </div>
-              <input #userLoginInput maxlength="20" type="text" (keyup.enter)="LoginRequest()"
+              <input #userLoginInput minlength="3" maxlength="31" type="text" (keyup.enter)="LoginRequest()" (keyup)="LoginInvalid()"
                 class="form-control bg-secondary text-light border-dark"
-                [class.is-invalid]="loginError||userExist||wrongPw" id="userName" placeholder="Username">
+                [class.is-invalid]="loginError||loginInvalid" id="userName" placeholder="Username">
             </div>
             <small id="userHelp" class="text-danger" *ngIf="loginError">
-              Must be 3-20 characters long.
-            </small>
-            <small id="userHelp2" class="text-danger" *ngIf="userExist">
-              This username is already taken.
+              {{loginErrorString}}
             </small>
           </div>
           <label for="userPw">Password</label>
@@ -30,15 +27,12 @@
               <div class="input-group-prepend">
                 <div class="btn btn-dark"><i class="fa fa-lock" aria-hidden="true"></i></div>
               </div>
-              <input #pwLoginInput maxlength="80" type="password" (keyup.enter)="LoginRequest()"
+              <input #pwLoginInput maxlength="80" type="password" (keyup.enter)="LoginRequest()" (keyup)="PasswordInvalid()"
                 class="form-control bg-secondary text-light border-dark"
-                [class.is-invalid]="loginError||userExist||wrongPw" id="userPw" placeholder="Password">
+                [class.is-invalid]="pwError||pwInvalid" id="userPw" placeholder="Password">
             </div>
-            <small id="passwordHelp" class="text-danger" *ngIf="loginError">
-              Must be at least 6 characters long.
-            </small>
-            <small id="passwordHelp2" class="text-danger" *ngIf="wrongPw">
-              This user does not exist.
+            <small id="passwordHelp" class="text-danger" *ngIf="pwError">
+              {{pwErrorString}}
             </small>
           </div>
         </form>

@@ -30,6 +30,7 @@ export class VideojsPlayerComponent implements OnInit, AfterViewInit, OnDestroy,
   PlayerType = PlayerType;
   IsPlaying = false;
   IsReady = false;
+  LiveStream = false;
   TimeUpdate: NodeJS.Timeout;
   IsPlayingUpdate: Subscription;
   VideoUpdate: Subscription;
@@ -45,19 +46,19 @@ export class VideojsPlayerComponent implements OnInit, AfterViewInit, OnDestroy,
       autoplay: true,
       controls: true,
       preload: 'auto',
-      techorder : ["flash","html5"],
       enableWorker: true,
-      maxBufferLength: 1,
-      liveBackBufferLength: 0,
-      liveSyncDuration: 0,
-      liveMaxLatencyDuration: 5,
-      liveDurationInfinity: true,
-      highBufferWatchdogPeriod: 1,
+      liveDurationInfinity: false,
+      liveui: true
     }, onPlayerReady => {
       this.InitPlayer();
     });
   }
 
+  SeekLive() {
+    if (this.IsHost) {
+      this.videojsplayer.currentTime(this.videojsplayer.liveTracker.seekableEnd());
+    }
+  }
 
   ngOnChanges() {
     if (this.IsReady && this.CurrentPlayerType != PlayerType.External) {
@@ -124,7 +125,9 @@ export class VideojsPlayerComponent implements OnInit, AfterViewInit, OnDestroy,
 
   setVideo(vid: VideoDTO) {
     $('#dialogModal-Sync').modal('hide');
+    this.LiveStream = false;
     if (vid.url.includes(".m3u8")) {
+      this.LiveStream = true;
       this.videojsplayer.src({
         type: 'application/x-mpegURL',
         src: vid.url,

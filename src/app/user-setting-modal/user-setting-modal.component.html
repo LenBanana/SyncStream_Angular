@@ -14,10 +14,10 @@
                     <li class="nav-item mr-1" (click)="CurrentSettings=SettingsMenu.Layout">
                       <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Layout}">Layout</a>
                     </li>
-                    <li class="nav-item mr-1" (click)="CurrentSettings=SettingsMenu.Stream">
+                    <li class="nav-item mr-1" *ngIf="User.approved" (click)="CurrentSettings=SettingsMenu.Stream">
                       <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Stream}">Streaming</a>
                     </li>
-                    <li class="nav-item mr-1" (click)="CurrentSettings=SettingsMenu.Api">
+                    <li class="nav-item mr-1" *ngIf="User.approved&&User.userprivileges>=UserPrivileges.Administrator" (click)="CurrentSettings=SettingsMenu.Api">
                       <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Api}">API</a>
                     </li>
                   </ul>
@@ -69,7 +69,7 @@
                       </div>
                     </div>
                   </div>
-                  <div *ngIf="CurrentSettings==SettingsMenu.Api" class="container-fluid py-3">
+                  <div *ngIf="CurrentSettings==SettingsMenu.Api&&User.approved&&User.userprivileges>=UserPrivileges.Administrator" class="container-fluid py-3">
                     <h3>API</h3>
                     <div class="custom-control custom-checkbox pt-2 pl-0">
                       <label class="mt-3">Key<span class="text-danger"> *</span></label>

@@ -3,11 +3,11 @@
     <div [class.none]="CurrentPlayerType!=PlayerType.Nothing" class="nothing-playing vh-big">
       <span><i class="fa fa-pause-circle" aria-hidden="true"></i> Nothing playing</span>
     </div>
-    <app-mpegts-player *ngIf="CurrentPlayerType==PlayerType.Live" [class.none]="CurrentPlayerType!=PlayerType.Live" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-mpegts-player>
-    <app-youtube *ngIf="CurrentPlayerType==PlayerType.YouTube" [class.none]="CurrentPlayerType!=PlayerType.YouTube" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-youtube>
-    <app-videojs-player *ngIf="CurrentPlayerType==PlayerType.External" [class.none]="CurrentPlayerType!=PlayerType.External" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-videojs-player>
-    <app-plyr-player *ngIf="CurrentPlayerType==PlayerType.Vimeo" [class.none]="CurrentPlayerType!=PlayerType.Vimeo" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-plyr-player>
-    <app-twitch *ngIf="CurrentPlayerType==PlayerType.Twitch" [class.none]="CurrentPlayerType!=PlayerType.Twitch" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-twitch>
+    <app-mpegts-player *ngIf="CurrentPlayerType==PlayerType.Live" [class.none]="CurrentPlayerType!=PlayerType.Live" [CurrentPing]="CurrentPing" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-mpegts-player>
+    <app-youtube *ngIf="CurrentPlayerType==PlayerType.YouTube" [class.none]="CurrentPlayerType!=PlayerType.YouTube" [CurrentPing]="CurrentPing" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-youtube>
+    <app-videojs-player *ngIf="CurrentPlayerType==PlayerType.External" [class.none]="CurrentPlayerType!=PlayerType.External" [CurrentPing]="CurrentPing" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-videojs-player>
+    <app-plyr-player *ngIf="CurrentPlayerType==PlayerType.Vimeo" [class.none]="CurrentPlayerType!=PlayerType.Vimeo" [CurrentPing]="CurrentPing" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-plyr-player>
+    <app-twitch *ngIf="CurrentPlayerType==PlayerType.Twitch" [class.none]="CurrentPlayerType!=PlayerType.Twitch" [CurrentPing]="CurrentPing" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-twitch>
   </div>
   <div *ngIf="Username" class="ChatView col-3 CardBack border-around-nobot rounded-left" [class.hideChat]="!twitchChat">
     <div class="chat-height">

@@ -21,10 +21,14 @@ export class LoginModalComponent implements OnInit, OnDestroy {
   @Input() logout: boolean;
   Valid: string;
   loginError = false;
-  userExist = false;
-  wrongPw = false;
+  loginErrorString = "Username error";
+  pwError = false;
+  pwErrorString = "Password error";
   loginRequest;
   registerRequest;
+  loginInvalid = false;
+  pwInvalid = false;
+  regExStringUsername = /^\w(?:\w|[.-](?=\w)){2,31}$/;
 
   ngOnInit(): void {
     this.loginRequest = this.signalRService.loginRequest.subscribe(result => {
@@ -37,10 +41,11 @@ export class LoginModalComponent implements OnInit, OnDestroy {
       }
       if (result.username == null) {
         this.SaveLogin.emit(result);
-        this.wrongPw = true;
+        this.loginErrorString = "User does not exist";
+        this.loginError = true;
         setTimeout(() => {
-          this.wrongPw = false;
-        }, 5000);
+          this.loginError = false;
+        }, 3000);
         return;
       }
       this.SaveLogin.emit(result);
@@ -59,10 +64,11 @@ export class LoginModalComponent implements OnInit, OnDestroy {
         return;
       }
       if (result.username == null) {
-        this.userExist = true;
+        this.loginErrorString = "User already exists";
+        this.loginError = true;
         setTimeout(() => {
-          this.userExist = false;
-        }, 5000);
+          this.loginError = false;
+        }, 3000);
         return;
       }
       this.SaveLogin.emit(result);
@@ -80,35 +86,59 @@ export class LoginModalComponent implements OnInit, OnDestroy {
     this.registerRequest.unsubscribe();
   }
 
-  public LoginRequest() {
+  LoginRequest() {
     const user: User = this.validateUserRequest();
     if (user) {
       this.signalRService.LoginRequest(user, navigator.appVersion);
     }
   }
 
-  public RegisterRequest() {
+  RegisterRequest() {
     const user: User = this.validateUserRequest();
     if (user) {
       this.signalRService.RegisterRequest(user);
     }
   }
 
-  public validateUserRequest(): User {
+  LoginInvalid() {
+    const username: string = this.userLoginElement.nativeElement.value;
+    var regEx = new RegExp(this.regExStringUsername);
+    this.loginInvalid = !username || !regEx.test(username);
+    return this.loginInvalid;
+  }
+
+  PasswordInvalid() {
+    const pw: string = this.pwLoginElement.nativeElement.value;
+    this.pwInvalid = !pw || pw.length < 6 || pw.length > 80;
+    return this.pwInvalid;
+  }
+
+  validateUserRequest(): User {
     const username: string = this.userLoginElement.nativeElement.value;
     const pw: string = this.pwLoginElement.nativeElement.value;
-    if (username && pw && username.length >= 3 && pw.length >= 6 && username.length <= 20 && pw.length <= 80) {
-      const pwSha: string = sha512.sha512(pw);
-      if (pwSha) {
-        const user: User = { username: username, password: pwSha, id: 0, approved: 0, userprivileges: 0, streamToken: "", apiKey: ""};
-        return user;
+    var regEx = new RegExp(this.regExStringUsername);
+    if (!this.LoginInvalid()) {
+      if (!this.PasswordInvalid()) {
+        const pwSha: string = sha512.sha512(pw);
+        if (pwSha) {
+          const user: User = { username: username, password: pwSha, id: 0, approved: 0, userprivileges: 0, streamToken: "", apiKey: ""};
+          return user;
+        }
+      } else {
+        this.pwErrorString = "Password invalid";
+        this.pwError = true;
+        setTimeout(() => {
+          this.pwError = false;
+        }, 3000);
+        return null;
       }
     } else {
+      this.loginErrorString = "Username invalid";
       this.loginError = true;
-        setTimeout(() => {
-          this.loginError = false;
-        }, 5000);
-        return null;
+      setTimeout(() => {
+        this.loginError = false;
+      }, 3000);
+      return null;
     }
   }
 

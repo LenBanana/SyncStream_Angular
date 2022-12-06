@@ -4,6 +4,8 @@ import { VideoDTO } from '../Interfaces/VideoDTO';
 import { PlayerService } from '../player/player-service/player.service';
 import { PlayerType } from '../player/player.component';
 import { PlaylistService } from '../playlist/playlist-service/playlist.service';
+import { PingService } from '../services/pingservice.service';
+import { SignalRService } from '../services/signal-r.service';
 import { MediaService } from './media-service/media.service';
 
 @Component({
@@ -13,7 +15,7 @@ import { MediaService } from './media-service/media.service';
 })
 export class MediaComponent implements OnInit, OnDestroy {
 
-  constructor(private playerService: PlayerService, private playlistService: PlaylistService, private mediaService: MediaService) { }
+  constructor(private playerService: PlayerService, private playlistService: PlaylistService, private mediaService: MediaService, private pingService: PingService, private signalrService: SignalRService) { }
   @Input() UniqueId: string;
   @Input() logout: boolean;
   @Input() Username = "";
@@ -22,6 +24,8 @@ export class MediaComponent implements OnInit, OnDestroy {
   @Input() Threshhold = .5;
   @Output() isPlayingEvent = new EventEmitter();
   @Output() playlistChange = new EventEmitter();
+  @Output() threshholdChange = new EventEmitter();
+  CurrentPing = 0;
   readyEvent: Subject<void> = new Subject<void>();
   CurrentPlayerType: PlayerType = PlayerType.Nothing;
   PlayerType = PlayerType;
@@ -33,6 +37,8 @@ export class MediaComponent implements OnInit, OnDestroy {
   IsPlayingListener: Subscription;
   PlayerTimeListener: Subscription;
   PlaylistUpdate: Subscription;
+  PingUpdate: Subscription;
+  PingInterval;
 
   ngOnDestroy() {
     this.PlayerTypeListener.unsubscribe();
@@ -42,6 +48,23 @@ export class MediaComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.PingInterval = setInterval(() => {
+      this.pingService.GetPing();
+    }, 5000);
+    this.PingUpdate = this.signalrService.pingStream.subscribe(ping => {
+      if (!ping) {
+        return;
+      }
+      this.CurrentPing = Number.parseFloat(ping.toFixed(2));
+      if (this.Threshhold < this.CurrentPing || (this.IsHost && this.Threshhold > 2 && this.CurrentPing < 2) || (!this.IsHost && this.Threshhold > .5 && this.CurrentPing < .5)) {
+        if (!this.IsHost) {
+          this.Threshhold = this.CurrentPing < .5 ? .5 : Number.parseFloat(ping.toFixed(2));
+        } else {
+          this.Threshhold = (this.CurrentPing < 2 ? 2 : Number.parseFloat(ping.toFixed(2))) * 2;
+        }
+        this.threshholdChange.emit(this.Threshhold);
+      }
+    });
     this.PlayerTypeListener = this.playerService.playerType.subscribe(type => {
       if (!type || type == null) {
         this.CurrentPlayerType = PlayerType.Nothing;

@@ -1,2 +1,2 @@
 <video #videojsplayer class="video-js media-player" controls playsinline autoplay="true"></video>
-
+<div *ngIf="LiveStream" class="live-button btn btn-danger p-1" [class.pointer]="IsHost" (click)="SeekLive()"><i class="fa fa-circle"></i> LIVE</div>

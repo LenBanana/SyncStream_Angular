@@ -3,6 +3,7 @@ import { User } from '../Interfaces/User';
 import * as sha512 from 'js-sha512';
 import { UserSettingService } from './user-setting-service/user-setting.service';
 import { browserSettingName, BrowserSettings, changeSettings } from '../Interfaces/BrowserSettings';
+import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
 declare var $: any;
 
 @Component({
@@ -21,6 +22,7 @@ export class UserSettingModalComponent implements OnInit {
   SettingsMenu = SettingsMenu;
   ShowStreamKey = false;
   ShowApiKey = false;
+  UserPrivileges = UserPrivileges;
   ngOnInit(): void {
     this.User.password = "";
   }
