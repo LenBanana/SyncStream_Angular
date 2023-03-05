@@ -39,7 +39,13 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
   waitTimeout: NodeJS.Timeout;
   errorCount = 0;
   maxErrorCount = 24; // 1 minute of retries
+  volume = 1;
+  mouseTimeout;
   ngOnInit(): void {
+    var volumeStorage = localStorage.getItem('livePlayerVolume');
+    if (volumeStorage) {
+      this.volume = Number.parseFloat(volumeStorage);
+    }
   }
 
   ngAfterViewInit(): void {
@@ -64,6 +70,7 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
     this.player?.off("timeupdate", () => {});
     this.player?.off("ended", () => {});
     this.player?.off("ready", () => {});
+    this.player?.off("volumechange", () => {});
   }
 
   AddSubscriptions() {
@@ -96,11 +103,9 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
           type: 'flv',
           isLive: true,
           url: vid.url,
-          cors: true
+          cors: true,
       }, {
-        enableStashBuffer: false,
-        isLive: true,
-        liveBufferLatencyChasing: true
+        isLive: true
       }
       );
       this.player.attachMediaElement(videoElement);
@@ -110,10 +115,23 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
     }
   }
 
+  SeekLive() {
+    this.player.currentTime = this.player.buffered.end(0) - .15;
+  }
+
+  IsLive() {
+    return (this.player.currentTime + 1) >= this.player.buffered.end(0)
+  }
+
   InitPlayer() {
     var videoElement = document.getElementById('MpegtsPlayer') as HTMLMediaElement;
     videoElement.removeEventListener("canplay", e => {});
     videoElement.removeEventListener("waiting", e => {});
+    this.player.volume = this.volume;
+    clearTimeout(this.mouseTimeout);
+    this.mouseTimeout = setTimeout(() => {
+      $('#MpegtsLiveBtn').addClass('hide');
+    }, 2000);
     this.player.off(mpegts.Events.ERROR, e => {});
     this.player.on(mpegts.Events.ERROR, event => {
       if (!this.IsHost) {
@@ -136,13 +154,24 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
       }
       this.IsPlaying = true;
     })
+    videoElement.addEventListener("volumechange", vol => {
+      if (this.player.muted) this.volume = 0; else this.volume = this.player.volume;
+      localStorage.setItem('livePlayerVolume', this.volume.toString());
+    })
     videoElement.addEventListener("waiting", ready => {
       if (this.IsPlaying) {
         clearTimeout(this.waitTimeout);
         this.waitTimeout = setTimeout(() => {
           this.setVideo(this.currentVid);
-        }, 2500);
+        }, 5000);
       }
+    })
+    videoElement.addEventListener("mousemove", ready => {
+      clearTimeout(this.mouseTimeout);
+      $('#MpegtsLiveBtn').removeClass('hide');
+      this.mouseTimeout = setTimeout(() => {
+        $('#MpegtsLiveBtn').addClass('hide');
+      }, 2000);
     })
   }
 }

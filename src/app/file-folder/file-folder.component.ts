@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, V
 import { MatMenuTrigger } from '@angular/material/menu';
 import { Subscription } from 'rxjs';
 import { DownloadManagerService } from '../download-manager/download-manger-service/download-manager.service';
-import { userId } from '../global.settings';
+import { getCookie, userId } from '../global.settings';
 import { DownloadFile, FileFolder } from '../Interfaces/DownloadInfo';
 import { User } from '../Interfaces/User';
 import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
@@ -47,7 +47,7 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
         return;
       }
       this.Users = users;
-      this.FilteredUsers = users.filter(x => x.userprivileges >= UserPrivileges.Administrator);
+      this.FilteredUsers = users.filter(x => x.userprivileges >= UserPrivileges.Administrator && x.id != this.userId);
     });
   }
 
@@ -140,23 +140,36 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   ShareFolderModal() {
-    $('#chooseUserModal').modal('show');
+    if (!this.FilteredUsers || this.FilteredUsers.length == 0) {
+      var Token = getCookie("login-token");
+      var UserID = Number.parseInt(getCookie("user-id"));
+      if (Token && UserID) {
+        this.userAdminService.GetUsers(Token, UserID);
+      }
+    }
+    $('#chooseUserModal' + this.folder.id).modal('toggle');
   }
 
-  ShareFolder(user) {
+  ShareFolder() {
+    var user = Number.parseFloat((document.getElementById('userSel1' + this.folder.id) as HTMLSelectElement).value);
     this.downloadService.ShareFolder(this.folder.id, user);
-    $('#chooseUserModal').modal('hide');
+    $('#chooseUserModal' + this.folder.id).modal('hide');
   }
 
   drop(file) {
-    var prevIdx = file.previousIndex + ((this.page - 1) * this.pageSize);
+    var itemId = (file.item.element.nativeElement as HTMLDivElement).id;
+    var fileId = Number.parseFloat(itemId?.substring(8, itemId?.length));
+    if (!fileId) {
+      return;
+    }
+    var prevIdx = this.filterFiles.findIndex(x => x.id == fileId);
+    file.previousIndex + ((this.page - 1) * this.pageSize);
     var fileFolderId = this.filterFiles[prevIdx].fileFolderId;
     var folderId = file.container.data.id;
     if (folderId == fileFolderId) {
       folderId = this.currentFolder.parent.id;
     }
     if (folderId) {
-      var fileId = this.filterFiles[prevIdx].id;
       this.filterFiles.splice(prevIdx, 1);
       this.downloadService.ChangeFolder(fileId, folderId);
     }

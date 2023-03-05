@@ -1,8 +1,18 @@
 <div *ngIf="filterFiles&&filterFiles.length>0" cdkDropListSortingDisabled="true" cdkDropList [cdkDropListData]="filterFiles" class="col-12">
-  <div (dblclick)="ToggleEdit(f)" (click)="$event.stopPropagation();" cdkDrag [cdkDragDisabled]="f.editing" [class.no-events]="f.editing" (contextmenu)="$event.preventDefault();menuTrigger.openMenu();getEvent()" *ngFor="let f of filterFiles | slice: (page-1) * pageSize : page * pageSize; let i = index;">
+  <div (dblclick)="ToggleEdit(f)"  id="fileview{{f.id}}" (click)="$event.stopPropagation();" cdkDrag [cdkDragDisabled]="f.editing" [class.no-events]="f.editing" (contextmenu)="$event.preventDefault();menuTrigger.openMenu();getEvent()" *ngFor="let f of filterFiles | slice: (page-1) * pageSize : page * pageSize; let i = index;">
     <div class="card text-white bg-secondary mb-2 pointer no-events" [cdkDragData]="f" [matMenuTriggerFor]="menu" #menuTrigger="matMenuTrigger">
-      <div class="card-body p-2" data-toggle="collapse" [attr.data-target]="'#collapseFileFooter-' + f.id" aria-expanded="false" [attr.aria-controls]="'#collapseFileFooter-' + f.id">
-        <i class="fa fa-file ml-3 mr-2" aria-hidden="true"></i>
+      <div class="card-body mb-1 p-2" data-toggle="collapse" [attr.data-target]="'#collapseFileFooter-' + f.id" aria-expanded="false" [attr.aria-controls]="'#collapseFileFooter-' + f.id">
+        <div *ngIf="f.fileEnding.toLocaleLowerCase()=='.wav'||f.fileEnding.toLocaleLowerCase()=='.mp3'||f.fileEnding.toLocaleLowerCase()=='.ogg'; else defaultIcon" style="z-index: 10001; display: inline-flex; cursor: pointer; pointer-events: auto;">
+          <i class="fa ml-2 mr-2" [class.fa-play]="!f.player||f.player.paused" [class.fa-pause]="f.player&&!f.player?.paused" aria-hidden="true" (click)="playWavFile(f);$event.preventDefault();$event.stopPropagation();"></i>
+          <div class="player-loading-bar ml-2" (click)="$event.preventDefault();$event.stopPropagation();seekFileTo(f, $event)">
+            <div class="player-loading-bar-bg" [style.width.%]="getPlayerPercentage(f)"></div>
+          </div>
+          <span class="player-loading-time">{{timeFromSeconds(f.player?.currentTime)}}/{{timeFromSeconds(f.player?.duration)}}</span>
+        </div>
+        <ng-template #defaultIcon>
+          <i *ngIf="isImg(f)" (click)="$event.preventDefault();$event.stopPropagation();openImg(f)" class="fa fa-file-image-o ml-2 mr-2 pointer" aria-hidden="true" style="pointer-events: auto;"></i>
+          <i *ngIf="!isImg(f)" class="fa fa-file ml-2 mr-2" aria-hidden="true" style="pointer-events: auto;"></i>
+        </ng-template>
         <div class="m-0 w-50" style="display: inline-flex;" *ngIf="!f.editing">
           <p class="card-title short-text m-0" [class.normal-events]="f.editing">
             <span class="pointer no-events" (click)="$event.stopPropagation();" (dblclick)="ToggleEdit(f)"> {{f.name}}<span *ngIf="!f.name.endsWith(f.fileEnding)">{{f.fileEnding}}</span></span>
@@ -50,3 +60,7 @@
   </div>
 </div>
 <app-text-dialog [Id]="serverDialog.id" [Question]="serverDialog.question" [AddInput]="false" [Header]="serverDialog.header" [Answer1]="serverDialog.answer1" [Answer2]="serverDialog.answer2" [AlertType]="serverDialog.alertType" (Yes)="DeleteFile()" (No)="ShowDeleteModal(false)"></app-text-dialog>
+
+<div class="modal img-show-modal" id="imgShowModal">
+  <img class="modal-content" id="imgShowImg">
+</div>

@@ -96,6 +96,18 @@ export class DownloadManagerService {
     }
   }
 
+  public DownloadYtFile(url: string, quality: string) {
+    if (this.Token) {
+      hubConnection.invoke('DownloadYtVideo', this.Token, url, quality);
+    }
+  }
+
+  public GetYtQuality(url: string) {
+    if (this.Token) {
+      return this.http.get<number[]>(baseUrl + "api/video/getYoutubeQuality?url=" + url + "&token=" + this.Token);
+    }
+  }
+
   public ChangeDownload(fileId: number, fileName: string) {
     if (this.Token) {
       hubConnection.invoke('ChangeDownload', this.Token, fileId, fileName);

@@ -42,6 +42,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   inMenu = false;
   IsHost: boolean = false;
   nav: boolean = false;
+  externalChat: boolean = false;
   fullscreen: boolean = false;
   isPlaying = false;
   twitchChat = false;

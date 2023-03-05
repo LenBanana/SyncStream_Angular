@@ -12,13 +12,13 @@
                 <button class="btn" [class.btn-dark]="!CleanUp" [class.btn-danger]="CleanUp" (click)="CleanUpFiles()"><i class="fa fa-trash-o"
                     aria-hidden="true"></i></button>
               </div>
-              <input [(ngModel)]="downloadUrl" (keyup.enter)="DownloadFile()" type="text" class="form-control bg-dark text-light border-dark"
+              <input [disabled]="LoadingQuality ? true : null" [(ngModel)]="downloadUrl" (change)="CheckYtQuality()" (input)="CheckYtQuality()" (keyup.enter)="!LoadingQuality&&DownloadFile()" type="text" class="form-control bg-dark text-light border-dark"
                 placeholder="https://...">
-              <div class="input-group-append">
+              <div class="input-group-append" *ngIf="!IsYt()">
                 <input [(ngModel)]="downloadName" (keyup.enter)="DownloadFile()" type="text" class="form-control rounded-0 bg-dark text-light border-dark"
                   placeholder="Name...">
               </div>
-              <div class="input-group-append">
+              <div class="input-group-append" *ngIf="!IsYt()">
                 <select [(ngModel)]="CurrentPreset" class="form-control px-4 rounded-0 bg-dark text-light border-dark">
                   <option value="0">Very Slow</option>
                   <option value="1">Slower</option>
@@ -31,12 +31,17 @@
                   <option value="8">Ultra Fast</option>
                 </select>
               </div>
-              <div class="input-group-append">
-                <button class="btn btn-dark" (click)="DownloadFile()"><i class="fa fa-download"
-                    aria-hidden="true"></i></button>
+              <div class="input-group-append" *ngIf="PossibleYtQuality.length>0&&!LoadingQuality&&IsYt()">
+                <select [(ngModel)]="CurrentYtQuality" class="form-control px-4 rounded-0 bg-dark text-light border-dark">
+                  <option *ngFor="let quality of PossibleYtQuality" value="{{quality}}">{{quality}}p</option>
+                </select>
               </div>
               <div class="input-group-append">
-                <button id="dropZone" class="btn btn-dark" (click)="SelectFile()"><i class="fa fa-upload"
+                <button [disabled]="LoadingQuality ? true : null" class="btn btn-dark" (click)="DownloadFile()"><i *ngIf="!LoadingQuality" class="fa" [class.fa-download]="!IsYt()" [class.fa-youtube]="IsYt()"
+                    aria-hidden="true"></i><i *ngIf="LoadingQuality" class="fa fa-cog fa-spin"></i></button>
+              </div>
+              <div class="input-group-append">
+                <button [disabled]="LoadingQuality ? true : null" id="dropZone" class="btn btn-dark" (click)="SelectFile()"><i class="fa fa-upload"
                     aria-hidden="true"></i></button>
               </div>
             </div>

@@ -35,8 +35,89 @@ export class FileViewComponent implements OnInit {
   DownloadDbFile(file: DownloadFile) {
     var Token = getCookie("login-token");
     if (Token) {
-      var fileUrl = baseUrl + "api/video/videoByToken?uniqueId=" + file.id + "&videoKey=" + file.fileKey + "&token=" + Token;
-      window.open(fileUrl, "_self");
+      var fileUrl = this.GetDownloadUri(file);
+      window.open(fileUrl, "_blank");
+    }
+  }
+
+  GetDownloadUri(file: DownloadFile) {
+    var Token = getCookie("login-token");
+    if (Token) {
+      return baseUrl + "api/video/videoByToken?uniqueId=" + file.id + "&videoKey=" + file.fileKey + "&token=" + Token;
+    }
+  }
+
+  timeFromSeconds(sec) {
+    if (!sec||sec<=0) {
+      return "00:00:00";
+    }
+    var date = new Date(0);
+    date.setSeconds(sec);
+    var hours = date.getUTCHours().toString();
+    var minute = date.getMinutes().toString();
+    var second = date.getSeconds().toString();
+    hours = ("0" + hours).slice(-2);
+    minute = ("0" + minute).slice(-2);
+    second = ("0" + second).slice(-2);
+    return hours + ':' + minute + ":" + second;
+  }
+
+  openImg(file: DownloadFile) {
+    console.log(file);
+    if (this.isImg(file)) {
+      var fileUri = this.GetDownloadUri(file);
+      $("#imgShowImg").attr("src",fileUri);
+      setTimeout(() => {
+        $('#imgShowModal').modal('show');
+      }, 100);
+    }
+  }
+
+  isImg(file: DownloadFile) {
+    return file.fileEnding.toLocaleLowerCase() == ".jpg" ||
+    file.fileEnding.toLocaleLowerCase() == ".jpeg" ||
+    file.fileEnding.toLocaleLowerCase() == ".gif" ||
+    file.fileEnding.toLocaleLowerCase() == ".ico" ||
+    file.fileEnding.toLocaleLowerCase() == ".icon" ||
+    file.fileEnding.toLocaleLowerCase() == ".png";
+  }
+
+  playWavFile(file: DownloadFile) {
+    var url = this.GetDownloadUri(file);
+    if ((!file.player||file.player.paused) && url && url.length > 0) {
+      this.filterFiles.forEach(x => x.player?.pause());
+      if (!file.player) {
+        var a = new Audio(url);
+        a.play();
+        file.player = a;
+      } else if (file.player?.paused) {
+        file.player.play();
+      }
+    }
+    else if (file.player) {
+      file.player.pause();
+    }
+    return file.player;
+  }
+
+  seekFileTo(file:DownloadFile, event) {
+    if (!file.player) {
+      this.playWavFile(file);
+    }
+    setTimeout(() => {
+      var clickPerc = event.layerX / event.target.clientWidth;
+      var seekPos = file.player.duration * clickPerc;
+      if (seekPos >= 0 && seekPos <= file.player.duration) {
+        file.player.currentTime = seekPos;
+      }
+    }, 200);
+  }
+
+  getPlayerPercentage(file: DownloadFile) {
+    if (file.player) {
+      return file.player.currentTime / file.player.duration * 100;
+    } else {
+      return 0;
     }
   }
 

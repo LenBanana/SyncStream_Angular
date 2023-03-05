@@ -37,7 +37,7 @@
   <div class="container-fluid">
     <div class="row justify-content-start mr-1">
       <div class="col-lg-2 col-6 m-0 p-0" *ngFor="let child of folder.children">
-        <!-- cdkDropListSortingDisabled="true" [cdkDropListData]="child" (cdkDropListDropped)="dropThrough($event)" cdkDropList-->
+        <!-- cdkDropListSortingDisabled="true" [cdkDropListData]="child" (cdkDropListDropped)="dropThrough($event)" cdkDropList {{child.id}}-->
         <app-file-folder [UniqueId]="UniqueId" [folder]="child" [currentFolder]="currentFolder"
           [filterFiles]="filterFiles" [page]="page" [pageSize]="pageSize" (goDeeper)="GoThroughDeeper($event)"
           [IsInRoom]="IsInRoom"></app-file-folder>
@@ -77,16 +77,20 @@
   </button>
 </mat-menu>
 
-<div class="modal hide fade in" id="chooseUserModal">
+<div class="modal hide fade in" id="chooseUserModal{{folder.id}}">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content bg-secondary">
-      <div class="modal-body explain-text mb-4">
+      <div class="modal-body explain-text">
         <div class="form-group text-center">
           <label for="userSel1" class="mb-2">Select user</label>
-          <select class="form-control bg-dark border-dark text-light" id="userSel1" (change)="ShareFolder($event.target.value)">
+          <select class="form-control bg-dark border-dark text-light" id="userSel1{{folder.id}}">
             <option *ngFor="let user of FilteredUsers" value="{{user.id}}">{{user.username}}</option>
           </select>
         </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-success mr-auto" (click)="ShareFolder()">Ok</button>
+        <button class="btn btn-danger" (click)="ShareFolderModal()">Close</button>
       </div>
     </div>
   </div>

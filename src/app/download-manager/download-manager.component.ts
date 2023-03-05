@@ -71,6 +71,9 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
   AlertType = AlertType;
   ConversionPreset = ConversionPreset;
   CurrentPreset: ConversionPreset = ConversionPreset.SuperFast;
+  CurrentYtQuality = 1080;
+  PossibleYtQuality = [];
+  LoadingQuality = false;
   finishedIds: string[] = [];
   ngOnInit(): void {
     //var info: DownloadInfo = { id: '6f0a64ea-9371-42c5-8420-cab287442429', progress: 25 };
@@ -95,16 +98,16 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
       if (!f || f == null) {
         return;
       }
-      var idx = this.progresses.findIndex(x => x.id == f);
-      if (idx != -1) {
-        this.progresses.splice(idx, 1);
-        this.finishedIds.push(f);
-        setTimeout(() => {
-          this.finishedIds.pop();
-        }, 500);
-      }
-      this.firstSort = true;
-      this.downloadService.GetFolderFiles(this.currentFolder.id);
+      setTimeout(() => {
+        var idx = this.progresses.findIndex(x => x.id == f);
+        if (idx != -1) {
+          this.progresses.splice(idx, 1);
+          this.finishedIds.push(f);
+            this.finishedIds.pop();
+        }
+        this.firstSort = true;
+        this.downloadService.GetFolderFiles(this.currentFolder.id);
+    }, 500);
     });
     this.fileFolders = this.downloadService.folders.subscribe(f => {
       if (!f || f == null) {
@@ -311,6 +314,10 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
   }
 
   DownloadFile() {
+    if (this.IsYt()) {
+      this.DownloadYtFile();
+      return;
+    }
     if (this.downloadUrl.length > 0 && this.downloadUrl.startsWith("http")) {
       if (this.downloadName.length==0) {
         this.downloadName = "New File";
@@ -320,6 +327,32 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
       if (this.downloadName == "New File") {
         this.downloadName = "";
       }
+    }
+  }
+
+  IsYt() {
+    return this.downloadUrl.includes('youtube') || this.downloadUrl.includes('youtu.be') && this.downloadUrl.includes("?v=");
+  }
+
+  CheckYtQuality() {
+    if (this.IsYt()) {
+      this.LoadingQuality = true;
+      this.downloadService.GetYtQuality(this.downloadUrl).subscribe(x => {
+        this.PossibleYtQuality = x;
+        this.LoadingQuality = false;
+        if (!this.PossibleYtQuality.includes(this.CurrentYtQuality)) {
+          this.CurrentYtQuality = this.PossibleYtQuality[this.PossibleYtQuality.length - 1];
+        }
+      }, e => {this.LoadingQuality=false;this.PossibleYtQuality=[1080];this.CurrentYtQuality=1080});
+      return;
+    }
+  }
+
+  DownloadYtFile() {
+    if (this.downloadUrl.length > 0 && this.downloadUrl.startsWith("http") && !this.LoadingQuality) {
+      this.downloadService.DownloadYtFile(this.downloadUrl, this.CurrentYtQuality.toString());
+      this.downloadUrl = "";
+      this.PossibleYtQuality = [];
     }
   }
 }

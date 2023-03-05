@@ -19,7 +19,7 @@ import { browserSettingName, BrowserSettings, LayoutSettings, settingsUpdate } f
 import { ChessService } from '../chess-game/chess-service/chess.service';
 import { NgxChessBoardService } from 'ngx-chess-board';
 import { getCookie } from '../global.settings';
-import { DownloadManagerService } from '../download-manager/download-manger-service/download-manager.service';
+import { ConversionPreset, DownloadManagerService } from '../download-manager/download-manger-service/download-manager.service';
 import { PlayerService } from '../player/player-service/player.service';
 import { LiveUser } from '../Interfaces/liveStream';
 

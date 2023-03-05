@@ -25,6 +25,7 @@ export class MediaComponent implements OnInit, OnDestroy {
   @Output() isPlayingEvent = new EventEmitter();
   @Output() playlistChange = new EventEmitter();
   @Output() threshholdChange = new EventEmitter();
+  @Output() hideChat = new EventEmitter();
   CurrentPing = 0;
   readyEvent: Subject<void> = new Subject<void>();
   CurrentPlayerType: PlayerType = PlayerType.Nothing;
@@ -68,9 +69,15 @@ export class MediaComponent implements OnInit, OnDestroy {
     this.PlayerTypeListener = this.playerService.playerType.subscribe(type => {
       if (!type || type == null) {
         this.CurrentPlayerType = PlayerType.Nothing;
+        this.hideChat.emit(false);
         return;
       }
       this.CurrentPlayerType = type as PlayerType;
+      if (this.CurrentPlayerType == PlayerType.Blackjack) {
+        this.hideChat.emit(true);
+      } else {
+        this.hideChat.emit(false);
+      }
     });
     this.IsPlayingListener = this.playerService.isplaying.subscribe(play => {
       if (play != null) {

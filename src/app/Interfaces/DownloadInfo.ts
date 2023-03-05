@@ -15,6 +15,7 @@ export class DownloadFile {
   length: number;
   editing: boolean;
   editName: string;
+  player: HTMLAudioElement;
 }
 
 export class FileFolder {

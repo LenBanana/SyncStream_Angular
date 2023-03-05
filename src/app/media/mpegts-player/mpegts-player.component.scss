@@ -1,0 +1,12 @@
+.live-button {
+  position: absolute;
+  top: 25px;
+  right: 50px;
+  font-size: .75rem;
+  opacity: 1;
+  transition: opacity .5s ease;
+}
+
+.hide {
+  opacity: 0;
+}

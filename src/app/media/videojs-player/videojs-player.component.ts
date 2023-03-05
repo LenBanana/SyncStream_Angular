@@ -19,7 +19,7 @@ declare var $: any;
   templateUrl: './videojs-player.component.html',
   styleUrls: ['./videojs-player.component.scss']
 })
-export class VideojsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
+export class VideojsPlayerComponent implements AfterViewInit, OnDestroy, OnChanges {
 
   constructor(private playlistService: PlaylistService, private playerService: PlayerService, private mediaService: MediaService, private dialogService: DialogService) { }
   @Input() CurrentPlayerType = PlayerType.Nothing;
@@ -37,13 +37,11 @@ export class VideojsPlayerComponent implements OnInit, AfterViewInit, OnDestroy,
   ServerTimeUpdate: Subscription;
   @ViewChild('videojsplayer', {static: true}) videojselement: ElementRef;
   videojsplayer: videojs.Player;
-
-  ngOnInit(): void {
-  }
+  volume = 1;
 
   ngAfterViewInit(): void {
     this.videojsplayer = videojs(this.videojselement.nativeElement, {
-      autoplay: true,
+      autoplay: 'play',
       controls: true,
       preload: 'auto',
       enableWorker: true,
@@ -75,6 +73,7 @@ export class VideojsPlayerComponent implements OnInit, AfterViewInit, OnDestroy,
     this.videojsplayer.off("timeupdate", () => {});
     this.videojsplayer.off("ended", () => {});
     this.videojsplayer.off("canplay", () => {});
+    this.videojsplayer?.off("volumechange", () => {});
     this.videojsplayer?.dispose();
   }
 
@@ -159,6 +158,11 @@ export class VideojsPlayerComponent implements OnInit, AfterViewInit, OnDestroy,
   }
 
   InitPlayer() {
+    var volumeStorage = localStorage.getItem('jsPlayerVolume');
+    if (volumeStorage) {
+      this.volume = Number.parseFloat(volumeStorage);
+      this.videojsplayer.volume(this.volume);
+    }
     this.videojsplayer.on("play", event => {
       if (this.IsHost) {
         this.playerService.PlayPause(true, this.UniqueId);
@@ -183,6 +187,10 @@ export class VideojsPlayerComponent implements OnInit, AfterViewInit, OnDestroy,
       }
       this.mediaService.playerTime.next(this.videojsplayer.currentTime());
     });
+    this.videojsplayer.on("volumechange", vol => {
+      if (this.videojsplayer.muted()) this.volume = 0; else this.volume = this.videojsplayer.volume();
+      localStorage.setItem('jsPlayerVolume', this.volume.toString());
+    })
     this.videojsplayer.on("ended", end => {
       this.videojsplayer.pause();
       if (!this.IsHost) {
