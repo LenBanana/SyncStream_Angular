@@ -161,17 +161,6 @@ export class MediaEditorComponent implements OnInit, OnDestroy {
     this.mediaStates.push({Id: id, text: 'Uploading...', alertType: AlertType.Info, progress: 0 });
     upload.subscribe(resp => {
       var idx = this.mediaStates.findIndex(x => x.Id == id);
-      if (resp.type === HttpEventType.Response) {
-        //Download file when finished
-        /*var type = resp.body.type.split('/')[1];
-        var fileName = file.name.substring(0, file.name.lastIndexOf(".")) + "." + type;
-        var link = document.createElement('a');
-        link.href = window.URL.createObjectURL(resp.body);
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);*/
-      }
       if (resp.type === HttpEventType.UploadProgress) {
         const percentDone = 100 * resp.loaded / resp.total;
         if (percentDone >= 100) {
