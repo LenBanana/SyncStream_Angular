@@ -7,6 +7,7 @@ import { DownloadFile, FileFolder } from '../Interfaces/DownloadInfo';
 import { User } from '../Interfaces/User';
 import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
 import { UserAdminService } from '../user-admin-modal/user-admin-service/user-admin.service';
+import { BrowserSettings } from '../Interfaces/BrowserSettings';
 declare var $: any;
 
 @Component({
@@ -26,13 +27,13 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
   @Input() page: number = 1;
   @Input() IsInRoom: boolean = false;
   @Input() UniqueId: string = "";
+  @Input() browserSettings: BrowserSettings;
   @Output() goDeeper = new EventEmitter();
   @ViewChild('menuTrigger') menuTrigger: MatMenuTrigger;
   getFolders: Subscription;
   userUpdate: Subscription;
   edit = false;
   editName = "";
-  userId = userId;
   Users: User[] = [];
   FilteredUsers: User[] = [];
 
@@ -47,8 +48,12 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
         return;
       }
       this.Users = users;
-      this.FilteredUsers = users.filter(x => x.userprivileges >= UserPrivileges.Administrator && x.id != this.userId);
+      this.FilteredUsers = users.filter(x => x.userprivileges >= UserPrivileges.Administrator && x.id != userId);
     });
+  }
+
+  getUserId() {
+    return userId;
   }
 
   ngOnDestroy(): void {

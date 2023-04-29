@@ -49,6 +49,7 @@ import { MpegtsPlayerComponent } from './media/mpegts-player/mpegts-player.compo
 import { LiveStreamViewComponent } from './live-stream-view/live-stream-view.component';
 import { DateLivePipe } from './live-stream-view/date-live-pipe/date-live.pipe';
 import { WebrtcComponent } from './media/webrtc/webrtc.component';
+import { MediaEditorComponent } from './media-editor/media-editor.component';
 const DragConfig = {
   dragStartThreshold: 0,
   pointerDirectionChangeThreshold: 5,
@@ -93,7 +94,8 @@ const DragConfig = {
     MpegtsPlayerComponent,
     LiveStreamViewComponent,
     DateLivePipe,
-    WebrtcComponent
+    WebrtcComponent,
+    MediaEditorComponent
   ],
   imports: [
     MatMenuModule,

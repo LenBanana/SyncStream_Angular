@@ -5,6 +5,7 @@ import { Server } from '../Interfaces/server';
 import { User } from '../Interfaces/User';
 import { SignalRService } from '../services/signal-r.service';
 import * as sha512 from 'js-sha512';
+import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
 declare var $:any
 
 @Component({
@@ -20,6 +21,8 @@ export class AddRoomModalComponent implements OnInit {
   @Input() logout: boolean;
   NewRoomName: string = "";
   NewRoomPassword: string = "";
+  NewRoomPermanent: boolean = false;
+  UserPrivileges = UserPrivileges;
 
   ngOnInit(): void {
   }
@@ -43,7 +46,8 @@ export class AddRoomModalComponent implements OnInit {
     if (roomName != null && roomName.length > 0) {
       var randomId = randomID();
       var server: Server = { currenttime: 0, isplaying: false, members: [], title: "Nothing playing", currentVideo: {title: "", url: ""}, playlist: [], gallowWord: "", playingGallows: false }
-      var room: Room = { uniqueId: randomId, name: roomName, server: server, password: pwSha, deletable: true }
+      var room: Room = { uniqueId: randomId, name: roomName, server: server, password: pwSha, deletable: !this.NewRoomPermanent }
+      console.log(room)
       this.signalRService.addRoom(room);
       this.JoinRoom.emit(randomId);
       this.NewRoomName = "";

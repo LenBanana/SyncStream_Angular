@@ -1,0 +1,97 @@
+<button class="btn btn-dark rounded-right" style="border-radius: 0;" (click)="openModal();!currentSelection&&!converting&&selectFile();"
+  [ngbTooltip]="'Edit file'"><i class="fa fa-cogs" aria-hidden="true"></i></button>
+<div class="modal hide fade in" id="mediaEditorModal">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content bg-dark">
+      <div class="modal-header mx-3">
+        <ng-container *ngIf="convertMode; then converter else editor"></ng-container>
+        <ng-template #converter>
+          <h3>Media Converter</h3>
+        </ng-template>
+        <ng-template #editor>
+          <h3>Media Editor</h3>
+        </ng-template>
+        <div class="btn-group btn-group-toggle ml-auto" data-toggle="buttons">
+          <label class="btn btn-dark pointer" [class.disabled]="converting" (click)="!converting&&convertMode=true;">
+            <input type="radio" name="options" id="option1" autocomplete="off" checked> Convert
+          </label>
+          <label class="btn btn-dark pointer" [class.disabled]="converting||maxMilliSeconds==0" (click)="!converting&&maxMilliSeconds>0&&convertMode=false;">
+            <input type="radio" name="options" id="option2" autocomplete="off"> Edit
+          </label>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="container-fluid">
+          <div class="row">
+            <div class="col-12">
+              <input type="file" [disabled]="converting ? true : null" id="mediaSelect" style="display: none;" (change)="fileSelected($event)" #mediaSelect />
+            </div>
+          </div>
+          <ng-container *ngIf="convertMode && currentSelection">
+            <div class="row">
+              <div class="col-12">
+                <div class="form-group m-0">
+                  <label for="mediaTypeSelect" class="w-100 text-truncate">Select the media type<span *ngIf="currentSelection"> - {{currentSelection.name}}</span></label>
+                  <select [disabled]="converting ? true : null" class="form-control bg-secondary text-light border-dark" id="mediaTypeSelect"
+                    [(ngModel)]="mediaType">
+                    <ng-container *ngFor="let option of mediaTypes; let first = first;">
+                      <option [value]="option.value" [attr.selected]="first ? true : null">{{option.label}}</option>
+                    </ng-container>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+          <ng-container>
+            <div class="row" [class.none]="convertMode">
+              <div class="col-6">
+                <div class="form-group">
+                  <label for="startMilliSeconds">Start Time (ms):</label>
+                  <input type="number" class="form-control bg-secondary text-light border-dark" id="startMilliSeconds"
+                    min="0" [max]="maxMilliSeconds" [value]="sliderMinValue()">
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="form-group">
+                  <label for="endMilliSeconds">End Time (ms):</label>
+                  <input type="number" class="form-control bg-secondary text-light border-dark" id="endMilliSeconds"
+                    min="0" [max]="maxMilliSeconds" [value]="sliderMaxValue()">
+                </div>
+              </div>
+              <div class="col-12 mt-3 px-4">
+                <div id="slider"></div>
+              </div>
+            </div>
+          </ng-container>
+          <div class="row mt-2" *ngIf="mediaStates&&mediaStates.length>0">
+            <div class="col-12 my-1">
+              <hr>
+            </div>
+            <div class="col-12" *ngFor="let state of mediaStates">
+              <div class="progress bg-secondary" style="height: 2rem;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated rounded"
+                [class.bg-danger]="state.alertType==AlertType.Danger"
+                [class.bg-warning]="state.alertType==AlertType.Warning"
+                [class.bg-success]="state.alertType==AlertType.Success"
+                [class.bg-info]="state.alertType==AlertType.Info" [style.width.%]="state.progress"><span class="text-truncate mx-2 justify-content-center d-flex position-absolute w-100">{{state.text}}</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer mx-3">
+        <div class="form-group  mr-auto mb-0">
+          <button type="button" class="btn btn-success font-weight-bold mr-3" [disabled]="converting ? true : null" (click)="selectFile()">Select file <i class="fa fa-file" aria-hidden="true"></i></button>
+          <ng-container *ngIf="convertMode && currentSelection">
+            <button type="button" class="btn btn-primary font-weight-bold" [disabled]="converting ? true : null" (click)="convertMedia()">Process <i class="fa fa-cogs" aria-hidden="true"></i></button>
+          </ng-container>
+          <ng-container *ngIf="!convertMode && currentSelection && startMilliSeconds < endMilliSeconds">
+            <button type="button" class="btn btn-primary font-weight-bold" [disabled]="converting ? true : null" (click)="cutMedia()">Process <i class="fa fa-cogs" aria-hidden="true"></i></button>
+          </ng-container>
+        </div>
+        <button type="button" class="btn btn-danger font-weight-bold" (click)="closeModal()">Close <i
+            class="fa ml-1 fa-times-circle" aria-hidden="true"></i></button>
+      </div>
+    </div>
+  </div>
+</div>

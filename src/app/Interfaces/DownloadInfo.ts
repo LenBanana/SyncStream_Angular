@@ -16,6 +16,7 @@ export class DownloadFile {
   editing: boolean;
   editName: string;
   player: HTMLAudioElement;
+  selected: boolean;
 }
 
 export class FileFolder {
@@ -25,4 +26,5 @@ export class FileFolder {
   parent: FileFolder;
   children: FileFolder[];
   files: DownloadFile[];
+  selected: boolean;
 }

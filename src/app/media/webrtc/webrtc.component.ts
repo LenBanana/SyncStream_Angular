@@ -1,4 +1,6 @@
 import { AfterViewInit, Component, OnInit } from '@angular/core';
+import { BehaviorSubject } from 'rxjs';
+import { hubConnection } from '../../services/signal-r.service';
 declare var adapter: any;
 
 @Component({
@@ -9,11 +11,31 @@ declare var adapter: any;
 export class WebrtcComponent implements OnInit, AfterViewInit {
 
   constructor() { }
+  localStream: BehaviorSubject<MediaStream> = new BehaviorSubject(null);
+  remoteStreams: BehaviorSubject<Map<string, MediaStream>> = new BehaviorSubject(new Map());
+
   preferredDisplaySurface;
   startButton;
 
   ngOnInit(): void {
-    }
+    hubConnection.on('ReceiveSignal', this.onReceiveSignal.bind(this));
+  }
+
+  private onReceiveSignal(fromConnectionId: string, signal: RTCSessionDescriptionInit | RTCIceCandidate): void {
+    // Handle incoming WebRTC signaling here
+  }
+
+  async startLocalStream(videoConstraints: MediaTrackConstraints = { width: 1280, height: 720 }): Promise<void> {
+    const mediaStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: true });
+    this.localStream.next(mediaStream);
+  }
+
+  async createOffer(peerConnection: RTCPeerConnection, targetConnectionId: string): Promise<void> {
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+
+    hubConnection.send('SendSignal', targetConnectionId, offer);
+  }
 
     ngAfterViewInit(): void {
       this.preferredDisplaySurface = document.getElementById('displaySurface') as HTMLSelectElement;

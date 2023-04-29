@@ -8,3 +8,8 @@ export function getCookie(name) {
 
 export var token = getCookie("login-token");
 export var userId = Number.parseInt(getCookie("user-id"));
+
+export function resetToken() {
+  token = getCookie("login-token");
+  userId = Number.parseInt(getCookie("user-id"));
+}

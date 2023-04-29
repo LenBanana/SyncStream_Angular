@@ -1,36 +1,13 @@
-import {
-  HttpEventType
-} from '@angular/common/http';
-import {
-  Component,
-  ElementRef,
-  Input,
-  OnDestroy,
-  OnInit,
-  ViewChild
-} from '@angular/core';
-import {
-  getCookie
-} from '../global.settings';
-import {
-  AlertType,
-  Dialog
-} from '../Interfaces/Dialog';
-import {
-  DownloadFile,
-  DownloadInfo,
-  FileFolder
-} from '../Interfaces/DownloadInfo';
-import {
-  baseUrl
-} from '../services/signal-r.service';
-import {
-  DialogService
-} from '../text-dialog/text-dialog-service/dialog-service.service';
-import {
-  ConversionPreset,
-  DownloadManagerService
-} from './download-manger-service/download-manager.service';
+import { HttpEventType } from '@angular/common/http';
+import { Component, ElementRef, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AlertType } from '../Interfaces/Dialog';
+import { DownloadFile, DownloadInfo, FileFolder } from '../Interfaces/DownloadInfo';
+import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
+import { ConversionPreset, DownloadManagerService } from './download-manger-service/download-manager.service';
+import { BrowserSettings } from '../Interfaces/BrowserSettings';
+import { Subscription } from 'rxjs';
+import { User } from '../Interfaces/User';
+declare var $: any;
 declare var $: any;
 
 @Component({
@@ -42,13 +19,16 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
 
   constructor(private downloadService: DownloadManagerService, private dialogService: DialogService) {}
   @ViewChild('fileSelect') fileSelectView: ElementRef;
+  @Input() User: User;
   @Input() IsInRoom: boolean = false;
   @Input() UniqueId: string = "";
-  downloadProgress;
-  downloadFinished;
-  getDownloads;
-  fileFolders;
-  folderFiles;
+  @Input() browserSettings: BrowserSettings;
+  folderUpdate: Subscription;
+  downloadProgress: Subscription;
+  downloadFinished: Subscription;
+  getDownloads: Subscription;
+  fileFolders: Subscription;
+  folderFiles: Subscription;
   files: DownloadFile[] = [];
   filterFiles: DownloadFile[] = [];
   selectionFiles: DownloadFile[] = [];
@@ -72,12 +52,17 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
   ConversionPreset = ConversionPreset;
   CurrentPreset: ConversionPreset = ConversionPreset.SuperFast;
   CurrentYtQuality = 1080;
+  YtAudioOnly = false;
   PossibleYtQuality = [];
   LoadingQuality = false;
   finishedIds: string[] = [];
   ngOnInit(): void {
-    //var info: DownloadInfo = { id: '6f0a64ea-9371-42c5-8420-cab287442429', progress: 25 };
-    //this.progresses.push(info)
+    this.folderUpdate = this.downloadService.updateFolder.subscribe(f => {
+      if (this.files && f) {
+        this.files.push(f);
+        this.SetFiles(this.files, false);
+      }
+    });
     this.downloadProgress = this.downloadService.progress.subscribe(p => {
       if (!p || p == null) {
         this.progresses = [];
@@ -142,6 +127,14 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
       this.sortFilesBy(change);
   }
 
+  Filter() {
+    if (this.filterName.length > 0) {
+      this.filterFiles = [...this.files.filter(x => x.name.toLocaleLowerCase().includes(this.filterName))];
+      return;
+    }
+    this.filterFiles = [...this.files];
+  }
+
   UpdateFolder(folder: FileFolder) {
     this.page = 1;
     this.currentFolder = folder;
@@ -176,6 +169,7 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
     this.getDownloads.unsubscribe();
     this.fileFolders.unsubscribe();
     this.folderFiles.unsubscribe();
+    this.folderUpdate.unsubscribe();
   }
 
   CollapseAll() {
@@ -186,14 +180,6 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
   CollapseProgresses() {
     $('#progressCards').collapse(this.collapseProgress ? 'hide' : 'show');
     this.collapseProgress = !this.collapseProgress;
-  }
-
-  Filter() {
-    if (this.filterName.length > 0) {
-      this.filterFiles = [...this.files.filter(x => x.name.toLocaleLowerCase().includes(this.filterName))];
-      return;
-    }
-    this.filterFiles = [...this.files];
   }
 
   sortFilesBy(change = true) {
@@ -331,13 +317,18 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
   }
 
   IsYt() {
-    return this.downloadUrl.includes('youtube') || this.downloadUrl.includes('youtu.be') && this.downloadUrl.includes("?v=");
+    return (this.downloadUrl.includes('youtube') && this.downloadUrl.includes("?v=")) || this.downloadUrl.includes('youtu.be');
   }
 
   CheckYtQuality() {
     if (this.IsYt()) {
       this.LoadingQuality = true;
       this.downloadService.GetYtQuality(this.downloadUrl).subscribe(x => {
+        if (!x || x.length == 0) {
+          this.LoadingQuality = false;
+          this.PossibleYtQuality = [1080];
+          return;
+        }
         this.PossibleYtQuality = x;
         this.LoadingQuality = false;
         if (!this.PossibleYtQuality.includes(this.CurrentYtQuality)) {
@@ -350,7 +341,7 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
 
   DownloadYtFile() {
     if (this.downloadUrl.length > 0 && this.downloadUrl.startsWith("http") && !this.LoadingQuality) {
-      this.downloadService.DownloadYtFile(this.downloadUrl, this.CurrentYtQuality.toString());
+      this.downloadService.DownloadYtFile(this.downloadUrl, this.CurrentYtQuality.toString(), this.YtAudioOnly);
       this.downloadUrl = "";
       this.PossibleYtQuality = [];
     }

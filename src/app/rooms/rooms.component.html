@@ -32,7 +32,7 @@
   </div>
   <div *ngIf="filterRooms&&SignalR" class="container-fluid" style="padding-left: 5vw; padding-right: 5vw;">
     <div class="mt-3 row">
-      <div class="col-4" *ngIf="pageSize<filterRooms.length">
+      <div class="col-12 mb-1 col-md-4" *ngIf="pageSize<filterRooms.length">
         <form autocomplete="off">
           <!-- Disable chrome autofill -->
           <input type="text" class="form-control" autocomplete="off chrome-off" style="display: none;" />
@@ -67,7 +67,7 @@
               </p>
             </div>
           </div>
-          <div *ngIf="user.userprivileges>1&&room.deletable" class="delete-bubble info-bubble hide-btn pointer"
+          <div *ngIf="user.userprivileges>1&&!room.isPrivileged" class="delete-bubble info-bubble hide-btn pointer"
             (click)="room.server.members.length==0 && DeleteRoom(room.uniqueId, room.server.members.length)"><i
               class="fa fa-times"></i></div>
           <div class="room-card top-corner skew10 pointer room-shadow"
@@ -91,7 +91,7 @@
                     *ngIf="room.server.playlist.length>0&&!room.server.currentVideo.url.toLocaleLowerCase().includes('twitch')&&!room.server.currentVideo.url.toLocaleLowerCase().includes('youtube')"></i>
                 </div>
               </div>
-              <div class="col-4 room-info-container rounded shadow-sm">
+              <div class="col-4 room-info-container rounded shadow-sm" [matMenuTriggerFor]="menu" #menuTrigger="matMenuTrigger">
                 <div class="room-playlist-info">
                   <p class="text-center font-weight-bold mt-2 counterSkew10" style="margin: 0;">Playlist</p>
                   <p *ngIf="room.server.playlist==0" style="font-size: 10px;" class="text-center">Nothing here yet</p>
@@ -122,6 +122,17 @@
                 </div>
               </div>
             </div>
+            <mat-menu #menu="matMenu" style="z-index: 10000;">
+              <button mat-menu-item class="text-light">
+                <i class="fa fa-clipboard mr-1 pointer" aria-hidden="true"></i>
+                <span> Deletable</span>
+              </button>
+              <hr class="m-0 p-0">
+              <button mat-menu-item class="text-light">
+                <i class="fa fa-pen mr-1 pointer text-secondary" aria-hidden="true"></i>
+                <span> Rename</span>
+              </button>
+            </mat-menu>
           </div>
         </div>
       </ng-container>
@@ -129,20 +140,27 @@
   </div>
 
   <div class="footer">
-    <p class="mt-1" style="padding-top: .5%;">
-      <span class="pointer" data-toggle="modal" data-target="#howToModal">How to?</span>
-      <span class="pointer ml-4" data-toggle="modal" data-target="#contactModal">Contact</span>
-      <span class="pointer ml-4 text-info" data-toggle="modal" data-target="#dialogModal-logout"
-        *ngIf="user.username&&logout">Logout</span>
-      <span class="pointer ml-4 text-info" data-toggle="modal" data-target="#userSettingModal"
-        *ngIf="user.username&&logout">Settings</span>
-      <span class="pointer ml-4 text-info" data-toggle="modal" data-target="#userAdminModal"
-        *ngIf="user.username&&logout&&user.userprivileges>2">User Administration</span>
-      <span class="pointer ml-4 text-info" data-toggle="modal" data-target="#downloadManagerModal"
-          *ngIf="user.username&&logout&&user.userprivileges>2">Download Manager</span>
-      <span class="pointer ml-4 text-info" data-toggle="modal" data-target="#liveViewModal"
-          *ngIf="user.username&&logout&&user.userprivileges>0&&LiveUsers&&LiveUsers.length>0">Live Channels ({{LiveUsers.length}})</span>
-    </p>
+    <nav class="navbar navbar-expand-lg navbar-dark text-light footer-bg">
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#mainNavBar" aria-controls="mainNavBar" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+      <div class="collapse navbar-collapse" id="mainNavBar">
+        <div class="navbar-nav mx-auto">
+          <span class="pointer nav-item nav-link" data-toggle="modal" data-target="#howToModal">How to?</span>
+          <span class="pointer nav-item nav-link" data-toggle="modal" data-target="#contactModal">Contact</span>
+          <span class="pointer nav-item nav-link text-info" data-toggle="modal" data-target="#dialogModal-logout"
+            *ngIf="user.username&&logout">Logout</span>
+          <span class="pointer nav-item nav-link text-info" data-toggle="modal" data-target="#userSettingModal"
+            *ngIf="user.username&&logout">Settings</span>
+          <span class="pointer nav-item nav-link text-info" data-toggle="modal" data-target="#userAdminModal"
+            *ngIf="user.username&&logout&&user.userprivileges>2">User Administration</span>
+          <span class="pointer nav-item nav-link text-info" data-toggle="modal" data-target="#downloadManagerModal"
+              *ngIf="user.username&&logout&&user.userprivileges>2">Download Manager</span>
+          <span class="pointer nav-item nav-link text-info" data-toggle="modal" data-target="#liveViewModal"
+              *ngIf="user.username&&logout&&user.userprivileges>0&&LiveUsers&&LiveUsers.length>0">Live Channels ({{LiveUsers.length}})</span>
+        </div>
+      </div>
+    </nav>
   </div>
   <app-help-modal (AddRoom)="AddRoom()"></app-help-modal>
   <app-add-room-modal [user]="user" [logout]="logout" (JoinRoom)="JoinRoom($event, 0)"></app-add-room-modal>
@@ -151,7 +169,7 @@
   <div style="margin-top: 75px;"></div>
 </div>
 
-<app-download-manager *ngIf="user.username&&logout&&user.userprivileges>2" [IsInRoom]="(currentRoom&&currentRoom.length>0)" [UniqueId]="currentRoom"></app-download-manager>
+<app-download-manager *ngIf="user.username&&logout&&user.userprivileges>2" [User]="user" [browserSettings]="browserSettings" [IsInRoom]="(currentRoom&&currentRoom.length>0)" [UniqueId]="currentRoom"></app-download-manager>
 <app-text-dialog [Id]="'RoomNotFoundModal'" [Question]="'The room you are looking for does not exist'"
   [AddInput]="false" [Header]="'Room not found'" [Answer1]="'Ok'" (Yes)="refresh()">
 </app-text-dialog>

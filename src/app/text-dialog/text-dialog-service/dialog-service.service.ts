@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { Dialog } from '../../Interfaces/Dialog';
+import { AlertType, Dialog } from '../../Interfaces/Dialog';
 import { hubConnection, SignalRService } from '../../services/signal-r.service';
 
 @Injectable({
@@ -20,6 +20,24 @@ export class DialogService {
       }
     });
    }
+
+  public PushDefaultDialog(text: string, header: string, type: AlertType) {
+    const dialog: Dialog = {
+      id: "media-editor-perm",
+      header: header,
+      question: text,
+      answer1: "Ok",
+      answer2: null,
+      yes: null,
+      no: null,
+      alertType: type
+    };
+    this.newDialog.next(dialog);
+  }
+
+  public PushPermissionDialog() {
+    this.PushDefaultDialog("Permission to content denied.", "Permission error", AlertType.Danger);
+  }
 
   public addDialogListener() {
     hubConnection.on('dialog', (data) => {

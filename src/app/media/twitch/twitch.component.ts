@@ -107,6 +107,8 @@ export class TwitchComponent implements OnInit, OnChanges, OnDestroy, AfterViewI
     this.IsPlayingUpdate?.unsubscribe();
     this.VideoUpdate?.unsubscribe();
     this.ServerTimeUpdate?.unsubscribe();
+    clearInterval(this.TimeUpdate);
+    this.player = null;
   }
 
   AddSubscriptions() {

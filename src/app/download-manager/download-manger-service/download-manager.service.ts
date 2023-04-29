@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { getCookie, token } from '../../global.settings';
-import { AlertType, Dialog } from '../../Interfaces/Dialog';
+import { token } from '../../global.settings';
+import { AlertType } from '../../Interfaces/Dialog';
 import { DownloadFile, DownloadInfo, FileFolder } from '../../Interfaces/DownloadInfo';
 import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
 import { DialogService } from '../../text-dialog/text-dialog-service/dialog-service.service';
@@ -11,15 +11,14 @@ import { DialogService } from '../../text-dialog/text-dialog-service/dialog-serv
   providedIn: 'root'
 })
 export class DownloadManagerService {
-
   progress: BehaviorSubject<DownloadInfo> = new BehaviorSubject(null);
   downloadFinished: BehaviorSubject<string> = new BehaviorSubject(null);
   downloadFiles: BehaviorSubject<DownloadFile[]> = new BehaviorSubject(null);
   folderFiles: BehaviorSubject<DownloadFile[]> = new BehaviorSubject(null);
+  updateFolder: BehaviorSubject<DownloadFile> = new BehaviorSubject(null);
   folders: BehaviorSubject<FileFolder> = new BehaviorSubject(null);
   browserResults: BehaviorSubject<string[]> = new BehaviorSubject(null);
   fileInfo: BehaviorSubject<object> = new BehaviorSubject(null);
-  Token = token;
   constructor(private signalRService: SignalRService, private http: HttpClient, private dialogService: DialogService) {
     signalRService.connectionClosed.subscribe(isClosed => {
       if (isClosed===false) {
@@ -32,8 +31,7 @@ export class DownloadManagerService {
         this.addDownloadRemovedListener();
         this.addDownloadProgressListener();
         this.addDownloadFinishedListener();
-        this.GetDownloads();
-        this.GetFolders();
+        this.addUpdateFolderServerRequestListener();
       }
       if (isClosed===true) {
         this.removeFolderListener();
@@ -45,6 +43,7 @@ export class DownloadManagerService {
         this.removeDownloadRemovedListener();
         this.removeDownloadProgressListener();
         this.removeDownloadFinishedListener();
+        this.removeUpdateFolderServerRequestListener();
         this.downloadFiles.next([]);
         this.progress.next(null);
       }
@@ -52,16 +51,16 @@ export class DownloadManagerService {
   }
 
   public CleanUpFiles(remove: boolean = false) {
-    if (this.Token) {
-      hubConnection.invoke('CleanUpFiles', this.Token, remove);
+    if (token) {
+      hubConnection.invoke('CleanUpFiles', token, remove);
     }
   }
 
   public UploadFile(file: File) {
-    if (this.Token) {
+    if (token) {
       const formData: FormData = new FormData();
       formData.append('fileKey', file, file.name);
-      return this.http.post(baseUrl + "api/video/addVideo?token=" + this.Token, formData, {
+      return this.http.post(baseUrl + "api/video/addFile?token=" + token, formData, {
         reportProgress: true,
         observe: 'events'
       });
@@ -73,17 +72,7 @@ export class DownloadManagerService {
     Object.keys(obj).forEach(i => {
       txt += "<p class=\"p-0 m-0\"><span class=\"badge badge-primary mr-2\">" + this.capitalizeFirstLetter(i) + "</span>" + "<span class=\"short-text-file\">" + obj[i] + "</span></p>";
     });
-    const dialog: Dialog = {
-      id: "file-info",
-      header: "File info",
-      question: txt,
-      answer1: "Ok",
-      answer2: null,
-      yes: null,
-      no: null,
-      alertType: AlertType.Info
-    };
-    this.dialogService.newDialog.next(dialog);
+    this.dialogService.PushDefaultDialog(txt, "File info", AlertType.Info);
   }
 
   capitalizeFirstLetter(string) {
@@ -91,93 +80,104 @@ export class DownloadManagerService {
   }
 
   public DownloadFile(url: string, name: string, preset: ConversionPreset) {
-    if (this.Token) {
-      hubConnection.invoke('DownloadFile', this.Token, url, name, preset);
+    if (token) {
+      hubConnection.invoke('DownloadFile', token, url, name, preset);
     }
   }
 
-  public DownloadYtFile(url: string, quality: string) {
-    if (this.Token) {
-      hubConnection.invoke('DownloadYtVideo', this.Token, url, quality);
+  public DownloadYtFile(url: string, quality: string, audioOnly: boolean) {
+    if (token) {
+      hubConnection.invoke('DownloadYtVideo', token, url, quality, audioOnly);
     }
   }
 
   public GetYtQuality(url: string) {
-    if (this.Token) {
-      return this.http.get<number[]>(baseUrl + "api/video/getYoutubeQuality?url=" + url + "&token=" + this.Token);
+    if (token) {
+      return this.http.get<number[]>(baseUrl + "api/video/getYoutubeQuality?url=" + url + "&token=" + token);
     }
   }
 
   public ChangeDownload(fileId: number, fileName: string) {
-    if (this.Token) {
-      hubConnection.invoke('ChangeDownload', this.Token, fileId, fileName);
+    if (token) {
+      hubConnection.invoke('ChangeDownload', token, fileId, fileName);
     }
   }
 
   public GetDownloads() {
-    if (this.Token) {
-      hubConnection.invoke('GetDownloads', this.Token);
+    if (token) {
+      hubConnection.invoke('GetDownloads', token);
     }
   }
 
   public GetFolders(folderId: number = 1) {
-    if (this.Token) {
-      hubConnection.invoke('GetFolders', this.Token, folderId);
+    if (token) {
+      hubConnection.invoke('GetFolders', token, folderId);
     }
   }
 
   public AddFolder(folderId: number) {
-    if (this.Token) {
-      hubConnection.invoke('AddFolder', this.Token, folderId);
+    if (token) {
+      hubConnection.invoke('AddFolder', token, folderId);
     }
   }
 
   public ShareFolder(folderId: number, userId: number) {
-    if (this.Token) {
-      hubConnection.invoke('ShareFolder', this.Token, folderId, userId);
+    if (token) {
+      hubConnection.invoke('ShareFolder', token, folderId, userId);
     }
   }
 
   public DeleteFolder(folderId: number) {
-    if (this.Token) {
-      hubConnection.invoke('DeleteFolder', this.Token, folderId);
+    if (token) {
+      hubConnection.invoke('DeleteFolder', token, folderId);
     }
   }
 
   public ChangeFolderName(folderId: number, folderName: string) {
-    if (this.Token) {
-      hubConnection.invoke('ChangeFolderName', this.Token, folderId, folderName);
+    if (token) {
+      hubConnection.invoke('ChangeFolderName', token, folderId, folderName);
     }
   }
 
   public GetFolderFiles(folderId: number) {
-    if (this.Token) {
-      hubConnection.invoke('GetFolderFiles', this.Token, folderId);
+    if (token) {
+      hubConnection.invoke('GetFolderFiles', token, folderId);
     }
   }
 
   public ChangeFolder(fileId: number, folderId: number) {
-    if (this.Token) {
-      hubConnection.invoke('ChangeFolder', this.Token, fileId, folderId);
+    if (token) {
+      hubConnection.invoke('ChangeFolder', token, fileId, folderId);
     }
   }
 
   public CancelM3U8Download(downloadId: string) {
-    if (this.Token) {
-      hubConnection.invoke('CancelConversion', this.Token, downloadId);
+    if (token) {
+      hubConnection.invoke('CancelConversion', token, downloadId);
     }
   }
 
   public GetFileInfo(id: number) {
-    if (this.Token) {
-      hubConnection.invoke('GetFileInfo', this.Token, id);
+    if (token) {
+      hubConnection.invoke('GetFileInfo', token, id);
     }
   }
 
   public RemoveFile(id: number) {
-    if (this.Token) {
-      hubConnection.invoke('RemoveFile', this.Token, id);
+    if (token) {
+      hubConnection.invoke('RemoveFile', token, id);
     }
+  }
+
+  public addUpdateFolderServerRequestListener() {
+    hubConnection.on('updateFolders', (data) => {
+      this.updateFolder.next(data);
+    });
+  }
+
+  public removeUpdateFolderServerRequestListener() {
+    hubConnection.off('updateFolders', (data) => {
+    });
   }
 
   public addFileInfoResultListener() {

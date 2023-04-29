@@ -10,7 +10,6 @@ import { hubConnection, SignalRService } from '../../services/signal-r.service';
 })
 export class LiveStreamService {
 
-  Token = token;
   liveChannels: BehaviorSubject<LiveUser[]> = new BehaviorSubject(null);
   watchingUser: BehaviorSubject<User[]> = new BehaviorSubject(null);
   constructor(private signalRService: SignalRService) {
@@ -50,14 +49,14 @@ export class LiveStreamService {
   }
 
   public GetUsersWatching(userName: string) {
-    if (this.Token) {
-      hubConnection.invoke('GetUsersWatching', this.Token, userName);
+    if (token) {
+      hubConnection.invoke('GetUsersWatching', token, userName);
     }
   }
 
   public GetLiveUsers() {
-    if (this.Token) {
-      hubConnection.invoke('GetLiveUsers', this.Token);
+    if (token) {
+      hubConnection.invoke('GetLiveUsers', token);
     }
   }
 }

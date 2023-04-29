@@ -10,11 +10,11 @@ import { randomIntFromInterval } from '../helper/generic';
 import { User } from '../Interfaces/User';
 import { Room } from '../Interfaces/Room';
 import { Token } from '../helper/Globals';
-import { getCookie } from '../global.settings';
+import { getCookie, token } from '../global.settings';
 export var hubConnection: signalR.HubConnection;
 export var CurrentPing: number = 0.5;
 export var baseUrl: string = "https://sync.dreckbu.de/";
-//export var baseUrl: string = "https://localhost:5001/";
+//export var baseUrl: string = "https://localhost:44371/";
 //export var baseUrl: string = "https://localhost:32780/";
 @Injectable({
   providedIn: 'root'
@@ -147,11 +147,19 @@ export class SignalRService {
   }
 
   public addRoom(room: Room) {
-    hubConnection.invoke('AddRoom', room);
+    var tk = "";
+    if (token) {
+      tk = token;
+    }
+    hubConnection.invoke('AddRoom', room, tk);
   }
 
   public removeRoom(UniqueId: string) {
-    hubConnection.invoke('RemoveRoom', UniqueId);
+    var tk = "";
+    if (token) {
+      tk = token;
+    }
+    hubConnection.invoke('RemoveRoom', UniqueId, tk);
   }
 
   public AddTokenListener() {

@@ -9,6 +9,7 @@ import { PlayerService } from '../player/player-service/player.service';
 import { PlaylistService } from '../playlist/playlist-service/playlist.service';
 import { baseUrl } from '../services/signal-r.service';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
+import { BrowserSettings } from '../Interfaces/BrowserSettings';
 declare var $: any;
 
 @Component({
@@ -25,11 +26,25 @@ export class FileViewComponent implements OnInit {
   @Input() currentId: number = 0;
   @Input() IsInRoom: boolean = false;
   @Input() UniqueId: string = "";
+  @Input() browserSettings: BrowserSettings;
   @ViewChild('menuTrigger') menuTrigger: MatMenuTrigger;
   serverDialog: Dialog = { id: 'delete-perm', header: 'Delete file?', question: '', answer1: 'Yes', answer2: 'No', yes: null, no: null, alertType: AlertType.Warning }
   askedId = 0;
 
   ngOnInit(): void {
+  }
+
+  anySelected(file: DownloadFile) {
+    return file.selected || (this.filterFiles.findIndex(x => x.selected) != -1);
+  }
+
+  GetRemainingTime(file: DownloadFile) {
+    const created = new Date(file.created);
+    var dateString = created.toUTCString().replace(" GMT", "") + " UTC";
+    const UTCCreated = new Date(dateString)
+    UTCCreated.setDate(UTCCreated.getDate() + 14);
+    UTCCreated.setHours(UTCCreated.getHours() + 2);
+    return UTCCreated;
   }
 
   DownloadDbFile(file: DownloadFile) {
@@ -43,7 +58,7 @@ export class FileViewComponent implements OnInit {
   GetDownloadUri(file: DownloadFile) {
     var Token = getCookie("login-token");
     if (Token) {
-      return baseUrl + "api/video/videoByToken?uniqueId=" + file.id + "&videoKey=" + file.fileKey + "&token=" + Token;
+      return baseUrl + "api/video/fileByToken?fileKey=" + file.fileKey + "&token=" + Token;
     }
   }
 
@@ -63,7 +78,6 @@ export class FileViewComponent implements OnInit {
   }
 
   openImg(file: DownloadFile) {
-    console.log(file);
     if (this.isImg(file)) {
       var fileUri = this.GetDownloadUri(file);
       $("#imgShowImg").attr("src",fileUri);
@@ -93,6 +107,7 @@ export class FileViewComponent implements OnInit {
       } else if (file.player?.paused) {
         file.player.play();
       }
+      file.player.volume = this.browserSettings.generalSettings.audioVolume / 100;
     }
     else if (file.player) {
       file.player.pause();
@@ -121,7 +136,17 @@ export class FileViewComponent implements OnInit {
     }
   }
 
+  GetFileInfo(id: number) {
+    this.downloadService.GetFileInfo(id);
+  }
+
   RemoveFile(id: number) {
+    if (this.filterFiles.findIndex(x => x.selected) != -1) {
+      var selectedCount = this.filterFiles.filter(x => x.selected);
+      this.serverDialog.question = "Are you sure you want to delete " + selectedCount.length + " selected files";
+      this.ShowDeleteModal(true);
+      return;
+    }
     var idx = this.filterFiles.findIndex(x => x.id == id);
     if (idx == -1) {
       return;
@@ -132,21 +157,25 @@ export class FileViewComponent implements OnInit {
     this.ShowDeleteModal(true);
   }
 
-  GetFileInfo(id: number) {
-    this.downloadService.GetFileInfo(id);
-  }
-
-  DeleteFile() {
-    this.downloadService.RemoveFile(this.askedId);
+  DeleteCallback() {
     this.ShowDeleteModal(false);
+    if (this.filterFiles.findIndex(x => x.selected) != -1) {
+      var selectedCount = this.filterFiles.filter(x => x.selected);
+      selectedCount.forEach(x => this.DeleteFile(x));
+      return;
+    }
+    var idx = this.filterFiles.findIndex(x => x.id == this.askedId);
+    if (idx != -1) {
+      this.DeleteFile(this.filterFiles[idx]);
+    }
   }
 
-  SendToRoom(f: DownloadFile) {
-    if (f && this.IsInRoom && this.UniqueId.length > 0) {
-      var fileUrl = baseUrl + "api/video/videoByToken?uniqueId=" + f.id + "&videoKey=" + f.fileKey;
-      var vid: VideoDTO = {title: f.name, url: fileUrl};
-      this.playlistService.addVideo(vid, this.UniqueId);
+  DeleteFile(file: DownloadFile) {
+    if (file.player) {
+      file.player.pause();
+      file.player = null;
     }
+    this.downloadService.RemoveFile(file.id);
   }
 
   ShowDeleteModal(show) {
@@ -154,6 +183,14 @@ export class FileViewComponent implements OnInit {
       $('#dialogModal-delete-perm').modal('show');
     } else {
       $('#dialogModal-delete-perm').modal('hide');
+    }
+  }
+
+  SendToRoom(f: DownloadFile) {
+    if (f && this.IsInRoom && this.UniqueId.length > 0) {
+      var fileUrl = baseUrl + "api/video/fileByToken?fileKey=" + f.fileKey;
+      var vid: VideoDTO = {title: f.name, url: fileUrl};
+      this.playlistService.addVideo(vid, this.UniqueId);
     }
   }
 
@@ -174,23 +211,13 @@ export class FileViewComponent implements OnInit {
     if (!Token) {
       return;
     }
-    var fileUrl = baseUrl + "api/video/videoByToken?uniqueId=" + file.id + "&videoKey=" + file.fileKey;
+    var fileUrl = baseUrl + "api/video/fileByToken?fileKey=" + file.fileKey;
     navigator.clipboard.writeText(fileUrl).catch(async err => {
         const permissionStatus = await navigator.permissions.query({
           name: 'clipboard-write' as PermissionName
         });
         if (permissionStatus.state !== "granted") {
-          const dialog: Dialog = {
-            id: "clipboard-perm",
-            header: "Permission error",
-            question: "Please grant clipboard permissions.",
-            answer1: "Ok",
-            answer2: null,
-            yes: null,
-            no: null,
-            alertType: AlertType.Warning
-          };
-          this.dialogService.newDialog.next(dialog);
+          this.dialogService.PushDefaultDialog("Please grant clipboard permissions.", "Permission error", AlertType.Warning);
           return;
         }
       });

@@ -12,7 +12,7 @@
                       <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.User}">User settings</a>
                     </li>
                     <li class="nav-item mr-1" (click)="CurrentSettings=SettingsMenu.Layout">
-                      <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Layout}">Layout</a>
+                      <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Layout}">General</a>
                     </li>
                     <li class="nav-item mr-1" *ngIf="User.approved" (click)="CurrentSettings=SettingsMenu.Stream">
                       <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Stream}">Streaming</a>
@@ -38,15 +38,19 @@
                     <input [(ngModel)]="Password" minlength="2" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
                   </div>
                   <div *ngIf="CurrentSettings==SettingsMenu.Layout" class="container-fluid py-3">
-                    <h3>Frontpage</h3>
+                    <h3>Layout</h3>
                     <div class="custom-control custom-checkbox pt-2">
                       <input [(ngModel)]="BrowserSettings.layoutSettings.showCountInfo" type="checkbox" class="custom-control-input" id="countInfoCheck" (change)="changeSettings()">
                       <label class="custom-control-label" for="countInfoCheck">Always show user/playlist information</label>
                     </div>
-                    <h3 class="pt-3">In room</h3>
                     <div class="custom-control custom-checkbox pt-2">
                       <input [(ngModel)]="BrowserSettings.layoutSettings.bigSideNav" type="checkbox" class="custom-control-input" id="sideNavCheck" (change)="changeSettings()">
-                      <label class="custom-control-label" for="sideNavCheck">Show large menu</label>
+                      <label class="custom-control-label" for="sideNavCheck">Show room sidemenu text</label>
+                    </div>
+                    <div class="mt-3" *ngIf="User.userprivileges>=UserPrivileges.Administrator">
+                      <h3 class="pt-3">Download Manager</h3>
+                      <label for="audioVolumeCtrl">Audio volume - {{BrowserSettings.generalSettings.audioVolume}}%</label>
+                      <input type="range" [(ngModel)]="BrowserSettings.generalSettings.audioVolume" (change)="changeSettings()" class="form-control-range" id="audioVolumeCtrl" value="100" style="max-width: 33%;">
                     </div>
                   </div>
                   <div *ngIf="CurrentSettings==SettingsMenu.Stream" class="container-fluid py-3">

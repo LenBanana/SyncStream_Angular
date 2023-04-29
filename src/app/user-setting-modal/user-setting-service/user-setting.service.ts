@@ -10,7 +10,6 @@ import { token } from '../../global.settings';
   providedIn: 'root'
 })
 export class UserSettingService {
-  Token = token;
 
   Users: BehaviorSubject<User[]> = new BehaviorSubject(null);
   constructor(private http: HttpClient) { }
@@ -21,8 +20,8 @@ export class UserSettingService {
   }
 
   public GenerateApiKey() {
-    if (this.Token) {
-      hubConnection.invoke('GenerateApiKey', this.Token);
+    if (token) {
+      hubConnection.invoke('GenerateApiKey', token);
     }
   }
 }

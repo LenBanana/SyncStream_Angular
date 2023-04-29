@@ -34,12 +34,14 @@
             ],
             "styles": [
               "src/styles.scss",
+              "node_modules/jquery-ui/dist/themes/dot-luv/jquery-ui.min.css",
               "node_modules/bootstrap/dist/css/bootstrap.min.css",
               "node_modules/cardsJS/dist/cards.min.css",
               "node_modules/font-awesome/scss/font-awesome.scss"
             ],
             "scripts": [
               "node_modules/jquery/dist/jquery.min.js",
+              "node_modules/jquery-ui/dist/jquery-ui.min.js",
               "node_modules/popper.js/dist/umd/popper.min.js",
               "node_modules/cardsJS/dist/cards.min.js",
               "node_modules/bootstrap/dist/js/bootstrap.min.js"

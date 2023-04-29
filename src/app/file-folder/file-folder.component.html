@@ -8,8 +8,8 @@
       {{currentFolder.name}}<i class="fa fa-angle-right pl-1 font-weight-bold" aria-hidden="true"></i>
     </div>
   </div>
-  <div class="card text-white mr-1 ml-1 p-0 folderContainer" [class.bg-dark]="folder.id==userId"
-    [class.bg-secondary]="folder.id!=userId" cdkDropListSortingDisabled="true" [cdkDropListData]="folder"
+  <div class="card text-white mr-1 ml-1 p-0 folderContainer" [class.bg-dark]="folder.id==getUserId()"
+    [class.bg-secondary]="folder.id!=getUserId()" cdkDropListSortingDisabled="true" [cdkDropListData]="folder"
     [class.col-lg-3]="folder.id==currentFolder.id" [class.col-5]="folder.id==currentFolder.id"
     (cdkDropListDropped)="drop($event)" cdkDropList [class.pointer]="folder.id!=currentFolder.id||folder.parent"
     [class.actionable]="folder.id!=currentFolder.id">
@@ -38,7 +38,7 @@
     <div class="row justify-content-start mr-1">
       <div class="col-lg-2 col-6 m-0 p-0" *ngFor="let child of folder.children">
         <!-- cdkDropListSortingDisabled="true" [cdkDropListData]="child" (cdkDropListDropped)="dropThrough($event)" cdkDropList {{child.id}}-->
-        <app-file-folder [UniqueId]="UniqueId" [folder]="child" [currentFolder]="currentFolder"
+        <app-file-folder [browserSettings]="browserSettings" [UniqueId]="UniqueId" [folder]="child" [currentFolder]="currentFolder"
           [filterFiles]="filterFiles" [page]="page" [pageSize]="pageSize" (goDeeper)="GoThroughDeeper($event)"
           [IsInRoom]="IsInRoom"></app-file-folder>
       </div>
@@ -53,7 +53,7 @@
 <div class="border-dark mb-3 mt-3 mr-4 ml-4" style="height: 1px;"
   *ngIf="folder.id==currentFolder.id&&filterFiles&&filterFiles.length>0"></div>
 <div class="ml-2">
-  <app-file-view *ngIf="folder.id==currentFolder.id&&filterFiles&&filterFiles.length>0" [UniqueId]="UniqueId"
+  <app-file-view *ngIf="folder.id==currentFolder.id&&filterFiles&&filterFiles.length>0" [browserSettings]="browserSettings" [UniqueId]="UniqueId"
     [filterFiles]="filterFiles" [page]="page" [IsInRoom]="IsInRoom" [pageSize]="pageSize"
     [currentId]="currentFolder.id"></app-file-view>
 </div>

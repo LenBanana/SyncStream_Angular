@@ -112,8 +112,7 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
         if (Token) {
           vid.url += "&token=" + Token;
         } else {
-          const dialog: Dialog = { id: "content-perm-mpegts", header: "Permission error", question: "Permission to content denied.", answer1: null, answer2: null, yes: null, no: null, alertType: AlertType.Danger };
-          this.dialogService.newDialog.next(dialog);
+          this.dialogService.PushPermissionDialog();
           return;
         }
       }

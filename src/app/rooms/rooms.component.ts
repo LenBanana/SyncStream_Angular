@@ -1,27 +1,25 @@
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ElementRef, HostListener, Inject, OnInit, ViewChild } from '@angular/core';
-import { Server } from '../Interfaces/server';
-import { Member } from '../Interfaces/Member';
-import { ChatMessage } from '../Interfaces/Chatmessage';
+import { ChangeDetectorRef, Component, HostListener, OnInit, ViewChild } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
-import { SignalRService, baseUrl } from '../services/signal-r.service';
+import { SignalRService } from '../services/signal-r.service';
 import { Location } from '@angular/common';
-declare var $:any
 import { RoomService } from './rooms-service/rooms.service';
 import { User } from '../Interfaces/User';
-import { randomID, randomIntFromInterval } from '../helper/generic';
+import { randomIntFromInterval } from '../helper/generic';
 import { Room } from '../Interfaces/Room';
-import { MainUser } from '../helper/Globals';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
 import { AlertType, Dialog } from '../Interfaces/Dialog';
 import { UserlistService } from '../userlist/userlist-service/userlist.service';
-import { browserSettingName, BrowserSettings, LayoutSettings, settingsUpdate } from '../Interfaces/BrowserSettings';
+import { browserSettingName, BrowserSettings, settingsUpdate } from '../Interfaces/BrowserSettings';
 import { ChessService } from '../chess-game/chess-service/chess.service';
 import { NgxChessBoardService } from 'ngx-chess-board';
-import { getCookie } from '../global.settings';
-import { ConversionPreset, DownloadManagerService } from '../download-manager/download-manger-service/download-manager.service';
+import { resetToken } from '../global.settings';
+import { DownloadManagerService } from '../download-manager/download-manger-service/download-manager.service';
 import { PlayerService } from '../player/player-service/player.service';
 import { LiveUser } from '../Interfaces/liveStream';
+import { MatMenuTrigger } from '@angular/material/menu';
+import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
+declare var $:any
 
 
 @Component({
@@ -30,6 +28,7 @@ import { LiveUser } from '../Interfaces/liveStream';
   styleUrls: ['./rooms.component.scss'],
 })
 export class RoomsComponent implements OnInit {
+  @ViewChild('menuTrigger') menuTrigger: MatMenuTrigger;
   rooms: Room[];
   filterRooms: Room[];
   FilterTerm = "";
@@ -64,9 +63,17 @@ export class RoomsComponent implements OnInit {
     }
   }
 
-  constructor(private route: ActivatedRoute, private playerService: PlayerService, private downloadService: DownloadManagerService, private chessService: ChessService, private ngxChessBoardService: NgxChessBoardService, private userService: UserlistService, private http: HttpClient, private router: Router, public signalRService: SignalRService, public roomService: RoomService, public dialogService: DialogService, private cdRef:ChangeDetectorRef, private loc: Location) {
-  // this.GetRooms();
-  // this.setIntervals();
+  constructor(private route: ActivatedRoute,
+    private playerService: PlayerService,
+    private downloadService: DownloadManagerService,
+    private chessService: ChessService,
+    private ngxChessBoardService: NgxChessBoardService,
+    private userService: UserlistService,
+    public signalRService: SignalRService,
+    public roomService: RoomService,
+    public dialogService: DialogService,
+    private cdRef:ChangeDetectorRef,
+    private loc: Location) {
   this.onResize();
   }
   resetGame() {
@@ -80,6 +87,17 @@ export class RoomsComponent implements OnInit {
       this.chessService.NullAllSubs();
     }, 10);
   }
+
+
+  getEvent() {
+    setTimeout(() => {
+      $('.cdk-overlay-container').bind('contextmenu', (e) => {
+        e.preventDefault();
+        this.menuTrigger.closeMenu();
+      });
+    }, 10);
+  }
+
 
   Filter() {
     if (this.FilterTerm) {
@@ -114,7 +132,7 @@ export class RoomsComponent implements OnInit {
   }
 
   trackByFn(index, item: Room) {
-    return item.uniqueId; // or item.id
+    return item.uniqueId;
   }
 
   AddRoom() {
@@ -163,18 +181,6 @@ export class RoomsComponent implements OnInit {
       }
       this.SignalR = !con;
     });
-
-    /*this.signalRService.loginRequest.subscribe(result => {
-      if (!result) {
-        return;
-      }
-      if (result.approved && result.userprivileges > 2) {
-        var Token = getCookie("login-token");
-        if (Token) {
-          this.roomService.DownloadFile(Token, "https://file-examples.com/wp-content/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
-        }
-      }
-    })*/
   }
 
   public Logout() {
@@ -184,6 +190,7 @@ export class RoomsComponent implements OnInit {
     curDate.setDate(curDate.getDate() - 30);
     document.cookie = "login-token=none; expires=" + curDate.toUTCString() + ";path=/;";
     this.logout = false;
+    resetToken();
   }
 
   public SaveLogin(user: User, logout: boolean) {
@@ -195,9 +202,13 @@ export class RoomsComponent implements OnInit {
       $('#registerModal').modal('show');
     }
     if (user && user.approved>0) {
+      resetToken();
       this.user = user;
       this.logout = true;
-      this.downloadService.GetFolders();
+      if (user.userprivileges >= UserPrivileges.Administrator) {
+        this.downloadService.GetDownloads();
+        this.downloadService.GetFolders();
+      }
       this.cdRef.detectChanges();
     }
     if (!logout && user.approved>0) {
@@ -222,12 +233,10 @@ export class RoomsComponent implements OnInit {
     this.loc.go('/');
     this.currentRoom = undefined;
     this.delInterval = true;
-    //window.location.reload();
   }
 
   refresh(): void {
     this.loc.go("/");
-    //window.location.reload();
     this.currentRoom = null;
   }
 

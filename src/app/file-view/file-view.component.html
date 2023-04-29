@@ -2,13 +2,16 @@
   <div (dblclick)="ToggleEdit(f)"  id="fileview{{f.id}}" (click)="$event.stopPropagation();" cdkDrag [cdkDragDisabled]="f.editing" [class.no-events]="f.editing" (contextmenu)="$event.preventDefault();menuTrigger.openMenu();getEvent()" *ngFor="let f of filterFiles | slice: (page-1) * pageSize : page * pageSize; let i = index;">
     <div class="card text-white bg-secondary mb-2 pointer no-events" [cdkDragData]="f" [matMenuTriggerFor]="menu" #menuTrigger="matMenuTrigger">
       <div class="card-body mb-1 p-2" data-toggle="collapse" [attr.data-target]="'#collapseFileFooter-' + f.id" aria-expanded="false" [attr.aria-controls]="'#collapseFileFooter-' + f.id">
-        <div *ngIf="f.fileEnding.toLocaleLowerCase()=='.wav'||f.fileEnding.toLocaleLowerCase()=='.mp3'||f.fileEnding.toLocaleLowerCase()=='.ogg'; else defaultIcon" style="z-index: 10001; display: inline-flex; cursor: pointer; pointer-events: auto;">
-          <i class="fa ml-2 mr-2" [class.fa-play]="!f.player||f.player.paused" [class.fa-pause]="f.player&&!f.player?.paused" aria-hidden="true" (click)="playWavFile(f);$event.preventDefault();$event.stopPropagation();"></i>
-          <div class="player-loading-bar ml-2" (click)="$event.preventDefault();$event.stopPropagation();seekFileTo(f, $event)">
-            <div class="player-loading-bar-bg" [style.width.%]="getPlayerPercentage(f)"></div>
+        <i *ngIf="anySelected(f); else vidIcon" class="fa ml-2 mr-2" [class.fa-square-o]="!f.selected" [class.fa-check-square-o]="f.selected" aria-hidden="true" (click)="f.selected=!f.selected;$event.preventDefault();$event.stopPropagation();" style="pointer-events: auto;"></i>
+        <ng-template #vidIcon>
+          <div *ngIf="f.fileEnding.toLocaleLowerCase()=='.wav'||f.fileEnding.toLocaleLowerCase()=='.mp3'||f.fileEnding.toLocaleLowerCase()=='.ogg'; else defaultIcon" style="z-index: 10001; display: inline-flex; cursor: pointer; pointer-events: auto;">
+            <i class="fa ml-2 mr-2" [class.fa-play]="!f.player||f.player.paused" [class.fa-pause]="f.player&&!f.player?.paused" aria-hidden="true" (click)="playWavFile(f);$event.preventDefault();$event.stopPropagation();"></i>
+            <div class="player-loading-bar ml-2" (click)="$event.preventDefault();$event.stopPropagation();seekFileTo(f, $event)">
+              <div class="player-loading-bar-bg" [style.width.%]="getPlayerPercentage(f)"></div>
+            </div>
+            <span class="player-loading-time">{{timeFromSeconds(f.player?.currentTime)}}/{{timeFromSeconds(f.player?.duration)}}</span>
           </div>
-          <span class="player-loading-time">{{timeFromSeconds(f.player?.currentTime)}}/{{timeFromSeconds(f.player?.duration)}}</span>
-        </div>
+        </ng-template>
         <ng-template #defaultIcon>
           <i *ngIf="isImg(f)" (click)="$event.preventDefault();$event.stopPropagation();openImg(f)" class="fa fa-file-image-o ml-2 mr-2 pointer" aria-hidden="true" style="pointer-events: auto;"></i>
           <i *ngIf="!isImg(f)" class="fa fa-file ml-2 mr-2" aria-hidden="true" style="pointer-events: auto;"></i>
@@ -19,7 +22,8 @@
           </p>
         </div>
         <span *ngIf="f.editing"><input id="editFileInput{{f.id}}" class="form-control bg-secondary text-light w-50 border-dark filename-input border-0 rounded-0 m-0 p-0" style="display: inline;" [(ngModel)]="f.name" (keyup.enter)="$event.target.blur();" (focusout)="$event.stopPropagation();ToggleEdit(f)" (click)="$event.stopPropagation();"/></span>
-        <span class="pointer short-text pull-right mr-3" style="max-width: 25%;">{{f.created | date: 'dd.MM.yyyy HH:mm'}}</span>
+        <span *ngIf="!f.temporary" class="pointer short-text pull-right mr-3" style="max-width: 25%;">{{f.created | date: 'dd.MM.yyyy HH:mm'}}</span>
+        <span *ngIf="f.temporary" class="pointer short-text pull-right mr-3" style="max-width: 25%;"><i class="fa fa-clock-o text-danger mr-2" aria-hidden="true"></i>{{GetRemainingTime(f) | date: 'dd.MM.yyyy HH:mm'}}</span>
       </div>
       <mat-menu #menu="matMenu" style="z-index: 10000;">
         <button mat-menu-item (click)="CopyToClip(f)" class="text-light">
@@ -47,6 +51,11 @@
           <span> Info</span>
         </button>
         <hr class="m-0 p-0">
+        <button mat-menu-item (click)="f.selected=!f.selected;" class="text-light">
+          <i class="fa mr-1 pointer text-info" [class.fa-square-o]="!f.selected" [class.fa-check-square-o]="f.selected" aria-hidden="true"></i>
+          <span> Select</span>
+        </button>
+        <hr class="m-0 p-0">
         <button mat-menu-item (click)="RemoveFile(f.id);" class="text-light">
           <i class="fa fa-times-circle mr-1 pointer text-danger" aria-hidden="true"></i>
           <span> Delete</span>
@@ -59,7 +68,7 @@
     </div>
   </div>
 </div>
-<app-text-dialog [Id]="serverDialog.id" [Question]="serverDialog.question" [AddInput]="false" [Header]="serverDialog.header" [Answer1]="serverDialog.answer1" [Answer2]="serverDialog.answer2" [AlertType]="serverDialog.alertType" (Yes)="DeleteFile()" (No)="ShowDeleteModal(false)"></app-text-dialog>
+<app-text-dialog [Id]="serverDialog.id" [Question]="serverDialog.question" [AddInput]="false" [Header]="serverDialog.header" [Answer1]="serverDialog.answer1" [Answer2]="serverDialog.answer2" [AlertType]="serverDialog.alertType" (Yes)="DeleteCallback()" (No)="ShowDeleteModal(false)"></app-text-dialog>
 
 <div class="modal img-show-modal" id="imgShowModal">
   <img class="modal-content" id="imgShowImg">

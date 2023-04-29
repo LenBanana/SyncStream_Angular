@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { getCookie } from '../global.settings';
+import { getCookie, token, userId } from '../global.settings';
 import { User } from '../Interfaces/User';
 import { SignalRService } from '../services/signal-r.service';
 import { UserAdminService } from './user-admin-service/user-admin.service';
@@ -15,8 +15,6 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
   constructor(public userAdminService: UserAdminService, public signalRService: SignalRService) { }
   Users: User[] = [];
   FilteredUsers: User[] = [];
-  Token: string;
-  UserID: number;
   DialogQuestion: string;
   DialogHeader: string;
   YesAnswer: string;
@@ -46,10 +44,8 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
         return;
       }
       if (result.approved && result.userprivileges > 2) {
-        this.Token = getCookie("login-token");
-        this.UserID = Number.parseInt(getCookie("user-id"));
-        if (this.Token && this.UserID) {
-          this.userAdminService.GetUsers(this.Token, this.UserID);
+        if (token && userId) {
+          this.userAdminService.GetUsers(token, userId);
         }
       }
     })
@@ -57,9 +53,7 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
       if (!result) {
         return;
       }
-      this.Token = result.token;
-      this.UserID = result.userID;
-      this.userAdminService.GetUsers(this.Token, this.UserID);
+      this.userAdminService.GetUsers(token, userId);
     })
   }
 
@@ -89,15 +83,15 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
   }
 
   DeleteUser() {
-    this.userAdminService.DeleteUser(this.Token, this.UserID, this.LastSelectedUser.id);
+    this.userAdminService.DeleteUser(token, userId, this.LastSelectedUser.id);
   }
 
   ApproveUser(user: User, approve: boolean) {
-    this.userAdminService.ApproveUser(this.Token, this.UserID, user.id, approve);
+    this.userAdminService.ApproveUser(token, userId, user.id, approve);
   }
 
   SetUserPrivileges(user: User, privileges: number) {
-    this.userAdminService.SetUserPrivileges(this.Token, this.UserID, user.id, privileges);
+    this.userAdminService.SetUserPrivileges(token, userId, user.id, privileges);
   }
 
   GetEnumInt(name) {
@@ -105,7 +99,7 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
   }
 
   DeleteUserQuestion(user: User) {
-    if (!this.Token || !this.UserID) {
+    if (!token || !userId) {
       alert("Please wait until fully logged in and try again");
       return;
     }

@@ -11,10 +11,6 @@ import {
   PieceIconInput
 } from 'ngx-chess-board';
 import {
-  AlertType,
-  Dialog
-} from '../Interfaces/Dialog';
-import {
   ChessGame,
   ChessMove
 } from '../Interfaces/Games/chess';

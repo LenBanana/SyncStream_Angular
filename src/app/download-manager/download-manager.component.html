@@ -14,12 +14,10 @@
               </div>
               <input [disabled]="LoadingQuality ? true : null" [(ngModel)]="downloadUrl" (change)="CheckYtQuality()" (input)="CheckYtQuality()" (keyup.enter)="!LoadingQuality&&DownloadFile()" type="text" class="form-control bg-dark text-light border-dark"
                 placeholder="https://...">
-              <div class="input-group-append" *ngIf="!IsYt()">
-                <input [(ngModel)]="downloadName" (keyup.enter)="DownloadFile()" type="text" class="form-control rounded-0 bg-dark text-light border-dark"
+              <div class="input-group-append">
+                <input *ngIf="!IsYt()" [(ngModel)]="downloadName" (keyup.enter)="DownloadFile()" type="text" class="form-control rounded-0 bg-dark text-light border-dark"
                   placeholder="Name...">
-              </div>
-              <div class="input-group-append" *ngIf="!IsYt()">
-                <select [(ngModel)]="CurrentPreset" class="form-control px-4 rounded-0 bg-dark text-light border-dark">
+                <select *ngIf="!IsYt()" [(ngModel)]="CurrentPreset" class="form-control px-4 rounded-0 bg-dark text-light border-dark">
                   <option value="0">Very Slow</option>
                   <option value="1">Slower</option>
                   <option value="2">Slow</option>
@@ -30,30 +28,30 @@
                   <option value="7">Super Fast</option>
                   <option value="8">Ultra Fast</option>
                 </select>
-              </div>
-              <div class="input-group-append" *ngIf="PossibleYtQuality.length>0&&!LoadingQuality&&IsYt()">
-                <select [(ngModel)]="CurrentYtQuality" class="form-control px-4 rounded-0 bg-dark text-light border-dark">
+                <select *ngIf="PossibleYtQuality.length>0&&!LoadingQuality&&IsYt()&&!YtAudioOnly" [(ngModel)]="CurrentYtQuality" class="form-control px-4 rounded-0 bg-dark text-light border-dark">
                   <option *ngFor="let quality of PossibleYtQuality" value="{{quality}}">{{quality}}p</option>
                 </select>
-              </div>
-              <div class="input-group-append">
+                <button class="btn btn-dark" *ngIf="PossibleYtQuality.length>0&&!LoadingQuality&&IsYt()" (click)="YtAudioOnly=!YtAudioOnly">
+                  <i class="fa" [class.fa-file-audio-o]="YtAudioOnly" [class.fa-file-video-o]="!YtAudioOnly" [title]="YtAudioOnly ? 'Download mp3' : 'Download mp4'"></i>
+                </button>
                 <button [disabled]="LoadingQuality ? true : null" class="btn btn-dark" (click)="DownloadFile()"><i *ngIf="!LoadingQuality" class="fa" [class.fa-download]="!IsYt()" [class.fa-youtube]="IsYt()"
                     aria-hidden="true"></i><i *ngIf="LoadingQuality" class="fa fa-cog fa-spin"></i></button>
+                    <button [disabled]="LoadingQuality ? true : null" id="dropZone" class="btn btn-dark" (click)="SelectFile()"><i class="fa fa-upload"
+                        aria-hidden="true"></i></button>
               </div>
-              <div class="input-group-append">
-                <button [disabled]="LoadingQuality ? true : null" id="dropZone" class="btn btn-dark" (click)="SelectFile()"><i class="fa fa-upload"
-                    aria-hidden="true"></i></button>
+              <div class="input-group-append" *ngIf="!IsYt()">
+                <app-media-editor [User]="User"></app-media-editor>
               </div>
             </div>
             <input type="file" id="fileSelect" style="display: none;" (change)="FileSelected($event)"
               accept="image/*,video/*" #fileSelect />
           </div>
           <div class="border-dark col-12 mb-3 mr-4" style="height: 1px;"></div>
-          <div class="col-6">
+          <div class="col-12 col-md-6 mt-1">
             <input class="form-control bg-dark text-light border-dark" placeholder="Search..."
             [(ngModel)]="filterName" (keyup)="Filter()">
           </div>
-          <div class="col-6">
+          <div class="col-12 col-md-6 mt-1">
             <ul class="nav nav-pills">
               <li class="nav-item mr-2">
                 <a class="nav-link pointer px-3" style="display: inline-block;" [class.active]="sortType=='name'" [class.border-dark]="sortType!='name'"
@@ -103,9 +101,8 @@
           </div>
         </div>
         <div *ngIf="progresses&&progresses.length>0" class="border-dark mb-3 mt-3 mr-4" style="height: 1px;"></div>
-        <!--<app-file-view [filterFiles]="filterFiles" [page]="page" [pageSize]="pageSize"></app-file-view>-->
         <div cdkDropListGroup>
-          <app-file-folder *ngIf="currentFolder" [UniqueId]="UniqueId" [folder]="currentFolder" [IsInRoom]="IsInRoom" [prevFolder]="prevFolder" [currentFolder]="currentFolder" [filterFiles]="filterFiles" [page]="page" [pageSize]="pageSize" (goDeeper)="UpdateFolder($event)"></app-file-folder>
+          <app-file-folder *ngIf="currentFolder" [browserSettings]="browserSettings" [UniqueId]="UniqueId" [folder]="currentFolder" [IsInRoom]="IsInRoom" [prevFolder]="prevFolder" [currentFolder]="currentFolder" [filterFiles]="filterFiles" [page]="page" [pageSize]="pageSize" (goDeeper)="UpdateFolder($event)"></app-file-folder>
         </div>
         <div class="pull-left mt-2">
           <ngb-pagination *ngIf="filterFiles.length>pageSize" [(page)]="page" [pageSize]="pageSize" [collectionSize]="filterFiles.length" [maxSize]="10">

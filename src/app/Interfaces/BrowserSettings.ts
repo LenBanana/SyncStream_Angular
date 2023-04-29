@@ -13,10 +13,8 @@ export class LayoutSettings {
 }
 
 export class GeneralSettings {
-  firstVisit: boolean;
-  constructor() {
-    this.firstVisit = true;
-  }
+  firstVisit: boolean = true;
+  audioVolume: number = 100;
 }
 
 export class BrowserSettings {

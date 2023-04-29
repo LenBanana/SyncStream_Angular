@@ -211,18 +211,18 @@ ngb-pagination ::ng-deep ul > li.active > a {
 
 .add-room-bubble {
   position: fixed;
-  bottom: 4.5vh;
-  right: 4.75vh;
+  bottom: 3rem;
+  right: 3rem;
   z-index: 1000;
 }
 
 .add-bubble-new {
-  font-size: 2vh;
-  width: 8vh;
-  height: 8vh;
+  font-size: 1rem;
+  width: 5rem;
+  height: 5rem;
   border-radius: 76px;
   text-align: center;
-  line-height: 9.5vh;
+  line-height: 5.5rem;
 }
 
 .add-container {
@@ -595,15 +595,11 @@ ngb-pagination ::ng-deep ul > li.active > a {
 }
 
 .footer {
-  height: 5vh;
-  max-height: 40px;
   position: fixed;
   bottom: 0px;
   width: 100%;
-  background: linear-gradient(to top, #20344b, #335275);
   font-size: .6em;
   font-weight: bold;
-  border-top: 1px solid #1c2f43;
   margin: 0;
   z-index: 100;
   text-align: center;
@@ -611,6 +607,11 @@ ngb-pagination ::ng-deep ul > li.active > a {
   flex-direction: column;
   justify-content: center;
   line-height: 20%;
+}
+
+.footer-bg {
+  border-top: 1px solid #1c2f43;
+  background: linear-gradient(to top, #20344b, #335275);
 }
 
 @keyframes FadeInAnimFull {
