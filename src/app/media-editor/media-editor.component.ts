@@ -98,7 +98,6 @@ export class MediaEditorComponent implements OnInit, OnDestroy {
       return;
     }
     this.currentSelection = selection;
-    console.log(this.currentSelection);
     this.maxMilliSeconds = 0;
     this.getFileDuration(this.currentSelection, (duration) => {
       this.endMilliSeconds = duration * 1000;
@@ -160,8 +159,8 @@ export class MediaEditorComponent implements OnInit, OnDestroy {
     var id = 'default';
     this.mediaStates.push({Id: id, text: 'Uploading...', alertType: AlertType.Info, progress: 0 });
     upload.subscribe(resp => {
-      var idx = this.mediaStates.findIndex(x => x.Id == id);
       if (resp.type === HttpEventType.UploadProgress) {
+        var idx = this.mediaStates.findIndex(x => x.Id == id);
         const percentDone = 100 * resp.loaded / resp.total;
         if (percentDone >= 100) {
           this.converting = false;
@@ -183,7 +182,6 @@ export class MediaEditorComponent implements OnInit, OnDestroy {
 
   getAvailableMediaTypes(currentType: string) {
     const type = currentType.toLowerCase();
-    console.log(type);
     this.mediaTypes = [];
 
     if (type.startsWith('image')) {

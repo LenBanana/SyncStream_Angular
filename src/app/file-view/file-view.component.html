@@ -22,8 +22,8 @@
           </p>
         </div>
         <span *ngIf="f.editing"><input id="editFileInput{{f.id}}" class="form-control bg-secondary text-light w-50 border-dark filename-input border-0 rounded-0 m-0 p-0" style="display: inline;" [(ngModel)]="f.name" (keyup.enter)="$event.target.blur();" (focusout)="$event.stopPropagation();ToggleEdit(f)" (click)="$event.stopPropagation();"/></span>
-        <span *ngIf="!f.temporary" class="pointer short-text pull-right mr-3" style="max-width: 25%;">{{f.created | date: 'dd.MM.yyyy HH:mm'}}</span>
-        <span *ngIf="f.temporary" class="pointer short-text pull-right mr-3" style="max-width: 25%;"><i class="fa fa-clock-o text-danger mr-2" aria-hidden="true"></i>{{GetRemainingTime(f) | date: 'dd.MM.yyyy HH:mm'}}</span>
+        <span *ngIf="!f.dateToBeDeleted" class="pointer short-text pull-right mr-3" style="max-width: 25%;">{{GetLocalDate(f.created) | date: 'dd.MM.yyyy HH:mm'}}</span>
+        <span *ngIf="f.dateToBeDeleted" class="pointer short-text pull-right mr-3" style="max-width: 25%;"><i class="fa fa-clock-o text-danger mr-2" aria-hidden="true"></i>{{GetLocalDate(f.dateToBeDeleted) | date: 'dd.MM.yyyy HH:mm'}}</span>
       </div>
       <mat-menu #menu="matMenu" style="z-index: 10000;">
         <button mat-menu-item (click)="CopyToClip(f)" class="text-light">
@@ -54,6 +54,10 @@
         <button mat-menu-item (click)="f.selected=!f.selected;" class="text-light">
           <i class="fa mr-1 pointer text-info" [class.fa-square-o]="!f.selected" [class.fa-check-square-o]="f.selected" aria-hidden="true"></i>
           <span> Select</span>
+        </button>
+        <button *ngIf="f.dateToBeDeleted" mat-menu-item (click)="MakeFilePermanent(f)" class="text-light">
+          <i class="fa mr-1 pointer text-warning fa-hdd-o" aria-hidden="true"></i>
+          <span> Persist</span>
         </button>
         <hr class="m-0 p-0">
         <button mat-menu-item (click)="RemoveFile(f.id);" class="text-light">

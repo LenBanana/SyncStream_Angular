@@ -54,10 +54,10 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   WhiteboardActive = false;
   BlackjackActive = false;
   liveChannelSub: Subscription;
-  playingGallows;
-  playingBlackjack;
-  message;
-  playFile;
+  playingGallows: Subscription;
+  playingBlackjack: Subscription;
+  message: Subscription;
+  playFile: Subscription;
   Messages: ChatMessage[];
   LiveUsers: LiveUser[] = [];
   pasteFn = (event) => {

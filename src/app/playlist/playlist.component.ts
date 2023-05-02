@@ -25,7 +25,7 @@ export class PlaylistComponent implements OnInit, OnDestroy {
   dropped = false;
   failed = false;
   FirstLoad = true;
-  playlistUpdate;
+  playlistUpdate: Subscription;
 
   ngOnInit(): void {
     this.readySub = this.ready.subscribe(() => { this.nowPlaying.emit(this.CurrentVideo); });

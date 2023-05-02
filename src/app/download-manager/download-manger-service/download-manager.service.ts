@@ -169,6 +169,12 @@ export class DownloadManagerService {
     }
   }
 
+  public MakeFilePermanent(id: number) {
+    if (token) {
+      hubConnection.invoke('MakeFilePermanent', token, id);
+    }
+  }
+
   public addUpdateFolderServerRequestListener() {
     hubConnection.on('updateFolders', (data) => {
       this.updateFolder.next(data);

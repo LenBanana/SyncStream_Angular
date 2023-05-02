@@ -38,21 +38,19 @@ export class FileViewComponent implements OnInit {
     return file.selected || (this.filterFiles.findIndex(x => x.selected) != -1);
   }
 
-  GetRemainingTime(file: DownloadFile) {
-    const created = new Date(file.created);
-    var dateString = created.toUTCString().replace(" GMT", "") + " UTC";
-    const UTCCreated = new Date(dateString)
-    UTCCreated.setDate(UTCCreated.getDate() + 14);
-    UTCCreated.setHours(UTCCreated.getHours() + 2);
-    return UTCCreated;
-  }
-
   DownloadDbFile(file: DownloadFile) {
     var Token = getCookie("login-token");
     if (Token) {
       var fileUrl = this.GetDownloadUri(file);
       window.open(fileUrl, "_blank");
     }
+  }
+
+  GetLocalDate(d: string) {
+    var utcDate = new Date(d);
+    var dateUTC = utcDate.toLocaleString("en-US") + " UTC";
+    var date = new Date(dateUTC);
+    return date;
   }
 
   GetDownloadUri(file: DownloadFile) {
@@ -176,6 +174,10 @@ export class FileViewComponent implements OnInit {
       file.player = null;
     }
     this.downloadService.RemoveFile(file.id);
+  }
+
+  MakeFilePermanent(file: DownloadFile) {
+    this.downloadService.MakeFilePermanent(file.id);
   }
 
   ShowDeleteModal(show) {

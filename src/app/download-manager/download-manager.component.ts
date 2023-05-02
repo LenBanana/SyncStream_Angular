@@ -128,8 +128,13 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
   }
 
   Filter() {
+    if (!this.files) {
+      return;
+    }
+    const map = new Map(this.files.map(pos => [pos.id, pos]));
+    const uniques = [...map.values()];
     if (this.filterName.length > 0) {
-      this.filterFiles = [...this.files.filter(x => x.name.toLocaleLowerCase().includes(this.filterName))];
+      this.filterFiles = [...uniques.filter(x => x.name.toLocaleLowerCase().includes(this.filterName))];
       return;
     }
     this.filterFiles = [...this.files];

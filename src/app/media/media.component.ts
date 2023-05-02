@@ -39,13 +39,15 @@ export class MediaComponent implements OnInit, OnDestroy {
   PlayerTimeListener: Subscription;
   PlaylistUpdate: Subscription;
   PingUpdate: Subscription;
-  PingInterval;
+  PingInterval: NodeJS.Timeout;
 
   ngOnDestroy() {
     this.PlayerTypeListener.unsubscribe();
     this.IsPlayingListener.unsubscribe();
     this.PlaylistUpdate.unsubscribe();
     this.PlayerTimeListener.unsubscribe();
+    this.PingUpdate.unsubscribe();
+    clearInterval(this.PingInterval);
   }
 
   ngOnInit(): void {
