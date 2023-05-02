@@ -118,13 +118,28 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
     this.AddFileListener();
   }
 
-  SetFiles(f: DownloadFile[], change: boolean = true) {
-    this.files = [...f];
-      this.Filter();
-      if (this.firstSort) {
-        this.firstSort = !this.firstSort;
-      }
-      this.sortFilesBy(change);
+  SetFiles(files: DownloadFile[], change: boolean = true) {
+    this.files = [...files];
+    this.files.forEach(f => {
+      f.created = f.created ? this.GetLocalDate(f.created) : null;
+      f.dateToBeDeleted = f.dateToBeDeleted ? this.GetLocalDate(f.dateToBeDeleted) : null;
+    });
+    this.Filter();
+    if (this.firstSort) {
+      this.firstSort = !this.firstSort;
+    }
+    this.sortFilesBy(change);
+  }
+
+  GetLocalDate(d: Date): Date {
+    console.log(d);
+    if (!d.getDate) {
+      var utcDate = new Date(d);
+      var dateUTC = utcDate.toLocaleString("en-US") + " UTC";
+      var date = new Date(dateUTC);
+      return date;
+    }
+    return d;
   }
 
   Filter() {

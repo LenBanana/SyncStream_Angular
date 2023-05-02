@@ -46,13 +46,6 @@ export class FileViewComponent implements OnInit {
     }
   }
 
-  GetLocalDate(d: string) {
-    var utcDate = new Date(d);
-    var dateUTC = utcDate.toLocaleString("en-US") + " UTC";
-    var date = new Date(dateUTC);
-    return date;
-  }
-
   GetDownloadUri(file: DownloadFile) {
     var Token = getCookie("login-token");
     if (Token) {
@@ -142,7 +135,7 @@ export class FileViewComponent implements OnInit {
     if (this.filterFiles.findIndex(x => x.selected) != -1) {
       var selectedCount = this.filterFiles.filter(x => x.selected);
       this.serverDialog.question = "Are you sure you want to delete " + selectedCount.length + " selected files";
-      this.ShowDeleteModal(true);
+      this.ToggleDeleteModal(true);
       return;
     }
     var idx = this.filterFiles.findIndex(x => x.id == id);
@@ -152,11 +145,11 @@ export class FileViewComponent implements OnInit {
     this.askedId = id;
     var file = this.filterFiles[idx];
     this.serverDialog.question = "Are you sure you want to delete " + file.name;
-    this.ShowDeleteModal(true);
+    this.ToggleDeleteModal(true);
   }
 
   DeleteCallback() {
-    this.ShowDeleteModal(false);
+    this.ToggleDeleteModal(false);
     if (this.filterFiles.findIndex(x => x.selected) != -1) {
       var selectedCount = this.filterFiles.filter(x => x.selected);
       selectedCount.forEach(x => this.DeleteFile(x));
@@ -180,7 +173,7 @@ export class FileViewComponent implements OnInit {
     this.downloadService.MakeFilePermanent(file.id);
   }
 
-  ShowDeleteModal(show) {
+  ToggleDeleteModal(show) {
     if (show) {
       $('#dialogModal-delete-perm').modal('show');
     } else {

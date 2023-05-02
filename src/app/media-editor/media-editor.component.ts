@@ -149,6 +149,7 @@ export class MediaEditorComponent implements OnInit, OnDestroy {
       return;
     }
     this.converting = true;
+    this.currentSelection = null;
     this.fileSelectView.nativeElement.value = '';
     var upload;
     if (method === 'ConvertMedia') {
@@ -183,45 +184,36 @@ export class MediaEditorComponent implements OnInit, OnDestroy {
   getAvailableMediaTypes(currentType: string) {
     const type = currentType.toLowerCase();
     this.mediaTypes = [];
+    const newMediaTypes = [];
 
-    if (type.startsWith('image')) {
-      const imageTypes: MediaTypeOption[] = [
-        { value: 0, label: 'PNG' },
-        { value: 1, label: 'JPEG' },
-        { value: 2, label: 'BMP' },
-        { value: 3, label: 'TIFF' },
-        { value: 4, label: 'WEBP' },
-      ];
-      this.mediaTypes.push(...imageTypes.filter(opt => !type.endsWith(opt.label.toLowerCase())));
+    if (type.startsWith('image') || type.endsWith('pdf')) {
+      newMediaTypes.push(...Object.values(ImageType)
+        .filter(value => typeof value === 'number')
+        .filter(value => !type.endsWith(ImageType[value].toLowerCase()))
+        .map(value => ({ value: value as number, label: ImageType[value] })));
     }
 
     if (type.startsWith('audio') || type.startsWith('video')) {
-      const audioTypes: MediaTypeOption[] = [
-        { value: 5, label: 'MP3' },
-        { value: 6, label: 'WAV' },
-        { value: 7, label: 'OGG' },
-        { value: 8, label: 'FLAC' },
-        { value: 9, label: 'AIFF' },
-        { value: 10, label: 'M4A' },
-      ];
-      this.mediaTypes.push(...audioTypes.filter(opt => !type.endsWith(opt.label.toLowerCase())));
+      newMediaTypes.push(...Object.values(AudioType)
+        .filter(value => typeof value === 'number')
+        .filter(value => !type.endsWith(AudioType[value].toLowerCase()))
+        .map(value => ({ value: value as number, label: AudioType[value] })));
     }
 
     if (type.startsWith('video') || type.endsWith('gif')) {
-      const videoTypes: MediaTypeOption[] = [
-        { value: 11, label: 'MP4' },
-        { value: 12, label: 'AVI' },
-        { value: 13, label: 'WMV' },
-        { value: 14, label: 'MOV' },
-        { value: 15, label: 'MKV' },
-        { value: 16, label: 'GIF' },
-      ];
-      this.mediaTypes.push(...videoTypes.filter(opt => !type.endsWith(opt.label.toLowerCase())));
+      newMediaTypes.push(...Object.values(VideoType)
+        .filter(value => typeof value === 'number')
+        .filter(value => !type.endsWith(VideoType[value].toLowerCase()))
+        .map(value => ({ value: value as number, label: VideoType[value] })));
     }
-    if (this.mediaTypes.length == 0) {
+
+    if (newMediaTypes.length === 0) {
       this.closeModal();
+      this.currentSelection = null;
       this.dialogService.PushDefaultDialog(`Type ${type} is not supported.`, "Type error", AlertType.Warning);
     } else {
+      this.mediaTypes.push(...newMediaTypes);
+      this.mediaTypes.sort((a, b) => a.label.localeCompare(b.label));
       this.mediaType = this.mediaTypes[0].value;
     }
   }

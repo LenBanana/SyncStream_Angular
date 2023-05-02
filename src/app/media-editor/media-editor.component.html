@@ -1,5 +1,3 @@
-<button class="btn btn-dark rounded-right" style="border-radius: 0;" (click)="openModal();!currentSelection&&!converting&&selectFile();"
-  [ngbTooltip]="'Edit file'"><i class="fa fa-cogs" aria-hidden="true"></i></button>
 <div class="modal hide fade in" id="mediaEditorModal">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content bg-dark">
@@ -80,7 +78,7 @@
         </div>
       </div>
       <div class="modal-footer mx-3">
-        <div class="form-group  mr-auto mb-0">
+        <div class="form-group mr-auto mb-0">
           <button type="button" class="btn btn-success font-weight-bold mr-3" [disabled]="converting ? true : null" (click)="selectFile()">Select file <i class="fa fa-file" aria-hidden="true"></i></button>
           <ng-container *ngIf="convertMode && currentSelection">
             <button type="button" class="btn btn-primary font-weight-bold" [disabled]="converting ? true : null" (click)="convertMedia()">Process <i class="fa fa-cogs" aria-hidden="true"></i></button>

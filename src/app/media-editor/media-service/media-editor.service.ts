@@ -77,11 +77,12 @@ export enum ImageType {
   JPEG,
   BMP,
   TIFF,
-  WEBP
+  WEBP,
+  PDF
 }
 
 export enum AudioType {
-  MP3 = 5,
+  MP3 = 6,
   WAV,
   OGG,
   FLAC,
@@ -90,7 +91,8 @@ export enum AudioType {
 }
 
 export enum VideoType {
-  MP4 = 11,
+  MP4 = 12,
+  WEBM,
   AVI,
   WMV,
   MOV,

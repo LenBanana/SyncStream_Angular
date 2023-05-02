@@ -22,8 +22,8 @@
           </p>
         </div>
         <span *ngIf="f.editing"><input id="editFileInput{{f.id}}" class="form-control bg-secondary text-light w-50 border-dark filename-input border-0 rounded-0 m-0 p-0" style="display: inline;" [(ngModel)]="f.name" (keyup.enter)="$event.target.blur();" (focusout)="$event.stopPropagation();ToggleEdit(f)" (click)="$event.stopPropagation();"/></span>
-        <span *ngIf="!f.dateToBeDeleted" class="pointer short-text pull-right mr-3" style="max-width: 25%;">{{GetLocalDate(f.created) | date: 'dd.MM.yyyy HH:mm'}}</span>
-        <span *ngIf="f.dateToBeDeleted" class="pointer short-text pull-right mr-3" style="max-width: 25%;"><i class="fa fa-clock-o text-danger mr-2" aria-hidden="true"></i>{{GetLocalDate(f.dateToBeDeleted) | date: 'dd.MM.yyyy HH:mm'}}</span>
+        <span *ngIf="!f.dateToBeDeleted" class="pointer short-text pull-right mr-3" style="max-width: 25%;">{{f.created | date: 'dd.MM.yyyy HH:mm'}}</span>
+        <span *ngIf="f.dateToBeDeleted" class="pointer short-text pull-right mr-3" style="max-width: 25%;"><i class="fa fa-clock-o text-danger mr-2" aria-hidden="true"></i>{{f.dateToBeDeleted | date: 'dd.MM.yyyy HH:mm'}}</span>
       </div>
       <mat-menu #menu="matMenu" style="z-index: 10000;">
         <button mat-menu-item (click)="CopyToClip(f)" class="text-light">
@@ -72,7 +72,7 @@
     </div>
   </div>
 </div>
-<app-text-dialog [Id]="serverDialog.id" [Question]="serverDialog.question" [AddInput]="false" [Header]="serverDialog.header" [Answer1]="serverDialog.answer1" [Answer2]="serverDialog.answer2" [AlertType]="serverDialog.alertType" (Yes)="DeleteCallback()" (No)="ShowDeleteModal(false)"></app-text-dialog>
+<app-text-dialog [Id]="serverDialog.id" [Question]="serverDialog.question" [AddInput]="false" [Header]="serverDialog.header" [Answer1]="serverDialog.answer1" [Answer2]="serverDialog.answer2" [AlertType]="serverDialog.alertType" (Yes)="DeleteCallback()" (No)="ToggleDeleteModal(false)"></app-text-dialog>
 
 <div class="modal img-show-modal" id="imgShowModal">
   <img class="modal-content" id="imgShowImg">
