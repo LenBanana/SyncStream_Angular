@@ -4,7 +4,7 @@
       <div class="card-body mb-1 p-2" data-toggle="collapse" [attr.data-target]="'#collapseFileFooter-' + f.id" aria-expanded="false" [attr.aria-controls]="'#collapseFileFooter-' + f.id">
         <i *ngIf="anySelected(f); else vidIcon" class="fa ml-2 mr-2" [class.fa-square-o]="!f.selected" [class.fa-check-square-o]="f.selected" aria-hidden="true" (click)="f.selected=!f.selected;$event.preventDefault();$event.stopPropagation();" style="pointer-events: auto;"></i>
         <ng-template #vidIcon>
-          <div *ngIf="f.fileEnding.toLocaleLowerCase()=='.wav'||f.fileEnding.toLocaleLowerCase()=='.mp3'||f.fileEnding.toLocaleLowerCase()=='.ogg'; else defaultIcon" style="z-index: 10001; display: inline-flex; cursor: pointer; pointer-events: auto;">
+          <div *ngIf="isAudio(f); else defaultIcon" style="z-index: 10001; display: inline-flex; cursor: pointer; pointer-events: auto;">
             <i class="fa ml-2 mr-2" [class.fa-play]="!f.player||f.player.paused" [class.fa-pause]="f.player&&!f.player?.paused" aria-hidden="true" (click)="playWavFile(f);$event.preventDefault();$event.stopPropagation();"></i>
             <div class="player-loading-bar ml-2" (click)="$event.preventDefault();$event.stopPropagation();seekFileTo(f, $event)">
               <div class="player-loading-bar-bg" [style.width.%]="getPlayerPercentage(f)"></div>
@@ -18,7 +18,7 @@
         </ng-template>
         <div class="m-0 w-50" style="display: inline-flex;" *ngIf="!f.editing">
           <p class="card-title short-text m-0" [class.normal-events]="f.editing">
-            <span class="pointer no-events" (click)="$event.stopPropagation();" (dblclick)="ToggleEdit(f)"> {{f.name}}<span *ngIf="!f.name.endsWith(f.fileEnding)">{{f.fileEnding}}</span></span>
+            <span class="pointer no-events" (click)="$event.stopPropagation();" (dblclick)="ToggleEdit(f)"> {{f.name}}<span *ngIf="!f.name.endsWith(f.fileEnding)">{{f.fileEnding.toLocaleLowerCase()}}</span></span>
           </p>
         </div>
         <span *ngIf="f.editing"><input id="editFileInput{{f.id}}" class="form-control bg-secondary text-light w-50 border-dark filename-input border-0 rounded-0 m-0 p-0" style="display: inline;" [(ngModel)]="f.name" (keyup.enter)="$event.target.blur();" (focusout)="$event.stopPropagation();ToggleEdit(f)" (click)="$event.stopPropagation();"/></span>

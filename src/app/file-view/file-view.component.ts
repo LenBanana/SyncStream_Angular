@@ -87,6 +87,14 @@ export class FileViewComponent implements OnInit {
     file.fileEnding.toLocaleLowerCase() == ".png";
   }
 
+  isAudio(f: DownloadFile) {
+    return f.fileEnding.toLocaleLowerCase()=='.flac'||
+    f.fileEnding.toLocaleLowerCase()=='.wav'||
+    f.fileEnding.toLocaleLowerCase()=='.mp3'||
+    f.fileEnding.toLocaleLowerCase()=='.ogg'||
+    f.fileEnding.toLocaleLowerCase()=='.m4a';
+  }
+
   playWavFile(file: DownloadFile) {
     var url = this.GetDownloadUri(file);
     if ((!file.player||file.player.paused) && url && url.length > 0) {

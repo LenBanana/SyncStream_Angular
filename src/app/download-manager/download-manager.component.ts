@@ -132,7 +132,6 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
   }
 
   GetLocalDate(d: Date): Date {
-    console.log(d);
     if (!d.getDate) {
       var utcDate = new Date(d);
       var dateUTC = utcDate.toLocaleString("en-US") + " UTC";
