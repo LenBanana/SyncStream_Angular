@@ -93,6 +93,7 @@ export enum AudioType {
 export enum VideoType {
   MP4 = 12,
   WEBM,
+  FLV,
   AVI,
   WMV,
   MOV,

@@ -1,8 +1,9 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, Input, OnDestroy, OnInit, QueryList, ViewChildren } from '@angular/core';
 import { getCookie, token, userId } from '../global.settings';
 import { User } from '../Interfaces/User';
 import { SignalRService } from '../services/signal-r.service';
 import { UserAdminService } from './user-admin-service/user-admin.service';
+import { NgbdSortableHeader, SortEvent, compare } from '../Interfaces/SortableHeader';
 declare var $:any
 
 @Component({
@@ -13,6 +14,7 @@ declare var $:any
 export class UserAdminModalComponent implements OnInit, OnDestroy {
 
   constructor(public userAdminService: UserAdminService, public signalRService: SignalRService) { }
+  @Input() user: User;
   Users: User[] = [];
   FilteredUsers: User[] = [];
   DialogQuestion: string;
@@ -24,11 +26,10 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
   page = 1;
   pageSize = 5;
   FilterTerm = "";
-  Sort = 0;
-  Desc = true;
   userUpdate;
   tokenUpdate;
   loginUpdate;
+  @ViewChildren(NgbdSortableHeader) headers: QueryList<NgbdSortableHeader>;
 
   ngOnInit(): void {
     this.userUpdate = this.userAdminService.Users.subscribe(users => {
@@ -36,7 +37,7 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
         return;
       }
       this.Users = users;
-      this.FilteredUsers = users;
+      this.FilteredUsers = [...this.Users];
       this.Filter();
     });
     this.loginUpdate = this.signalRService.loginRequest.subscribe(result => {
@@ -65,22 +66,27 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
 
   Filter() {
     if (this.FilterTerm) {
-      this.FilteredUsers = this.Users.filter(x => x.username.toLocaleLowerCase().includes(this.FilterTerm.toLocaleLowerCase()));
+      this.FilteredUsers = [...this.Users].filter(x => x.username.toLocaleLowerCase().includes(this.FilterTerm.toLocaleLowerCase()));
     } else {
-      this.FilteredUsers = this.Users;
-    }
-    switch(this.Sort) {
-      case 0:
-        this.FilteredUsers.sort((x, y) => (x.username > y.username ? (this.Desc ? 1 : -1) : (this.Desc ? -1 : 1)));
-        break;
-      case 1:
-        this.FilteredUsers.sort((x, y) => (x.userprivileges > y.userprivileges ? (this.Desc ? 1 : -1) : (this.Desc ? -1 : 1)));
-        break;
-      case 2:
-        this.FilteredUsers.sort((x, y) => (x.approved > y.approved ? (this.Desc ? 1 : -1) : (this.Desc ? -1 : 1)));
-        break;
+      this.FilteredUsers = [...this.Users];
     }
   }
+
+	onSort({ column, direction }: SortEvent) {
+		this.headers.forEach((header) => {
+			if (header.sortable !== column) {
+				header.direction = '';
+			}
+		});
+		if (direction === '' || column === '') {
+			this.FilteredUsers = [...this.Users];
+		} else {
+			this.FilteredUsers = [...this.Users].sort((a, b) => {
+				const res = compare(a[column], b[column]);
+				return direction === 'asc' ? res : -res;
+			});
+		}
+	}
 
   DeleteUser() {
     this.userAdminService.DeleteUser(token, userId, this.LastSelectedUser.id);
@@ -119,4 +125,10 @@ export enum UserPrivileges
     Moderator,
     Administrator,
     Elevated
+}
+
+export enum AuthenticationType
+{
+    Token,
+    API
 }

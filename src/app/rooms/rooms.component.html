@@ -164,7 +164,7 @@
   </div>
   <app-help-modal (AddRoom)="AddRoom()"></app-help-modal>
   <app-add-room-modal [user]="user" [logout]="logout" (JoinRoom)="JoinRoom($event, 0)"></app-add-room-modal>
-  <app-user-admin-modal *ngIf="user.username&&logout&&user.userprivileges>2"></app-user-admin-modal>
+  <app-user-admin-modal [user]="user" *ngIf="user.username&&logout&&user.userprivileges>2"></app-user-admin-modal>
   <app-user-setting-modal *ngIf="user.username&&logout" [User]="user" [BrowserSettings]="browserSettings"></app-user-setting-modal>
   <div style="margin-top: 75px;"></div>
 </div>
@@ -180,3 +180,6 @@
   [Username]="user.username" [Privileges]="user.userprivileges" [DelInterval]="delInterval" [logout]="logout" (goBack)="LeaveRoom()"
   (IntervalOff)="currentRoom=undefined; currentTime=undefined" (isInMenu)="inMenu=$event"></app-home>
 <app-live-stream-view [UniqueId]="currentRoom" (Users)="LiveUsers=$event"></app-live-stream-view>
+
+<app-permission-view *ngIf="user.username&&logout&&user.userprivileges>3"></app-permission-view>
+<app-filestorage-view *ngIf="user.username&&logout&&user.userprivileges>3"></app-filestorage-view>

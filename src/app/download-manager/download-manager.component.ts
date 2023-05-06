@@ -319,7 +319,7 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
   }
 
   DownloadFile() {
-    if (this.IsYt()) {
+    if (this.IsYt()||this.IsTwitch()) {
       this.DownloadYtFile();
       return;
     }
@@ -336,7 +336,11 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
   }
 
   IsYt() {
-    return (this.downloadUrl.includes('youtube') && this.downloadUrl.includes("?v=")) || this.downloadUrl.includes('youtu.be');
+    return (this.downloadUrl.includes('youtube') && (this.downloadUrl.includes("?v=") || this.downloadUrl.includes("/playlist?list="))) || this.downloadUrl.includes('youtu.be');
+  }
+
+  IsTwitch() {
+    return this.downloadUrl.includes('twitch.tv');
   }
 
   CheckYtQuality() {

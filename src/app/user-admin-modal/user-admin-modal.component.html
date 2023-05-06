@@ -1,70 +1,57 @@
 <div class="modal hide fade in" id="userAdminModal">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content bg-dark">
-            <div class="modal-header">
-                <h4><span class="text-main-color font-weight-bold">Dreck</span>Tube User</h4>
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
-            </div>
-            <div class="modal-body explain-text">
-                <label>Filter</label>
-                <input class="form-control bg-dark text-light border-dark" [(ngModel)]="FilterTerm" (keyup)="Filter()" placeholder="Username..." type="text">
-                <hr>
-                <table class="table table-dark table-striped"> <!-- [class.shake]="UserChangeError"-->
-                    <thead>
-                        <tr>
-                            <th>Username
-                                <div class="btn-group" role="group">
-                                    <div class="btn-group-vertical">
-                                        <i (click)="Sort=0;Desc=false;Filter();" class="fa fa-sort-asc btn btn-xs text-light pointer p-0 ml-2"></i>
-                                        <i (click)="Sort=0;Desc=true;Filter();" class="fa fa-sort-desc btn btn-xs text-light pointer p-0 ml-2"></i>
-                                    </div>
-                                </div>
-                            </th>
-                            <th>Privileges
-                                <div class="btn-group" role="group">
-                                    <div class="btn-group-vertical">
-                                        <i (click)="Sort=1;Desc=false;Filter();" class="fa fa-sort-asc btn btn-xs text-light pointer p-0 ml-2"></i>
-                                        <i (click)="Sort=1;Desc=true;Filter();" class="fa fa-sort-desc btn btn-xs text-light pointer p-0 ml-2"></i>
-                                    </div>
-                                </div>
-                            </th>
-                            <th>Approved
-                                <div class="btn-group" role="group">
-                                    <div class="btn-group-vertical">
-                                        <i (click)="Sort=2;Desc=false;Filter();" class="fa fa-sort-asc btn btn-xs text-light pointer p-0 ml-2"></i>
-                                        <i (click)="Sort=2;Desc=true;Filter();" class="fa fa-sort-desc btn btn-xs text-light pointer p-0 ml-2"></i>
-                                    </div>
-                                </div>
-                            </th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr *ngFor="let user of FilteredUsers | slice: (page-1) * pageSize : page * pageSize">
-                            <td>{{user.username}}</td>
-                            <td>
-                              <select class="form-control bg-dark border-dark text-light" [(ngModel)]="user.userprivileges" (change)="SetUserPrivileges(user, $event.target.value)">
-                                <ng-container *ngFor="let priv of Privileges | keys; let i = index;">
-                                  <option *ngIf="i >= (Privileges | keys).length / 2" value="{{GetEnumInt(priv)}}">{{priv}}</option>
-                                </ng-container>
-                              </select>
-                            </td>
-                            <td><i *ngIf="user.approved===0" (click)="ApproveUser(user, true)" class="fa fa-lock fa-2x text-danger ml-3 pointer"></i><i *ngIf="user.approved>0" (click)="ApproveUser(user, false)" class="fa fa-unlock fa-2x text-light ml-3 pointer"></i></td>
-                            <td><button (click)="DeleteUserQuestion(user)" class="btn btn-dark text-light"><i class="fa fa-trash-o"></i></button></td> <!-- -->
-                        </tr>
-                    </tbody>
-                </table>
-                <hr>
-                <ngb-pagination
-                [(page)]="page"
-                [pageSize]="pageSize"
-                [collectionSize]="FilteredUsers.length"></ngb-pagination>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-danger font-weight-bold" data-dismiss="modal">Close <i class="fa ml-1 fa-times-circle" aria-hidden="true"></i></button>
-            </div>
-        </div>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content bg-dark">
+      <div class="modal-header">
+        <h4><span class="text-main-color font-weight-bold">Dreck</span>Tube User</h4>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body explain-text">
+        <label>Filter</label>
+        <input class="form-control bg-dark text-light border-dark" [(ngModel)]="FilterTerm" (keyup)="Filter()"
+          placeholder="Username..." type="text">
+        <hr>
+        <table class="table table-dark table-striped">
+          <!-- [class.shake]="UserChangeError"-->
+          <thead>
+            <tr>
+              <th sortable="username" (sort)="onSort($event)">Username</th>
+              <th sortable="userprivileges" (sort)="onSort($event)">Privileges</th>
+              <th sortable="approved" (sort)="onSort($event)">Approved</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let user of FilteredUsers | slice: (page-1) * pageSize : page * pageSize">
+              <td>{{user.username}}</td>
+              <td>
+                <select class="form-control bg-dark border-dark text-light" [(ngModel)]="user.userprivileges"
+                  (change)="SetUserPrivileges(user, $event.target.value)">
+                  <ng-container *ngFor="let priv of Privileges | keys; let i = index;">
+                    <option *ngIf="i >= (Privileges | keys).length / 2" value="{{GetEnumInt(priv)}}">{{priv}}</option>
+                  </ng-container>
+                </select>
+              </td>
+              <td><i *ngIf="user.approved===0" (click)="ApproveUser(user, true)"
+                  class="fa fa-lock fa-2x text-danger ml-3 pointer"></i><i *ngIf="user.approved>0"
+                  (click)="ApproveUser(user, false)" class="fa fa-unlock fa-2x text-light ml-3 pointer"></i></td>
+              <td><button (click)="DeleteUserQuestion(user)" class="btn btn-dark text-light"><i
+                    class="fa fa-trash-o"></i></button></td> <!-- -->
+            </tr>
+          </tbody>
+        </table>
+        <hr>
+        <ngb-pagination [(page)]="page" [pageSize]="pageSize" [collectionSize]="FilteredUsers.length"></ngb-pagination>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-info font-weight-bold mr-auto" data-toggle="modal"
+          data-target="#permissionInfoModal" *ngIf="user.username&&user.userprivileges>3"><i class="fa fa-server mr-1"
+            aria-hidden="true"></i>Permissions</button>
+        <button type="button" class="btn btn-danger font-weight-bold" data-dismiss="modal">Close <i
+            class="fa ml-1 fa-times-circle" aria-hidden="true"></i></button>
+      </div>
     </div>
+  </div>
 </div>
-<app-text-dialog [Id]="'UserAdminQ'" [Question]="DialogQuestion" [AddInput]="false" [Header]="DialogHeader" [Answer1]="YesAnswer" [Answer2]="NoAnswer" (Yes)="DeleteUser()">
+<app-text-dialog [Id]="'UserAdminQ'" [Question]="DialogQuestion" [AddInput]="false" [Header]="DialogHeader"
+  [Answer1]="YesAnswer" [Answer2]="NoAnswer" (Yes)="DeleteUser()">
 </app-text-dialog>

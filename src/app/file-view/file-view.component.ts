@@ -84,6 +84,8 @@ export class FileViewComponent implements OnInit {
     file.fileEnding.toLocaleLowerCase() == ".gif" ||
     file.fileEnding.toLocaleLowerCase() == ".ico" ||
     file.fileEnding.toLocaleLowerCase() == ".icon" ||
+    file.fileEnding.toLocaleLowerCase() == ".bmp" ||
+    file.fileEnding.toLocaleLowerCase() == ".webp" ||
     file.fileEnding.toLocaleLowerCase() == ".png";
   }
 

@@ -36,7 +36,7 @@ import { DownloadManagerComponent } from './download-manager/download-manager.co
 import { FileFolderComponent } from './file-folder/file-folder.component';
 import { FileViewComponent } from './file-view/file-view.component';
 import { MatMenuModule } from '@angular/material/menu';
-import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { BrowserAnimationsModule, NoopAnimationsModule } from '@angular/platform-browser/animations';
 import { BrowserResultModalComponent } from './browser-result-modal/browser-result-modal.component';
 import { MediaComponent } from './media/media.component';
 import { YoutubeComponent } from './media/youtube/youtube.component';
@@ -50,6 +50,9 @@ import { LiveStreamViewComponent } from './live-stream-view/live-stream-view.com
 import { DateLivePipe } from './live-stream-view/date-live-pipe/date-live.pipe';
 import { WebrtcComponent } from './media/webrtc/webrtc.component';
 import { MediaEditorComponent } from './media-editor/media-editor.component';
+import { PermissionViewComponent } from './permission-view/permission-view.component';
+import { FilestorageViewComponent } from './filestorage-view/filestorage-view.component';
+import { NgbdSortableHeader } from './Interfaces/SortableHeader';
 const DragConfig = {
   dragStartThreshold: 0,
   pointerDirectionChangeThreshold: 5,
@@ -95,7 +98,9 @@ const DragConfig = {
     LiveStreamViewComponent,
     DateLivePipe,
     WebrtcComponent,
-    MediaEditorComponent
+    MediaEditorComponent,
+    PermissionViewComponent,
+    FilestorageViewComponent
   ],
   imports: [
     MatMenuModule,
@@ -107,7 +112,9 @@ const DragConfig = {
     CanvasWhiteboardModule,
     NgbModule,
     NgxChessBoardModule.forRoot(),
-    BrowserAnimationsModule
+    BrowserAnimationsModule,
+    NoopAnimationsModule,
+    NgbdSortableHeader
   ],
   providers: [DatePipe,{  provide: CDK_DRAG_CONFIG, useValue: DragConfig }],
   bootstrap: [AppComponent]
