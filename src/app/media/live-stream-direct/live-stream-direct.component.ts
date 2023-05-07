@@ -47,13 +47,17 @@ export class LiveStreamDirectComponent implements OnInit, AfterViewInit {
   }
 
   addSubs() {
+    var timeOut = setTimeout(() => {
+      this.LeaveRoom();
+    }, 2500);
     this.liveChannelSub = this.liveStreamService.liveChannels.subscribe(c => {
-      if (!c || c == null || !this.liveStream || this.liveStream.length==0) {
+      if (!c || c == null) {
         return;
       }
+      clearTimeout(timeOut);
       var idx = c.findIndex(x => x.userName.toLowerCase() == this.liveStream.toLowerCase());
       if (idx == -1) {
-        this.dialogService.PushDefaultDialog(`User '${this.liveStream}' is not streaming`, "User not online", AlertType.Warning);
+        this.LeaveRoom();
         return;
       }
       this.isLive = true;
@@ -62,6 +66,13 @@ export class LiveStreamDirectComponent implements OnInit, AfterViewInit {
       this.playerService.player.next({title: user, url: url});
       this.liveChannelSub.unsubscribe();
     })
+  }
+
+  LeaveRoom() {
+    this.dialogService.PushDefaultDialog(`User '${this.liveStream}' is not streaming`, "User not online", AlertType.Warning);
+    setTimeout(() => {
+      this.Leave();
+    }, 2500);
   }
 
   Leave() {

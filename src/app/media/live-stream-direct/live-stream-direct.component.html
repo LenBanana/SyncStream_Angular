@@ -2,3 +2,4 @@
   <app-mpegts-player *ngIf="isLive" [IsHost]="true"></app-mpegts-player>
 </div>
 <button id="directLeaveBtn" class="btn btn-danger leaveBtn hide" (click)="Leave()"><i class="fa fa-sign-out" aria-hidden="true"></i></button>
+<p *ngIf="!isLive" class="text-center mt-5"><i class="fa fa-circle-o-notch fa-spin fa-4x" aria-hidden="true"></i></p>
