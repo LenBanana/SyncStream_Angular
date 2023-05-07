@@ -1,5 +1,4 @@
 import { AfterViewInit, Component, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
-import Plyr from 'plyr';
 import { Subscription } from 'rxjs';
 import { getCookie } from '../../global.settings';
 import { delay } from '../../helper/generic';
@@ -7,11 +6,9 @@ import { VideoDTO } from '../../Interfaces/VideoDTO';
 import { PlayerService } from '../../player/player-service/player.service';
 import { PlayerType } from '../../player/player.component';
 import { PlaylistService } from '../../playlist/playlist-service/playlist.service';
-import { baseUrl } from '../../services/signal-r.service';
 import { MediaService } from '../media-service/media.service';
 declare var $: any;
 import mpegts from 'mpegts.js';
-import { AlertType, Dialog } from '../../Interfaces/Dialog';
 import { DialogService } from '../../text-dialog/text-dialog-service/dialog-service.service';
 
 @Component({
@@ -22,8 +19,8 @@ import { DialogService } from '../../text-dialog/text-dialog-service/dialog-serv
 export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
 
   constructor(private playlistService: PlaylistService, private playerService: PlayerService, private mediaService: MediaService, private dialogService: DialogService) { }
-  @Input() CurrentPlayerType = PlayerType.Nothing;
-  @Input() IsHost = false;
+  @Input() CurrentPlayerType = PlayerType.Live;
+  @Input() IsHost = true;
   @Input() UniqueId = "";
   @Input() CurrentPing = 0;
   @Input() Threshhold = .5;
@@ -130,6 +127,7 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
     clearTimeout(this.mouseTimeout);
     this.mouseTimeout = setTimeout(() => {
       $('#MpegtsLiveBtn').addClass('hide');
+      $('#directLeaveBtn').addClass('hide');
     }, 2000);
     this.player.off(mpegts.Events.ERROR, e => {});
     this.player.on(mpegts.Events.ERROR, event => {
@@ -137,7 +135,7 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
         return;
       }
       if (event == "NetworkError") {
-        if (!this.IsPlaying || this.errorCount >= this.maxErrorCount) {
+        if ((!this.IsPlaying || this.errorCount >= this.maxErrorCount) && this.UniqueId && this.UniqueId.length > 0) {
           this.playlistService.nextVideo(this.UniqueId);
         }
         else {
@@ -168,8 +166,10 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
     videoElement.addEventListener("mousemove", ready => {
       clearTimeout(this.mouseTimeout);
       $('#MpegtsLiveBtn').removeClass('hide');
+      $('#directLeaveBtn').removeClass('hide');
       this.mouseTimeout = setTimeout(() => {
         $('#MpegtsLiveBtn').addClass('hide');
+        $('#directLeaveBtn').addClass('hide');
       }, 2000);
     })
   }

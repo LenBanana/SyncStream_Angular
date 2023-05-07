@@ -53,6 +53,7 @@ import { MediaEditorComponent } from './media-editor/media-editor.component';
 import { PermissionViewComponent } from './permission-view/permission-view.component';
 import { FilestorageViewComponent } from './filestorage-view/filestorage-view.component';
 import { NgbdSortableHeader } from './Interfaces/SortableHeader';
+import { LiveStreamDirectComponent } from './media/live-stream-direct/live-stream-direct.component';
 const DragConfig = {
   dragStartThreshold: 0,
   pointerDirectionChangeThreshold: 5,
@@ -100,7 +101,8 @@ const DragConfig = {
     WebrtcComponent,
     MediaEditorComponent,
     PermissionViewComponent,
-    FilestorageViewComponent
+    FilestorageViewComponent,
+    LiveStreamDirectComponent
   ],
   imports: [
     MatMenuModule,

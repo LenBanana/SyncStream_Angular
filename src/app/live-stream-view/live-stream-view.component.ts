@@ -54,6 +54,10 @@ export class LiveStreamViewComponent implements OnInit, OnDestroy {
     clearInterval(this.timeInterval);
   }
 
+  JoinLiveView(user: LiveUser) {
+    window.location.href = "/live/" + user.userName;
+  }
+
   AddLiveStream(stream: LiveUser) {
     if (this.UniqueId && this.UniqueId.length > 0) {
       this.playlistService.addVideo({title: stream.userName, url: 'https://live.drecktu.be/live?stream=' + stream.userName.toLowerCase()}, this.UniqueId);

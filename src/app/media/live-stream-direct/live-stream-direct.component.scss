@@ -1,0 +1,10 @@
+.leaveBtn {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  transition: opacity .5s ease;
+}
+
+.hide {
+  opacity: 0;
+}

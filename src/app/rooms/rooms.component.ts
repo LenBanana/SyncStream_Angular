@@ -168,18 +168,18 @@ export class RoomsComponent implements OnInit {
       this.cdRef.detectChanges();
     });
 
-    this.signalRService.room.subscribe(result => {
-      this.rooms = result;
-      this.filterRooms = result;
-      this.Filter();
-      this.cdRef.detectChanges();
-    });
-
     this.signalRService.connectionClosed.subscribe(con => {
       if (con === false) {
         this.roomService.GetRooms();
       }
       this.SignalR = !con;
+    });
+
+    this.signalRService.room.subscribe(result => {
+      this.rooms = result;
+      this.filterRooms = result;
+      this.Filter();
+      this.cdRef.detectChanges();
     });
   }
 
