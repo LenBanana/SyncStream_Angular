@@ -174,6 +174,7 @@ export class YoutubeComponent implements OnInit, OnDestroy, OnChanges, AfterView
         return;
       }
       this.YTPlayer.loadVideoById(this.youtube_parser(vid.url), 0, 'hd1080');
+      this.IsYtReady = true;
     });
   }
 

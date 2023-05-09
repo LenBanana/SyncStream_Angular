@@ -576,7 +576,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
       var videoTitle = videourl.value.includes('vimeo.com') ? 'Vimeo - Video' : '';
       if (videourl.value.includes('youtube') || videourl.value.includes('youtu.be')) {
         try {
-          var videoInfo = await this.playerService.GetYTTitle(videourl.value);
+          var videoInfo = await this.playerService.GetYTInfo(videourl.value);
           videoTitle = videoInfo["title"];
         } catch (error) {
           videoTitle = '';

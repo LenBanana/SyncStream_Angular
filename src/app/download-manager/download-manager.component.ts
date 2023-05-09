@@ -4,10 +4,9 @@ import { AlertType } from '../Interfaces/Dialog';
 import { DownloadFile, DownloadInfo, FileFolder } from '../Interfaces/DownloadInfo';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
 import { ConversionPreset, DownloadManagerService } from './download-manger-service/download-manager.service';
-import { BrowserSettings } from '../Interfaces/BrowserSettings';
+import { BrowserSettings, IsTwitch, IsYt } from '../Interfaces/BrowserSettings';
 import { Subscription } from 'rxjs';
 import { User } from '../Interfaces/User';
-declare var $: any;
 declare var $: any;
 
 @Component({
@@ -52,6 +51,7 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
   ConversionPreset = ConversionPreset;
   CurrentPreset: ConversionPreset = ConversionPreset.SuperFast;
   CurrentYtQuality = 1080;
+  DefaultQualities = [360, 480, 720, 1080];
   YtAudioOnly = false;
   PossibleYtQuality = [];
   LoadingQuality = false;
@@ -76,7 +76,10 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
       if (idx == -1 && finishedIdx == -1) {
         this.progresses.push(p);
       } else {
-        this.progresses[idx] = p;
+        var prog = this.progresses[idx];
+        if (prog.name !== p.name) prog.name = p.name;
+        if (prog.progress !== p.progress) prog.progress = p.progress;
+        if (prog.type !== p.type) prog.type = p.type;
       }
     });
     this.downloadFinished = this.downloadService.downloadFinished.subscribe(f => {
@@ -313,13 +316,16 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
       this.currentDownloads[idx].upload.unsubscribe();
     }
     if (idx > -1) {
-      this.downloadService.CancelM3U8Download(id);
+      this.downloadService.CancelM3U8Download(id.trim());
       this.downloadService.downloadFinished.next(id);
     }
   }
 
+  IsYt() { return IsYt(this.downloadUrl) };
+  IsTwitch() { return IsTwitch(this.downloadUrl) };
+
   DownloadFile() {
-    if (this.IsYt()||this.IsTwitch()) {
+    if (IsYt(this.downloadUrl)||IsTwitch(this.downloadUrl)) {
       this.DownloadYtFile();
       return;
     }
@@ -335,21 +341,13 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
     }
   }
 
-  IsYt() {
-    return (this.downloadUrl.includes('youtube') && (this.downloadUrl.includes("?v=") || this.downloadUrl.includes("/playlist?list="))) || this.downloadUrl.includes('youtu.be');
-  }
-
-  IsTwitch() {
-    return this.downloadUrl.includes('twitch.tv');
-  }
-
   CheckYtQuality() {
-    if (this.IsYt()) {
+    if (IsYt(this.downloadUrl)) {
       this.LoadingQuality = true;
       this.downloadService.GetYtQuality(this.downloadUrl).subscribe(x => {
         if (!x || x.length == 0) {
           this.LoadingQuality = false;
-          this.PossibleYtQuality = [1080];
+          this.PossibleYtQuality = this.DefaultQualities;
           return;
         }
         this.PossibleYtQuality = x;
@@ -357,7 +355,7 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
         if (!this.PossibleYtQuality.includes(this.CurrentYtQuality)) {
           this.CurrentYtQuality = this.PossibleYtQuality[this.PossibleYtQuality.length - 1];
         }
-      }, e => {this.LoadingQuality=false;this.PossibleYtQuality=[1080];this.CurrentYtQuality=1080});
+      }, e => {this.LoadingQuality=false;this.PossibleYtQuality=this.DefaultQualities;this.CurrentYtQuality=1080});
       return;
     }
   }

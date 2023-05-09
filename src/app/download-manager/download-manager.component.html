@@ -104,7 +104,7 @@
           <div *ngFor="let p of progresses; let first = first;" class="progressBadges col-4 col-lg-1 m-0 px-1"
             title="{{p.name}}" [class.ml-1]="!first" [class.ml-3]="first">
             <span
-              [style.background]="'linear-gradient(90deg, #656778 0%, #656778 ' + p.progress + '%, rgba(69, 70, 88, 0.8509803922) ' + p.progress + '%)'"
+              [style.background]="'linear-gradient(90deg, #656778 0%, #656778 ' + p.progress + '%, rgba(69, 70, 88, 0.85) ' + p.progress + '%)'"
               class="badge badge-dark p-2"> <span class="badge">{{p.progress}}%</span>
               {{p.name}}</span>
           </div>

@@ -26,6 +26,15 @@ export class BrowserSettings {
   }
 }
 
+
+export function IsYt(url: string) {
+  return (url.includes('youtube') && (url.includes("?v=") || url.includes("/playlist?list="))) || url.includes('youtu.be');
+}
+
+export function IsTwitch(url: string) {
+  return url.includes('twitch.tv');
+}
+
 export function changeSettings(browserSettings) {
   var settingsJson = JSON.stringify(browserSettings);
   localStorage.setItem(browserSettingName, settingsJson);

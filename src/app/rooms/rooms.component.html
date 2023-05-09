@@ -2,28 +2,24 @@
   [Header]="logoutDialog.header" [Answer1]="logoutDialog.answer1" [Answer2]="logoutDialog.answer2" (Yes)="Logout()">
 </app-text-dialog>
 <app-text-dialog [Id]="chessEndDialog.id" [Question]="chessEndDialog.question" [AddInput]="false"
-  [Header]="chessEndDialog.header" [Answer1]="chessEndDialog.answer1" [Answer2]="chessEndDialog.answer2" (Yes)="resetGame()" (No)="endGame()">
+  [Header]="chessEndDialog.header" [Answer1]="chessEndDialog.answer1" [Answer2]="chessEndDialog.answer2"
+  (Yes)="resetGame()" (No)="endGame()">
 </app-text-dialog>
-<!--<div *ngIf="!SignalR&&logout==undefined" class="username-container text-center mb-2">
-  <span>Please wait until connected to our servers...</span>
-</div>-->
 <div id="RoomView" *ngIf="!currentRoom">
   <div class="header text-center">
     <div class="center-content">
-      <!--<div class="fade-in-start">
-                <div class="header-img right-top">
-                    <img class="contained-img" src="assets/img/bg_right.png" >
-                </div>
-                <div class="header-img left-top">
-                    <img class="contained-img" src="assets/img/bg_left.png" >
-                </div>
-            </div>-->
+      <!--<div class="header-img right-top">
+        <img class="contained-img" src="assets/img/bg_right.png">
+      </div>
+      <div class="header-img left-top">
+        <img class="contained-img spin-180" src="assets/img/bg_right.png">
+      </div>-->
       <span class="globe-icon"><i class="fa fa-globe mr-3" aria-hidden="true"></i></span>
-      <!--<span class="icon-text"><span style="color: #2980b9;">Dreck</span>Tube</span>-->
     </div>
   </div>
   <div class="container">
-    <h1 class="header-lines mt-4"><span class="px-4"><span style="color: #236d9e; font-weight: bold;">Dreck</span>Channel</span></h1>
+    <h1 class="header-lines mt-4"><span class="px-4"><span
+          style="color: #236d9e; font-weight: bold;">Dreck</span>Channel</span></h1>
   </div>
   <div *ngIf="!filterRooms||!SignalR" class="username-container text-center mb-2 mt-5">
     <div class="spinner-border" role="status">
@@ -70,8 +66,9 @@
           <div *ngIf="user.userprivileges>1&&!room.isPrivileged" class="delete-bubble info-bubble hide-btn pointer"
             (click)="room.server.members.length==0 && DeleteRoom(room.uniqueId, room.server.members.length)"><i
               class="fa fa-times"></i></div>
-          <div class="room-card top-corner skew10 pointer room-shadow"
-            (click)="JoinRoom(room.uniqueId, room.server.currenttime)">
+          <div id="room-card-{{room.uniqueId}}" class="room-card top-corner skew10 pointer room-shadow"
+            (click)="Join(room, $event)">
+            <!--[matMenuTriggerFor]="menu" #menuTrigger="matMenuTrigger" (contextmenu)="$event.preventDefault();menuTrigger.openMenu();getEvent()"-->
             <div class="row bottom-corner">
               <div class="col-8 pt-3 counterSkew10">
                 <div class="room-text">
@@ -80,18 +77,9 @@
                   <p style="font-size: .9rem;" class="short-text mt-3" [innerHTML]="room.server.title"
                     [title]="room.server.title"></p>
                 </div>
-                <div class="room-icon counterSkew10"><!--f56262 9146ff-->
-                  <i class="fa-brands fa-youtube" style="color: #232734;" aria-hidden="true"
-                    *ngIf="room.server.playlist.length!=0&&(room.server.playlist.length>0||room.server.currentVideo.title.toLocaleLowerCase().includes('youtube'))&&room.server.currentVideo.url.toLocaleLowerCase().includes('youtube')"></i>
-                  <i class="fa-brands fa-twitch" aria-hidden="true" style="color: #232734;"
-                    *ngIf="room.server.playlist.length>0&&room.server.currentVideo.url.toLocaleLowerCase().includes('twitch')"></i>
-                  <i class="fa-solid fa-dumpster-fire" style="color: #232734;" aria-hidden="true"
-                    *ngIf="room.server.playlist.length==0"></i>
-                  <i class="fa-solid fa-clapperboard" style="color: #232734;" aria-hidden="true"
-                    *ngIf="room.server.playlist.length>0&&!room.server.currentVideo.url.toLocaleLowerCase().includes('twitch')&&!room.server.currentVideo.url.toLocaleLowerCase().includes('youtube')"></i>
-                </div>
+                <ng-container *ngTemplateOutlet="roomIcons; context: { $implicit: room }"></ng-container>
               </div>
-              <div class="col-4 room-info-container rounded shadow-sm" [matMenuTriggerFor]="menu" #menuTrigger="matMenuTrigger">
+              <div class="col-4 room-info-container rounded shadow-sm">
                 <div class="room-playlist-info">
                   <p class="text-center font-weight-bold mt-2 counterSkew10" style="margin: 0;">Playlist</p>
                   <p *ngIf="room.server.playlist==0" style="font-size: 10px;" class="text-center">Nothing here yet</p>
@@ -99,11 +87,11 @@
                     <li *ngFor="let video of room.server.playlist">
                       <i class="fa fa-youtube-play"
                         style="color: #ff4c4c;background-image: radial-gradient(at center, #fff 40%, transparent 40%);"
-                        aria-hidden="true" *ngIf="video.url.toLocaleLowerCase().includes('youtube')"></i>
+                        aria-hidden="true" *ngIf="IsYt(room)"></i>
                       <i class="fa fa-twitch" aria-hidden="true" style="color: #9146ff;"
-                        *ngIf="video.url.toLocaleLowerCase().includes('twitch')"></i>
+                        *ngIf="IsTwitch(room)"></i>
                       <i class="fa fa-play text-light" aria-hidden="true"
-                        *ngIf="!video.url.toLocaleLowerCase().includes('twitch')&&!video.url.toLocaleLowerCase().includes('youtube')"></i>
+                        *ngIf="!IsTwitch(room)&&!IsYt(room)"></i>
                       <span class="PlaylistTitle">
                         <span class="PlaylistTitleText"> {{video.title}}</span>
                       </span>
@@ -141,9 +129,10 @@
 
   <div class="footer">
     <nav class="navbar navbar-expand-lg navbar-dark text-light footer-bg" style="min-height: 40px;">
-    <button class="navbar-toggler" style="position: absolute; top: 5px;" type="button" data-toggle="collapse" data-target="#mainNavBar" aria-controls="mainNavBar" aria-expanded="false" aria-label="Toggle navigation">
-      <i class="fa fa-bars" aria-hidden="true"></i>
-    </button>
+      <button class="navbar-toggler" style="position: absolute; top: 5px;" type="button" data-toggle="collapse"
+        data-target="#mainNavBar" aria-controls="mainNavBar" aria-expanded="false" aria-label="Toggle navigation">
+        <i class="fa fa-bars" aria-hidden="true"></i>
+      </button>
       <div class="collapse navbar-collapse" id="mainNavBar">
         <div class="navbar-nav mx-auto">
           <span class="pointer nav-item nav-link" data-toggle="modal" data-target="#howToModal">How to?</span>
@@ -155,9 +144,10 @@
           <span class="pointer nav-item nav-link text-info" data-toggle="modal" data-target="#userAdminModal"
             *ngIf="user.username&&logout&&user.userprivileges>2">User Administration</span>
           <span class="pointer nav-item nav-link text-info" data-toggle="modal" data-target="#downloadManagerModal"
-              *ngIf="user.username&&logout&&user.userprivileges>2">Download Manager</span>
+            *ngIf="user.username&&logout&&user.userprivileges>2">Download Manager</span>
           <span class="pointer nav-item nav-link text-info" data-toggle="modal" data-target="#liveViewModal"
-              *ngIf="user.username&&logout&&user.userprivileges>0&&LiveUsers&&LiveUsers.length>0">Live Channels ({{LiveUsers.length}})</span>
+            *ngIf="user.username&&logout&&user.userprivileges>0&&LiveUsers&&LiveUsers.length>0">Live Channels
+            ({{LiveUsers.length}})</span>
         </div>
       </div>
     </nav>
@@ -165,21 +155,42 @@
   <app-help-modal (AddRoom)="AddRoom()"></app-help-modal>
   <app-add-room-modal [user]="user" [logout]="logout" (JoinRoom)="JoinRoom($event, 0)"></app-add-room-modal>
   <app-user-admin-modal [user]="user" *ngIf="user.username&&logout&&user.userprivileges>2"></app-user-admin-modal>
-  <app-user-setting-modal *ngIf="user.username&&logout" [User]="user" [BrowserSettings]="browserSettings"></app-user-setting-modal>
+  <app-user-setting-modal *ngIf="user.username&&logout" [User]="user" [BrowserSettings]="browserSettings">
+  </app-user-setting-modal>
   <div style="margin-top: 75px;"></div>
 </div>
 
-<app-download-manager *ngIf="user.username&&logout&&user.userprivileges>2" [User]="user" [browserSettings]="browserSettings" [IsInRoom]="(currentRoom&&currentRoom.length>0)" [UniqueId]="currentRoom"></app-download-manager>
+<app-download-manager *ngIf="user.username&&logout&&user.userprivileges>2" [User]="user"
+  [browserSettings]="browserSettings" [IsInRoom]="(currentRoom&&currentRoom.length>0)" [UniqueId]="currentRoom">
+</app-download-manager>
 <app-text-dialog [Id]="'RoomNotFoundModal'" [Question]="'The room you are looking for does not exist'"
   [AddInput]="false" [Header]="'Room not found'" [Answer1]="'Ok'" (Yes)="refresh()">
 </app-text-dialog>
 <app-login-modal *ngIf="SignalR" (SaveLogin)="SaveLogin($event, false)" [user]="user" [logout]="logout">
 </app-login-modal>
 <!--<span *ngIf="currentRoom&&SignalR&&logout!=undefined" class="badge badge-dreck my-2 block pointer leaveBtn" [class.fade-out]="!inMenu" title="Leave room" (click)="LeaveRoom()"><i class="fa fa-sign-out pointer text-danger" aria-hidden="true"></i></span>-->
-<app-home *ngIf="currentRoom&&SignalR&&logout!=undefined" [UniqueId]="currentRoom" [BrowserSettings]="browserSettings" [currentTime]="currentTime"
-  [Username]="user.username" [Privileges]="user.userprivileges" [DelInterval]="delInterval" [logout]="logout" (goBack)="LeaveRoom()"
-  (IntervalOff)="currentRoom=undefined; currentTime=undefined" (isInMenu)="inMenu=$event"></app-home>
+<app-home *ngIf="currentRoom&&SignalR&&logout!=undefined" [UniqueId]="currentRoom" [BrowserSettings]="browserSettings"
+  [currentTime]="currentTime" [Username]="user.username" [Privileges]="user.userprivileges" [DelInterval]="delInterval"
+  [logout]="logout" (goBack)="LeaveRoom()" (IntervalOff)="currentRoom=undefined; currentTime=undefined"
+  (isInMenu)="inMenu=$event"></app-home>
+<div id="join-animation-placeholder" class="nothing-playing rounded shadow none">
+  <div>
+    <!--<img id="join-animation-img" class="none" src="">-->
+  </div>
+</div>
 <app-live-stream-view [UniqueId]="currentRoom" (Users)="LiveUsers=$event"></app-live-stream-view>
 
 <app-permission-view *ngIf="user.username&&logout&&user.userprivileges>3"></app-permission-view>
 <app-filestorage-view *ngIf="user.username&&logout&&user.userprivileges>3"></app-filestorage-view>
+<ng-template #roomIcons let-room>
+  <div class="room-icon counterSkew10">
+    <i class="fa-brands fa-youtube" style="color: #232734;" aria-hidden="true"
+      *ngIf="room.server.playlist.length!=0&&(room.server.playlist.length>0)&&IsYt(room)"></i>
+    <i class="fa-brands fa-twitch" aria-hidden="true" style="color: #232734;"
+      *ngIf="room.server.playlist.length>0&&IsTwitch(room)"></i>
+    <i class="fa-solid fa-dumpster-fire" style="color: #232734;" aria-hidden="true"
+      *ngIf="room.server.playlist.length==0"></i>
+    <i class="fa-solid fa-clapperboard" style="color: #232734;" aria-hidden="true"
+      *ngIf="room.server.playlist.length>0&&!IsTwitch(room)&&!IsYt(room)"></i>
+  </div>
+</ng-template>

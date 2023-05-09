@@ -10,7 +10,7 @@ import { Room } from '../Interfaces/Room';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
 import { AlertType, Dialog } from '../Interfaces/Dialog';
 import { UserlistService } from '../userlist/userlist-service/userlist.service';
-import { browserSettingName, BrowserSettings, settingsUpdate } from '../Interfaces/BrowserSettings';
+import { browserSettingName, BrowserSettings, IsTwitch, IsYt, settingsUpdate } from '../Interfaces/BrowserSettings';
 import { ChessService } from '../chess-game/chess-service/chess.service';
 import { NgxChessBoardService } from 'ngx-chess-board';
 import { resetToken } from '../global.settings';
@@ -143,25 +143,6 @@ export class RoomsComponent implements OnInit {
     }
   }
 
-  getStyle(room: Room) {
-    const bg = "background: ";
-    if (room.server.playlist.length==0&&!room.server.isplaying&&room.server.currentVideo.title=="Nothing playing") {
-      return bg + "radial-gradient(ellipse at bottom, #565F8F 0%, #262A3F 100%);";
-    }
-    else if (room.server.playlist.length>0&&!room.server.currentVideo.url.toLocaleLowerCase().includes('twitch')&&!room.server.currentVideo.url.toLocaleLowerCase().includes('youtube')) {
-      return bg + "radial-gradient(ellipse at bottom, #7f7fd5 0%, #3434A0 100%);";
-    }
-    else if ((room.server.playlist.length>0||room.server.currentVideo.title.toLocaleLowerCase().includes('youtube'))&&room.server.currentVideo.url.toLocaleLowerCase().includes('youtube')) {
-      return bg + "radial-gradient(ellipse at bottom, #D33B2B 0%, #93291e 100%);";
-    }
-    else if (room.server.playlist.length>0&&room.server.currentVideo.url.toLocaleLowerCase().includes('twitch')) {
-      return bg + "radial-gradient(ellipse at bottom, #811ED8 0%, #3E0F68 100%);";
-    }
-    else {
-      return bg + "radial-gradient(ellipse at bottom, #434A6F 0%, #262A3F 100%);";
-    }
-  }
-
   private async signalR() {
     await this.signalRService.startConnection().finally(() => {
       this.SignalR = true;
@@ -182,6 +163,9 @@ export class RoomsComponent implements OnInit {
       this.cdRef.detectChanges();
     });
   }
+
+  IsYt(room: Room) { return room.server.playlist.length > 0 && IsYt(room.server.playlist[0]?.url) };
+  IsTwitch(room: Room) { return room.server.playlist.length > 0 && IsTwitch(room.server.playlist[0]?.url) };
 
   public Logout() {
     this.user.username = 'Anon' + "#" + randomIntFromInterval(100, 10000);
@@ -220,19 +204,34 @@ export class RoomsComponent implements OnInit {
     this.delInterval = true;
   }
 
-  public JoinRoom(uniqueId: string, time: number) {
-    this.delInterval = false;
+  async Join(room: Room, clickEvent = null) {
+    $('#join-animation-placeholder').css({ background: this.IsYt(room)||this.IsTwitch(room) ? 'black' : 'rgb(17, 19, 26)' });
+    this.JoinRoom(room.uniqueId, room.server.currenttime, clickEvent);
+  }
+
+  public JoinRoom(uniqueId: string, time: number, clickEvent = null) {
+    var x = clickEvent != null ? clickEvent.pageX : '50%';
+    var y = clickEvent != null ? clickEvent.pageY : '50%';
+    $('#join-animation-placeholder').css({ top: y, left: x }).removeClass('none').addClass('join-room');
     this.loc.go('/room/' + uniqueId);
-    this.currentRoom = uniqueId;
-    this.currentTime = time;
-    this.playerService.currentTime.next(time);
+    setTimeout(() => {
+      this.currentRoom = uniqueId;
+      this.currentTime = time;
+      this.delInterval = false;
+      this.playerService.currentTime.next(time);
+      $('#join-animation-placeholder').removeClass('join-room').addClass('none');
+    }, 250);
   }
 
   public LeaveRoom() {
+    $('#join-animation-placeholder').removeClass('none').addClass('leave-room');
     this.userService.removeUser(this.currentRoom);
     this.loc.go('/');
     this.currentRoom = undefined;
     this.delInterval = true;
+    setTimeout(() => {
+      $('#join-animation-placeholder').removeClass('leave-room').addClass('none');
+    }, 250);
   }
 
   refresh(): void {

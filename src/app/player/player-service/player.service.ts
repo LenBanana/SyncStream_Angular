@@ -121,7 +121,7 @@ export class PlayerService {
     hubConnection.invoke('SetTime', time, UniqueId);
   }
 
-  public GetYTTitle(url: string) {
+  public GetYTInfo(url: string) {
     return this.http.get('https://noembed.com/embed?url=' + url).toPromise();
   }
 }

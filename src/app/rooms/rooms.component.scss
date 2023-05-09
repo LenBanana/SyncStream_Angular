@@ -26,6 +26,9 @@
   margin-left: -50%;
   text-align: right;
 }
+.spin-180 {
+  transform: rotateY(180deg);
+}
 
 .header-img {
   height: calc(5vw + 5vh + 2vmin);
@@ -58,6 +61,32 @@
   left: 50%;
 }
 
+.join-room {
+  animation: JoinRoom .275s ease-out;
+  opacity: 1 !important;
+}
+.leave-room {
+  animation: LeaveRoom .275s ease-out;
+  opacity: 1 !important;
+}
+.nothing-playing {
+  text-align: center;
+  display: table;
+  background-color: rgb(17, 19, 26);
+  width: 500px;
+  height: 200px;
+}
+.nothing-playing>div {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden
+}
+.nothing-playing>div>img {
+  flex-shrink: 0;
+  min-width: 70%;
+}
+
 .right-top {
   right: 0;
   top: 0;
@@ -67,7 +96,9 @@
   left: 0;
   top: 0;
 }
-
+.none {
+  display: none;
+}
 .right-bottom {
   right: 0;
   bottom: 0;
@@ -661,5 +692,38 @@ ngb-pagination ::ng-deep ul > li.active > a {
 
   100% {
     background-position: 0% 50%
+  }
+}
+
+@keyframes JoinRoom {
+  from {
+    width: 500px;
+    height: 200px;
+    position: fixed;
+    z-index: 9999;
+  }
+  to {
+    position: fixed;
+    width: 100vw;
+    height: 100vh;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+  }
+}
+@keyframes LeaveRoom {
+  from {
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    z-index: 9999;
+    top: 0;
+    left: 0;
+  }
+  to {
+    width: 500px;
+    height: 200px;
+    position: fixed;
+    z-index: 9999;
   }
 }
