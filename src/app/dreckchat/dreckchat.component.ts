@@ -17,6 +17,7 @@ import { Observable, OperatorFunction } from 'rxjs';
 import { debounceTime, distinctUntilChanged, map } from 'rxjs/operators';
 import { UserlistService } from '../userlist/userlist-service/userlist.service';
 import { Member } from '../Interfaces/Member';
+import { smileys } from '../global.settings';
 declare var $: any;
 
 @Component({
@@ -37,7 +38,7 @@ export class DreckchatComponent implements OnInit, OnDestroy {
   @Output() ChangeToAi = new EventEmitter();
   Messages: ChatMessage[] = [];
   CurrentDate: Date = new Date();
-  smileys: string[] = ('😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 😘 😗 😙 😚 😋 😜 😝 😛 🤑 🤗 🤓 😎 🤡 🤠 😏 😒 😞 😔 😟 😕 🙁 ☹️ 😣 😖 😫 😩 😤 😠 😡 😶 😐 😑 😯 😦 😧 😮 😲 😵 😳 😱 😨 😰 😢 😥 🤤 😭 😓 😪 😴 🙄 🤔 🤥 😬 🤐 🤢 🤮 🤧 😷 🤒 🤕 🤨 🤩 🤯 🧐 🤫 🤪 🤭').split(' ');
+  smileys = smileys;
   showSmileys: boolean = false;
   messages: any;
   message: any;

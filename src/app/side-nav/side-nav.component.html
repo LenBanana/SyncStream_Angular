@@ -1,13 +1,13 @@
 <div *ngIf="!WhiteboardActive&&!BlackjackActive" class="status-box bg-gray-900 rounded"
   [class.fade-out]="nav||fullscreen" (mouseenter)="enterMenu(true)" (mouseleave)="enterMenu(false)">
-  <span class="badge badge-dreck p-2  block pointer text-danger" title="Go back" (click)="refresh()"><i
+  <span [ngStyle]="{'font-size.%': GetFontSize()}" class="badge badge-dreck p-2  block pointer text-danger" title="Go back" (click)="refresh()"><i
       class="fa fa-sign-out " aria-hidden="true"></i><span class="menu-hide menu-msg unselectable"> Exit</span></span>
   <div class="divider-line m-1"></div>
-  <span class="badge badge-dreck p-2  block" [class.pointer]="!IsHost" (click)="!IsHost && SetHost()"
+  <span [ngStyle]="{'font-size.%': GetFontSize()}" class="badge badge-dreck p-2  block" [class.pointer]="!IsHost" (click)="!IsHost && SetHost()"
     [attr.title]="IsHost ? 'Host' : 'Member'"><i class="fa text-warning" [class.fa-star]="IsHost"
       [class.fa-star-o]="!IsHost"></i><span class="menu-hide menu-msg unselectable"><span
         *ngIf="IsHost">Host</span><span *ngIf="!IsHost">Member</span></span></span>
-  <span class="badge badge-dreck p-2  block pointer" title="Adds video from clipboard" (click)="quickPlay()"><i
+  <span [ngStyle]="{'font-size.%': GetFontSize()}" class="badge badge-dreck p-2  block pointer" title="Adds video from clipboard" (click)="quickPlay()"><i
       class="fa fa-plus-circle "></i><span class="menu-hide menu-msg unselectable"> Add</span></span>
 
   <div [class.left-tooltip]="BrowserSettings.layoutSettings.bigSideNav" class="add-video-fade p-3 rounded" [class.fade-out]="!showInput"
@@ -27,9 +27,9 @@
       </div>
     </div>
   </div>
-  <span class="badge badge-dreck p-2  block add-video-btn pointer" title="Open a local file to sync the time with"
+  <span [ngStyle]="{'font-size.%': GetFontSize()}" class="badge badge-dreck p-2  block add-video-btn pointer" title="Open a local file to sync the time with"
     (click)="PlayFile()"><i class="fa fa-file "></i> <span class="menu-hide menu-msg unselectable"> Files</span></span>
-  <span class="badge badge-dreck p-2  block pointer playlist-btn" (click)="TogglePlaylist()">
+  <span [ngStyle]="{'font-size.%': GetFontSize()}" class="badge badge-dreck p-2  block pointer playlist-btn" (click)="TogglePlaylist()">
     <i class="fa fa-video-camera " [class.text-primary]="!isPlaying" [class.text-success]="isPlaying"></i><span
       class="menu-hide menu-msg unselectable"> Playlist</span>
   </span>
@@ -59,9 +59,11 @@
       </div>
     </div>
   </div>
-  <span class="badge badge-dreck p-2  block pointer" title="Skip to next video" (click)="nextVideo()"><i
+  <span [ngStyle]="{'font-size.%': GetFontSize()}" class="badge badge-dreck p-2  block pointer" title="Skip to next video" (click)="nextVideo()"><i
       class="fa fa-forward "></i><span class="menu-hide menu-msg unselectable"> Next</span></span>
-  <span (click)="ToggleMemberlist()" class="badge badge-dreck p-2  block dreck-tooltip Memberlist"> <i
+      <span [ngStyle]="{'font-size.%': GetFontSize()}" class="badge badge-dreck p-2  block pointer" title="Stream" (click)="StartStream()">
+        <i class="fa fa-display"></i><span class="menu-hide menu-msg unselectable"> Stream</span></span>
+  <span (click)="ToggleMemberlist()" [ngStyle]="{'font-size.%': GetFontSize()}" class="badge badge-dreck p-2  block dreck-tooltip Memberlist"> <i
       class="fa fa-users "></i><span class="menu-hide menu-msg unselectable">User</span><span *ngIf="Members&&Members.length>0" class="messages-count font-weight-bold left-user-count">{{Members.length < 99 ? Members.length : '...'}}</span></span>
   <span class="dreck-tooltiptext Memberlist-preview" [class.left-tooltip]="BrowserSettings.layoutSettings.bigSideNav"
     style="z-index: 200; padding: 5px; width: 150px; transition: opacity 0.5s ease; opacity: 1; margin-top: -45px; margin-left: 44px;"
@@ -85,10 +87,10 @@
       </div>
     </div>
   </span>
-  <span class="badge badge-dreck p-2 block pointer" title="Toggles the chat" (click)="toggleTwitchChat()" style="position: relative;"><i
+  <span [ngStyle]="{'font-size.%': GetFontSize()}" class="badge badge-dreck p-2 block pointer" title="Toggles the chat" (click)="toggleTwitchChat()" style="position: relative;"><i
       class="fa fa-comment "></i> <span class="menu-hide menu-msg unselectable"> Chat</span><span *ngIf="Messages&&Messages.length>0" class="messages-count font-weight-bold">{{Messages.length < 99 ? Messages.length : '...'}}</span></span>
-      <span *ngIf="Privileges>0&&LiveUsers&&LiveUsers.length>0" class="badge badge-dreck p-2 block add-video-btn pointer" title="Live Channels" (click)="openLiveChannels()"><i class="fa fa-circle text-danger"></i><span class="menu-hide menu-msg unselectable"> Live</span><span class="messages-count font-weight-bold left-user-count">{{LiveUsers.length < 99 ? LiveUsers.length : '...'}}</span></span>
-  <span *ngIf="Privileges>=3" class="badge badge-dreck p-2 block add-video-btn pointer" title="Download Manager" (click)="openDownloadManager()"><i class="fa fa-tasks"></i><span class="menu-hide menu-msg unselectable"> Files</span></span>
+      <span [ngStyle]="{'font-size.%': GetFontSize()}" *ngIf="Privileges>0&&LiveUsers&&LiveUsers.length>0" class="badge badge-dreck p-2 block add-video-btn pointer" title="Live Channels" (click)="openLiveChannels()"><i class="fa fa-circle text-danger"></i><span class="menu-hide menu-msg unselectable"> Live</span><span class="messages-count font-weight-bold left-user-count">{{LiveUsers.length < 99 ? LiveUsers.length : '...'}}</span></span>
+  <span [ngStyle]="{'font-size.%': GetFontSize()}" *ngIf="Privileges>=3" class="badge badge-dreck p-2 block add-video-btn pointer" title="Download Manager" (click)="openDownloadManager()"><i class="fa fa-tasks"></i><span class="menu-hide menu-msg unselectable"> Files</span></span>
   <div class="divider-line m-1"></div>
-  <span class="badge badge-dreck p-2  block add-video-btn pointer" title="Menu" (click)="showMenu()"><i class="fa" [class.fa-ellipsis-v]="BrowserSettings.layoutSettings.bigSideNav" [class.fa-bars]="!BrowserSettings.layoutSettings.bigSideNav" aria-hidden="true"></i><span class="menu-hide menu-msg unselectable"> Menu</span></span>
+  <span [ngStyle]="{'font-size.%': GetFontSize()}" class="badge badge-dreck p-2  block add-video-btn pointer" title="Menu" (click)="showMenu()"><i class="fa" [class.fa-ellipsis-v]="BrowserSettings.layoutSettings.bigSideNav" [class.fa-bars]="!BrowserSettings.layoutSettings.bigSideNav" aria-hidden="true"></i><span class="menu-hide menu-msg unselectable"> Menu</span></span>
 </div>

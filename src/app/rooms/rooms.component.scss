@@ -62,11 +62,12 @@
 }
 
 .join-room {
-  animation: JoinRoom .275s ease-out;
+  animation: JoinRoomSlide .275s ease-out;
   opacity: 1 !important;
 }
 .leave-room {
-  animation: LeaveRoom .275s ease-out;
+  animation: JoinRoomSlide .275s ease-in;
+  animation-direction: reverse;
   opacity: 1 !important;
 }
 .nothing-playing {
@@ -695,7 +696,7 @@ ngb-pagination ::ng-deep ul > li.active > a {
   }
 }
 
-@keyframes JoinRoom {
+@keyframes JoinRoomZoom {
   from {
     width: 500px;
     height: 200px;
@@ -711,9 +712,9 @@ ngb-pagination ::ng-deep ul > li.active > a {
     z-index: 9999;
   }
 }
-@keyframes LeaveRoom {
+@keyframes JoinRoomSlide {
   from {
-    width: 100vw;
+    width: 0px;
     height: 100vh;
     position: fixed;
     z-index: 9999;
@@ -721,9 +722,11 @@ ngb-pagination ::ng-deep ul > li.active > a {
     left: 0;
   }
   to {
-    width: 500px;
-    height: 200px;
     position: fixed;
+    width: 100vw;
+    height: 100vh;
+    top: 0;
+    left: 0;
     z-index: 9999;
   }
 }

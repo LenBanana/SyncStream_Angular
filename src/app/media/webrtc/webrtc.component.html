@@ -1,13 +1,2 @@
-<button id="startButton" (click)="StartDisplay()">Start</button>
-<fieldset id="options" style="display:none">
-  <legend>Advanced options</legend>
-  <select id="displaySurface">
-    <option value="default" selected>Show default sharing options</option>
-    <option value="browser">Prefer to share a browser tab</option>
-    <option value="window">Prefer to share a window</option>
-    <option value="monitor">Prefer to share an entire screen</option>
-  </select>
-</fieldset>
-<video class="media-player" id="webRtcVideo">
-
-</video>
+<video class="media-player" id="webRtcVideo" controls autoplay playsInline></video>
+<app-media-device-modal></app-media-device-modal>

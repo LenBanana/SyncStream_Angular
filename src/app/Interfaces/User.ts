@@ -9,3 +9,7 @@ export interface User {
     streamToken: string,
     apiKey: string
 }
+
+export interface SharedUser extends User {
+  isShared: boolean
+}

@@ -1,12 +1,16 @@
-import { Component, EventEmitter, Input, OnDestroy, OnInit, Output } from '@angular/core';
-import { Subject, Subscription } from 'rxjs';
-import { VideoDTO } from '../Interfaces/VideoDTO';
-import { PlayerService } from '../player/player-service/player.service';
-import { PlayerType } from '../player/player.component';
-import { PlaylistService } from '../playlist/playlist-service/playlist.service';
-import { PingService } from '../services/pingservice.service';
-import { SignalRService } from '../services/signal-r.service';
-import { MediaService } from './media-service/media.service';
+import {Component, EventEmitter, Input, OnDestroy, OnInit, Output} from '@angular/core';
+import {Subject, Subscription} from 'rxjs';
+import {VideoDTO} from '../Interfaces/VideoDTO';
+import {PlayerService} from '../player/player-service/player.service';
+import {PlayerType} from '../player/player.component';
+import {PlaylistService} from '../playlist/playlist-service/playlist.service';
+import {PingService} from '../services/pingservice.service';
+import {SignalRService} from '../services/signal-r.service';
+import {MediaService} from './media-service/media.service';
+import {delay} from '../helper/generic';
+import {WebrtcService} from "./webrtc/webrtc-service/webrtc.service";
+
+declare var $: any;
 
 @Component({
   selector: 'app-media',
@@ -15,7 +19,15 @@ import { MediaService } from './media-service/media.service';
 })
 export class MediaComponent implements OnInit, OnDestroy {
 
-  constructor(private playerService: PlayerService, private playlistService: PlaylistService, private mediaService: MediaService, private pingService: PingService, private signalrService: SignalRService) { }
+  constructor(private playerService: PlayerService,
+              private playlistService: PlaylistService,
+              private mediaService: MediaService,
+              private pingService: PingService,
+              private signalrService: SignalRService,
+              private webRtcService: WebrtcService
+  ) {
+  }
+
   @Input() UniqueId: string;
   @Input() logout: boolean;
   @Input() Username = "";
@@ -39,7 +51,10 @@ export class MediaComponent implements OnInit, OnDestroy {
   PlayerTimeListener: Subscription;
   PlaylistUpdate: Subscription;
   PingUpdate: Subscription;
+  VideoUpdate: Subscription;
   PingInterval: NodeJS.Timeout;
+  WebRtcStreamStart: Subscription;
+  WebRtcStreamStop: Subscription;
 
   ngOnDestroy() {
     this.PlayerTypeListener.unsubscribe();
@@ -47,6 +62,7 @@ export class MediaComponent implements OnInit, OnDestroy {
     this.PlaylistUpdate.unsubscribe();
     this.PlayerTimeListener.unsubscribe();
     this.PingUpdate.unsubscribe();
+    this.VideoUpdate.unsubscribe();
     clearInterval(this.PingInterval);
   }
 
@@ -54,6 +70,16 @@ export class MediaComponent implements OnInit, OnDestroy {
     this.PingInterval = setInterval(() => {
       this.pingService.GetPing();
     }, 5000);
+    this.WebRtcStreamStart = this.webRtcService.streamStart.subscribe(o => {
+      if (o) {
+        this.CurrentPlayerType = PlayerType.WebRtc;
+      }
+    });
+    this.WebRtcStreamStop = this.webRtcService.streamStop.subscribe(o => {
+      if (o && this.CurrentPlayerType === PlayerType.WebRtc) {
+        this.CurrentPlayerType = PlayerType.Nothing;
+      }
+    });
     this.PingUpdate = this.signalrService.pingStream.subscribe(ping => {
       if (!ping) {
         return;
@@ -68,18 +94,14 @@ export class MediaComponent implements OnInit, OnDestroy {
         this.threshholdChange.emit(this.Threshhold);
       }
     });
-    this.PlayerTypeListener = this.playerService.playerType.subscribe(type => {
+    this.PlayerTypeListener = this.playerService.playerType.subscribe(async type => {
       if (!type || type == null) {
         this.CurrentPlayerType = PlayerType.Nothing;
         this.hideChat.emit(false);
         return;
       }
       this.CurrentPlayerType = type as PlayerType;
-      if (this.CurrentPlayerType == PlayerType.Blackjack) {
-        this.hideChat.emit(true);
-      } else {
-        this.hideChat.emit(false);
-      }
+      this.hideChat.emit(this.CurrentPlayerType === PlayerType.Blackjack);
     });
     this.IsPlayingListener = this.playerService.isplaying.subscribe(play => {
       if (play != null) {
@@ -97,6 +119,15 @@ export class MediaComponent implements OnInit, OnDestroy {
         this.SetTime(t);
       }
     })
+    this.VideoUpdate = this.playerService.player.subscribe(async vid => {
+      if (vid) {
+        $('#playerContainer').addClass('zoom-out');
+        await delay(500)
+        $('#playerContainer').addClass('zoom-in');
+        await delay(150)
+        $('#playerContainer').removeClass('zoom-out').removeClass('zoom-in');
+      }
+    });
   }
 
   nowPlaying(video: VideoDTO) {

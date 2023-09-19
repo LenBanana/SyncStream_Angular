@@ -19,7 +19,8 @@ import { PlayerService } from '../player/player-service/player.service';
 import { LiveUser } from '../Interfaces/liveStream';
 import { MatMenuTrigger } from '@angular/material/menu';
 import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
-declare var $:any
+import { PlayerType } from '../player/player.component';
+declare var $: any
 
 
 @Component({
@@ -72,9 +73,9 @@ export class RoomsComponent implements OnInit {
     public signalRService: SignalRService,
     public roomService: RoomService,
     public dialogService: DialogService,
-    private cdRef:ChangeDetectorRef,
+    private cdRef: ChangeDetectorRef,
     private loc: Location) {
-  this.onResize();
+    this.onResize();
   }
   resetGame() {
     this.ngxChessBoardService.reset();
@@ -116,7 +117,7 @@ export class RoomsComponent implements OnInit {
       await this.signalR();
       var room = params.get('UniqueId');
       this.fetchSettings();
-      if (room&&room.length>0) {
+      if (room && room.length > 0) {
         this.JoinRoom(room, 0);
       }
     });
@@ -124,7 +125,7 @@ export class RoomsComponent implements OnInit {
 
   fetchSettings() {
     var itemBackup = localStorage.getItem(browserSettingName);
-    if (!itemBackup||itemBackup.length == 0) {
+    if (!itemBackup || itemBackup.length == 0) {
       this.browserSettings = new BrowserSettings();
       return;
     }
@@ -136,7 +137,7 @@ export class RoomsComponent implements OnInit {
   }
 
   AddRoom() {
-    if (this.logout==true&&this.user.id>0&&this.user.approved>0) {
+    if (this.logout == true && this.user.id > 0 && this.user.approved > 0) {
       $("#addRoomModal").modal('show');
     } else {
       $("#loginModal").modal('show');
@@ -178,14 +179,14 @@ export class RoomsComponent implements OnInit {
   }
 
   public SaveLogin(user: User, logout: boolean) {
-    if (!user||user.username == null) {
+    if (!user || user.username == null) {
       this.logout = false;
       return;
     }
     if (user && user.approved == 0) {
       $('#registerModal').modal('show');
     }
-    if (user && user.approved>0) {
+    if (user && user.approved > 0) {
       resetToken();
       this.user = user;
       this.logout = true;
@@ -195,7 +196,7 @@ export class RoomsComponent implements OnInit {
       }
       this.cdRef.detectChanges();
     }
-    if (!logout && user.approved>0) {
+    if (!logout && user.approved > 0) {
       this.roomService.GenerateRememberToken(user, navigator.appVersion);
     }
   }
@@ -204,15 +205,13 @@ export class RoomsComponent implements OnInit {
     this.delInterval = true;
   }
 
-  async Join(room: Room, clickEvent = null) {
-    $('#join-animation-placeholder').css({ background: this.IsYt(room)||this.IsTwitch(room) ? 'black' : 'rgb(17, 19, 26)' });
-    this.JoinRoom(room.uniqueId, room.server.currenttime, clickEvent);
+  async Join(room: Room) {
+    $('#join-animation-placeholder').css({ background: this.IsYt(room) || this.IsTwitch(room) ? 'black' : 'rgb(17, 19, 26)' });
+    this.JoinRoom(room.uniqueId, room.server.currenttime);
   }
 
-  public JoinRoom(uniqueId: string, time: number, clickEvent = null) {
-    var x = clickEvent != null ? clickEvent.pageX : '50%';
-    var y = clickEvent != null ? clickEvent.pageY : '50%';
-    $('#join-animation-placeholder').css({ top: y, left: x }).removeClass('none').addClass('join-room');
+  public JoinRoom(uniqueId: string, time: number) {
+    $('#join-animation-placeholder').removeClass('none').addClass('join-room');
     this.loc.go('/room/' + uniqueId);
     setTimeout(() => {
       this.currentRoom = uniqueId;
@@ -229,6 +228,7 @@ export class RoomsComponent implements OnInit {
     this.loc.go('/');
     this.currentRoom = undefined;
     this.delInterval = true;
+    this.playerService.playerType.next(PlayerType.Nothing);
     setTimeout(() => {
       $('#join-animation-placeholder').removeClass('leave-room').addClass('none');
     }, 250);

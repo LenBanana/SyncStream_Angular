@@ -1,14 +1,27 @@
-<div class="transition PlayerWindow vh-big" [class.BlackjackBg]="CurrentPlayerType==PlayerType.Blackjack">
+<div class="transition PlayerWindow vh-big" [class.BlackjackBg]="CurrentPlayerType==PlayerType.Blackjack"
+  [class.bg-black]="CurrentPlayerType!=PlayerType.Nothing">
   <div class="row m-0">
-    <div [class.none]="CurrentPlayerType!=PlayerType.Nothing" class="nothing-playing vh-big">
-      <span><i class="fa fa-pause-circle" aria-hidden="true"></i> Nothing playing</span>
+    <div id="playerContainer" class="vh-big">
+      <app-webrtc  *ngIf="CurrentPlayerType==PlayerType.WebRtc" [UniqueId]="UniqueId"></app-webrtc>
+      <div [class.none]="CurrentPlayerType!=PlayerType.Nothing" class="nothing-playing vh-big">
+        <span><i class="fa fa-pause-circle" aria-hidden="true"></i> Nothing playing</span>
+      </div>
+      <app-mpegts-player *ngIf="CurrentPlayerType==PlayerType.Live" [CurrentPing]="CurrentPing"
+        [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"
+        [Threshhold]="Threshhold"></app-mpegts-player>
+      <app-youtube *ngIf="CurrentPlayerType==PlayerType.YouTube" [CurrentPing]="CurrentPing"
+        [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"
+        [Threshhold]="Threshhold"></app-youtube>
+      <app-videojs-player *ngIf="CurrentPlayerType==PlayerType.External" [CurrentPing]="CurrentPing"
+        [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"
+        [Threshhold]="Threshhold"></app-videojs-player>
+      <app-plyr-player *ngIf="CurrentPlayerType==PlayerType.Vimeo" [CurrentPing]="CurrentPing"
+        [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"
+        [Threshhold]="Threshhold"></app-plyr-player>
+      <app-twitch *ngIf="CurrentPlayerType==PlayerType.Twitch" [CurrentPing]="CurrentPing"
+        [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"
+        [Threshhold]="Threshhold"></app-twitch>
     </div>
-    <app-mpegts-player *ngIf="CurrentPlayerType==PlayerType.Live" [CurrentPing]="CurrentPing" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-mpegts-player>
-    <app-youtube *ngIf="CurrentPlayerType==PlayerType.YouTube" [CurrentPing]="CurrentPing" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-youtube>
-    <app-videojs-player *ngIf="CurrentPlayerType==PlayerType.External" [CurrentPing]="CurrentPing" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-videojs-player>
-    <app-plyr-player *ngIf="CurrentPlayerType==PlayerType.Vimeo" [CurrentPing]="CurrentPing" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-plyr-player>
-    <app-twitch *ngIf="CurrentPlayerType==PlayerType.Twitch" [CurrentPing]="CurrentPing" [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold"></app-twitch>
-
     <div *ngIf="CurrentPlayerType==PlayerType.WhiteBoard" class="CanvasStyle bg-canvas">
       <app-whiteboard [UniqueId]="UniqueId" [IsDrawing]="IsHost" [class.vh-90]="!nav" [GallowWord]="GallowWord">
       </app-whiteboard>
@@ -20,14 +33,16 @@
     <div class="center-content" *ngIf="CurrentPlayerType==PlayerType.Chess">
       <app-chess-game class="center-mid" [UniqueId]="UniqueId" [Username]="Username"></app-chess-game>
     </div>
-  <div *ngIf="Username&&CurrentPlayerType!=PlayerType.Blackjack" class="ChatView col-3 CardBack border-around-nobot rounded-left" [class.hideChat]="!twitchChat">
-    <div class="chat-height">
-      <div class="chat-height ml-1">
-        <app-dreckchat [nav]="false" [logout]="logout" [UniqueId]="UniqueId" [Username]="Username" [WhiteBoard]="false"></app-dreckchat>
+    <div *ngIf="Username&&CurrentPlayerType!=PlayerType.Blackjack"
+      class="ChatView col-3 CardBack border-around-nobot rounded-left" [class.hideChat]="!twitchChat">
+      <div class="chat-height">
+        <div class="chat-height ml-1">
+          <app-dreckchat [nav]="false" [logout]="logout" [UniqueId]="UniqueId" [Username]="Username"
+            [WhiteBoard]="false"></app-dreckchat>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
-<app-playlist [UniqueId]="UniqueId" (nowPlaying)="nowPlaying($event)"
-[ready]="readyEvent.asObservable()" (playlistChange)="playlistChange.emit($event)"></app-playlist>
+  <app-playlist [UniqueId]="UniqueId" (nowPlaying)="nowPlaying($event)" [ready]="readyEvent.asObservable()"
+    (playlistChange)="playlistChange.emit($event)"></app-playlist>

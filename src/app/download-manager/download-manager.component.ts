@@ -49,10 +49,11 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
   currentFolder: FileFolder;
   AlertType = AlertType;
   ConversionPreset = ConversionPreset;
-  CurrentPreset: ConversionPreset = ConversionPreset.SuperFast;
+  CurrentPreset: ConversionPreset = ConversionPreset.Fast;
   CurrentYtQuality = 1080;
   DefaultQualities = [360, 480, 720, 1080];
   YtAudioOnly = false;
+  DownloadSubtitles = false;
   PossibleYtQuality = [];
   LoadingQuality = false;
   finishedIds: string[] = [];
@@ -242,11 +243,14 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
     if (!file || !file.target || !file.target.files) {
       return;
     }
-    var selection = file.target.files[0];
-    if (selection == null) {
+    var selection = file.target.files;
+    if (selection == null || selection.length<1) {
       return;
     }
-    this.FileUpload(selection);
+    for (let i = 0; i < selection.length; i++) {
+      const file = selection[i];
+      this.FileUpload(file);
+    }
   }
 
   CleanUp = false;
@@ -342,7 +346,7 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
   }
 
   CheckYtQuality() {
-    if (IsYt(this.downloadUrl)) {
+    if (this.IsYt()) {
       this.LoadingQuality = true;
       this.downloadService.GetYtQuality(this.downloadUrl).subscribe(x => {
         if (!x || x.length == 0) {
@@ -362,7 +366,7 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
 
   DownloadYtFile() {
     if (this.downloadUrl.length > 0 && this.downloadUrl.startsWith("http") && !this.LoadingQuality) {
-      this.downloadService.DownloadYtFile(this.downloadUrl, this.CurrentYtQuality.toString(), this.YtAudioOnly);
+      this.downloadService.DownloadYtFile(this.downloadUrl, this.CurrentYtQuality.toString(), this.YtAudioOnly, this.DownloadSubtitles);
       this.downloadUrl = "";
       this.PossibleYtQuality = [];
     }

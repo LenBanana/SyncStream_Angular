@@ -6,45 +6,87 @@
         <button type="button" class="close" data-dismiss="modal">&times;</button>
       </div>
       <div class="modal-body explain-text">
-        <label>Filter</label>
-        <input class="form-control bg-dark text-light border-dark" [(ngModel)]="FilterTerm" (keyup)="Filter()"
-          placeholder="Username..." type="text">
+        <!-- Add bootstrap tabs -->
+        <ul class="nav nav-tabs border-0 mb-2">
+          <li class="nav-item mr-1" (click)="CurrentSettings=SettingsMenu.User">
+            <a class="nav-link text-light border-bottom border-dark pointer rounded"
+              [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.User}">User settings</a>
+          </li>
+          <li *ngIf="user.username&&user.userprivileges>3" class="nav-item mr-1"
+            (click)="CurrentSettings=SettingsMenu.Server">
+            <a class="nav-link text-light border-bottom border-dark pointer rounded"
+              [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Server}">Server</a>
+          </li>
+          <li *ngIf="user.username&&user.userprivileges>3" class="nav-item mr-1"
+            (click)="CurrentSettings=SettingsMenu.Dashboard">
+            <a class="nav-link text-light border-bottom border-dark pointer rounded"
+              [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Dashboard}">Dashboard</a>
+          </li>
+        </ul>
         <hr>
-        <table class="table table-dark table-striped">
-          <!-- [class.shake]="UserChangeError"-->
-          <thead>
-            <tr>
-              <th sortable="username" (sort)="onSort($event)">Username</th>
-              <th sortable="userprivileges" (sort)="onSort($event)">Privileges</th>
-              <th sortable="approved" (sort)="onSort($event)">Approved</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let user of FilteredUsers | slice: (page-1) * pageSize : page * pageSize">
-              <td>{{user.username}}</td>
-              <td>
-                <select class="form-control bg-dark border-dark text-light" [(ngModel)]="user.userprivileges"
-                  (change)="SetUserPrivileges(user, $event.target.value)">
-                  <ng-container *ngFor="let priv of Privileges | keys; let i = index;">
-                    <option *ngIf="i >= (Privileges | keys).length / 2" value="{{GetEnumInt(priv)}}">{{priv}}</option>
-                  </ng-container>
-                </select>
-              </td>
-              <td><i *ngIf="user.approved===0" (click)="ApproveUser(user, true)"
-                  class="fa fa-lock fa-2x text-danger ml-3 pointer"></i><i *ngIf="user.approved>0"
-                  (click)="ApproveUser(user, false)" class="fa fa-unlock fa-2x text-light ml-3 pointer"></i></td>
-              <td><button (click)="DeleteUserQuestion(user)" class="btn btn-dark text-light"><i
-                    class="fa fa-trash-o"></i></button></td> <!-- -->
-            </tr>
-          </tbody>
-        </table>
-        <hr>
-        <ngb-pagination [(page)]="page" [pageSize]="pageSize" [collectionSize]="FilteredUsers.length"></ngb-pagination>
+        <div *ngIf="CurrentSettings==SettingsMenu.User">
+          <label>Filter</label>
+          <input class="form-control bg-dark text-light border-dark" [(ngModel)]="FilterTerm" (keyup)="Filter()"
+            placeholder="Username..." type="text">
+          <hr>
+          <table class="table table-dark table-striped">
+            <!-- [class.shake]="UserChangeError"-->
+            <thead>
+              <tr>
+                <th sortable="username" (sort)="onSort($event)">Username</th>
+                <th sortable="userprivileges" (sort)="onSort($event)">Privileges</th>
+                <th sortable="approved" (sort)="onSort($event)">Approved</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let user of FilteredUsers | slice: (page-1) * pageSize : page * pageSize">
+                <td>{{user.username}}</td>
+                <td>
+                  <select class="form-control bg-dark border-dark text-light" [(ngModel)]="user.userprivileges"
+                    (change)="SetUserPrivileges(user, $event.target.value)">
+                    <ng-container *ngFor="let priv of Privileges | keys; let i = index;">
+                      <option *ngIf="i >= (Privileges | keys).length / 2" value="{{GetEnumInt(priv)}}">{{priv}}</option>
+                    </ng-container>
+                  </select>
+                </td>
+                <td><i *ngIf="user.approved===0" (click)="ApproveUser(user, true)"
+                    class="fa fa-lock fa-2x text-danger ml-3 pointer"></i><i *ngIf="user.approved>0"
+                    (click)="ApproveUser(user, false)" class="fa fa-unlock fa-2x text-light ml-3 pointer"></i></td>
+                <td><button (click)="DeleteUserQuestion(user)" class="btn btn-dark text-light"><i
+                      class="fa fa-trash-o"></i></button></td> <!-- -->
+              </tr>
+            </tbody>
+          </table>
+          <hr>
+          <ngb-pagination [(page)]="page" [pageSize]="pageSize"
+            [collectionSize]="FilteredUsers.length"></ngb-pagination>
+        </div>
+        <div *ngIf="CurrentSettings==SettingsMenu.Server&&user.username&&user.userprivileges>3">
+          <label>Public server message</label>
+          <div class="input-group">
+            <input class="form-control bg-dark text-light border-dark" [(ngModel)]="Announcement"
+              (keyup.enter)="MakeAnnouncement()" placeholder="Announcement..." type="text">
+            <div class="input-group-append">
+              <select [(ngModel)]="AnnouncementAlertType"
+                class="form-control px-4 rounded-0 bg-dark text-light border-dark">
+                <option value="0">Success</option>
+                <option value="1">Info</option>
+                <option value="2">Warning</option>
+                <option value="3">Error</option>
+              </select>
+              <button class="btn btn-secondary" (click)="MakeAnnouncement()"><i class="fa fa-bullhorn"></i></button>
+            </div>
+          </div>
+        </div>
+        <div *ngIf="CurrentSettings==SettingsMenu.Dashboard&&user.username&&user.userprivileges>3">
+          <app-server-dashboard></app-server-dashboard>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-info font-weight-bold mr-auto" data-toggle="modal"
-          data-target="#permissionInfoModal" *ngIf="user.username&&user.userprivileges>3"><i class="fa fa-server mr-1"
+          data-target="#permissionInfoModal"
+          *ngIf="user.username&&user.userprivileges>3&&CurrentSettings==SettingsMenu.User"><i class="fa fa-server mr-1"
             aria-hidden="true"></i>Permissions</button>
         <button type="button" class="btn btn-danger font-weight-bold" data-dismiss="modal">Close <i
             class="fa ml-1 fa-times-circle" aria-hidden="true"></i></button>

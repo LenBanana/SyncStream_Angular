@@ -4,7 +4,7 @@ import { Subscription } from 'rxjs';
 import { DownloadManagerService } from '../download-manager/download-manger-service/download-manager.service';
 import { getCookie, userId } from '../global.settings';
 import { DownloadFile, FileFolder } from '../Interfaces/DownloadInfo';
-import { User } from '../Interfaces/User';
+import { SharedUser, User } from '../Interfaces/User';
 import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
 import { UserAdminService } from '../user-admin-modal/user-admin-service/user-admin.service';
 import { BrowserSettings } from '../Interfaces/BrowserSettings';
@@ -31,11 +31,12 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
   @Output() goDeeper = new EventEmitter();
   @ViewChild('menuTrigger') menuTrigger: MatMenuTrigger;
   getFolders: Subscription;
+  getFolderUsers: Subscription;
   userUpdate: Subscription;
   edit = false;
   editName = "";
   Users: User[] = [];
-  FilteredUsers: User[] = [];
+  FilteredUsers: SharedUser[] = [];
 
   ngOnInit(): void {
     this.getFolders = this.downloadService.folders.subscribe(f => {
@@ -48,7 +49,12 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
         return;
       }
       this.Users = users;
-      this.FilteredUsers = users.filter(x => x.userprivileges >= UserPrivileges.Administrator && x.id != userId);
+      this.FilteredUsers = users.filter(x => x.userprivileges >= UserPrivileges.Administrator && x.id != userId).map(x => {
+        return {
+          ...x,
+          isShared: false
+        }
+      });
     });
   }
 
@@ -152,6 +158,20 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
         this.userAdminService.GetUsers(Token, UserID);
       }
     }
+    this.getFolderUsers = this.downloadService.folderShared.subscribe(users => {
+      if (!users) {
+        return;
+      }
+      this.FilteredUsers.forEach(a => {
+        a.isShared = false
+        if (users.some(b => a.id == b.id)) {
+          a.isShared = true;
+        }
+      });
+      this.FilteredUsers.sort((a, b) => a.isShared === b.isShared ? 0 : a.isShared ? 1 : -1);
+      this.getFolderUsers?.unsubscribe();
+    })
+    this.downloadService.GetFolderUsers(this.folder.id);
     $('#chooseUserModal' + this.folder.id).modal('toggle');
   }
 

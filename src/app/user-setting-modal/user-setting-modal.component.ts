@@ -31,6 +31,20 @@ export class UserSettingModalComponent implements OnInit {
     changeSettings(this.BrowserSettings);
   }
 
+  GetFontSize() {
+    let fSize = 90;
+    if (this.BrowserSettings?.layoutSettings?.menuSize) {
+      fSize = this.BrowserSettings.layoutSettings.menuSize;
+    }
+    if (fSize < 50) {
+      fSize = 50;
+    }
+    if (fSize > 150) {
+      fSize = 150;
+    }
+    return fSize;
+  }
+
   Save() {
     if (this.User.password !== this.RepeatPassword || this.Password.length === 0 || this.RepeatPassword.length === 0 || this.User.password.length === 0  || this.User.username.length === 0 ) {
       return;

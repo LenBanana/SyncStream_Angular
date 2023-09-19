@@ -671,7 +671,8 @@ export enum PlayerType {
   Live,
   WhiteBoard,
   Blackjack,
-  Chess
+  Chess,
+  WebRtc
 }
 
 export enum UserUpdate {

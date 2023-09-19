@@ -67,7 +67,7 @@
             (click)="room.server.members.length==0 && DeleteRoom(room.uniqueId, room.server.members.length)"><i
               class="fa fa-times"></i></div>
           <div id="room-card-{{room.uniqueId}}" class="room-card top-corner skew10 pointer room-shadow"
-            (click)="Join(room, $event)">
+            (click)="Join(room)">
             <!--[matMenuTriggerFor]="menu" #menuTrigger="matMenuTrigger" (contextmenu)="$event.preventDefault();menuTrigger.openMenu();getEvent()"-->
             <div class="row bottom-corner">
               <div class="col-8 pt-3 counterSkew10">

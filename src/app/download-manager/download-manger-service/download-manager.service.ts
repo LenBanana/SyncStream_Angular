@@ -6,6 +6,7 @@ import { AlertType } from '../../Interfaces/Dialog';
 import { DownloadFile, DownloadInfo, FileFolder } from '../../Interfaces/DownloadInfo';
 import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
 import { DialogService } from '../../text-dialog/text-dialog-service/dialog-service.service';
+import { User } from '../../Interfaces/User';
 
 @Injectable({
   providedIn: 'root'
@@ -19,6 +20,7 @@ export class DownloadManagerService {
   folders: BehaviorSubject<FileFolder> = new BehaviorSubject(null);
   browserResults: BehaviorSubject<string[]> = new BehaviorSubject(null);
   fileInfo: BehaviorSubject<object> = new BehaviorSubject(null);
+  folderShared: BehaviorSubject<User[]> = new BehaviorSubject(null);
   constructor(private signalRService: SignalRService, private http: HttpClient, private dialogService: DialogService) {
     signalRService.connectionClosed.subscribe(isClosed => {
       if (isClosed===false) {
@@ -27,6 +29,7 @@ export class DownloadManagerService {
         this.addDownloadsListener();
         this.addFolderFileListener();
         this.addBrowserResultListener();
+        this.addgetFolderUsersListener();
         this.addFileInfoResultListener();
         this.addDownloadRemovedListener();
         this.addDownloadProgressListener();
@@ -39,6 +42,7 @@ export class DownloadManagerService {
         this.removeDownloadsListener();
         this.removeFolderFileListener();
         this.removeBrowserResultListener();
+        this.removegetFolderUsersListener();
         this.removeFileInfoResultListener();
         this.removeDownloadRemovedListener();
         this.removeDownloadProgressListener();
@@ -85,9 +89,9 @@ export class DownloadManagerService {
     }
   }
 
-  public DownloadYtFile(url: string, quality: string, audioOnly: boolean) {
+  public DownloadYtFile(url: string, quality: string, audioOnly: boolean, downloadSubtitles: boolean) {
     if (token) {
-      hubConnection.invoke('DownloadYtVideo', token, url, quality, audioOnly);
+      hubConnection.invoke('DownloadYtVideo', token, url, quality, audioOnly, downloadSubtitles);
     }
   }
 
@@ -124,6 +128,12 @@ export class DownloadManagerService {
   public ShareFolder(folderId: number, userId: number) {
     if (token) {
       hubConnection.invoke('ShareFolder', token, folderId, userId);
+    }
+  }
+
+  public GetFolderUsers(folderId: number) {
+    if (token) {
+      hubConnection.invoke('GetFolderUsers', token, folderId);
     }
   }
 
@@ -174,6 +184,18 @@ export class DownloadManagerService {
       hubConnection.invoke('MakeFilePermanent', token, id);
     }
   }
+
+  public addgetFolderUsersListener() {
+    hubConnection.on('getFolderUsers', (data) => {
+      this.folderShared.next(data);
+    });
+  }
+
+  public removegetFolderUsersListener() {
+    hubConnection.off('getFolderUsers', (data) => {
+    });
+  }
+
 
   public addUpdateFolderServerRequestListener() {
     hubConnection.on('updateFolders', (data) => {

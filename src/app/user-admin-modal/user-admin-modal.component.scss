@@ -2,10 +2,23 @@
 .bg-dark {
   background-color: #323342 !important;
 }
-
 .border-dark {
   background-color: #454658d9 !important;
 }
+.bg-secondary {
+  background-color: #5d5e7c !important;
+}
+.btn-secondary {
+  background-color: #5d5e7c !important;
+}
+.badge-dreck {
+  text-align: center;
+  margin-bottom: 0.35rem!important;
+}
+.badge-dreck>.fa {
+  text-align: right;
+}
+
 
 ngb-pagination ::ng-deep ul > li:not(.active) > a {
   background-color: #454658d9 !important;

@@ -1,10 +1,10 @@
-import { Component, OnInit, Input, ViewChild, Output, EventEmitter, OnDestroy, AfterViewInit } from '@angular/core';
+import { Component, OnInit, Input, ViewChild, Output, EventEmitter, OnDestroy, AfterViewInit, OnChanges, SimpleChanges } from '@angular/core';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PlaylistService } from '../playlist/playlist-service/playlist.service';
 import { UserlistService } from '../userlist/userlist-service/userlist.service';
 import { VideoDTO } from '../Interfaces/VideoDTO';
 import { Member } from '../Interfaces/Member';
-import { PlayerComponent } from '../player/player.component';
+import {PlayerComponent, PlayerType} from '../player/player.component';
 import { Location } from '@angular/common';
 import { PlayerService } from '../player/player-service/player.service';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
@@ -15,6 +15,7 @@ import { ChatMessage } from '../Interfaces/Chatmessage';
 import { Subscription } from 'rxjs';
 import { LiveStreamService } from '../live-stream-view/live-stream-service/live-stream.service';
 import { LiveUser } from '../Interfaces/liveStream';
+import {WebrtcService} from "../media/webrtc/webrtc-service/webrtc.service";
 declare var $: any;
 
 @Component({
@@ -24,7 +25,15 @@ declare var $: any;
 })
 export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
 
-  constructor(public chatService: DreckchatService, private liveStreamService: LiveStreamService, private playlistService: PlaylistService, private playerService: PlayerService, private userService: UserlistService, private location: Location, private dialogService: DialogService) { }
+  constructor(public chatService: DreckchatService,
+              private liveStreamService: LiveStreamService,
+              private playlistService: PlaylistService,
+              private playerService: PlayerService,
+              private userService: UserlistService,
+              private location: Location,
+              private dialogService: DialogService,
+              private webRtcService: WebrtcService
+  ) { }
 
   @Input() logout: boolean;
   @Input() nav: boolean;
@@ -99,8 +108,22 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
     document.addEventListener('paste', this.pasteFn);
   }
 
+  GetFontSize() {
+    let fSize = 90;
+    if (this.BrowserSettings?.layoutSettings?.menuSize) {
+      fSize = this.BrowserSettings.layoutSettings.menuSize;
+    }
+    if (fSize < 50) {
+      fSize = 50;
+    }
+    if (fSize > 150) {
+      fSize = 150;
+    }
+    return fSize;
+  }
+
   ngOnInit(): void {
-    if (this.BrowserSettings.layoutSettings.bigSideNav) {
+    if (this.BrowserSettings?.layoutSettings?.bigSideNav) {
       setTimeout(() => {
         $('.menu-msg').toggleClass('menu-hide');
         $('.menu-msg').toggleClass('menu-show');
@@ -176,6 +199,12 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
     this.playFile.unsubscribe();
     this.liveChannelSub.unsubscribe();
     document.removeEventListener('paste', this.pasteFn);
+  }
+  StartStream() {
+    this.playerService.playerType.next(PlayerType.WebRtc);
+    setTimeout(() => {
+      this.webRtcService.startStream.next(this.UniqueId);
+    }, 25);
   }
 
   refresh(): void {

@@ -6,9 +6,11 @@ export var settingsUpdate: BehaviorSubject<boolean> = new BehaviorSubject(null);
 export class LayoutSettings {
   showCountInfo: boolean;
   bigSideNav: boolean;
+  menuSize: number;
   constructor() {
     this.showCountInfo = true;
     this.bigSideNav = false;
+    this.menuSize = 90;
   }
 }
 

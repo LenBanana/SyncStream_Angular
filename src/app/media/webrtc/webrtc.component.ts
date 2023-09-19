@@ -1,6 +1,11 @@
-import { AfterViewInit, Component, OnInit } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
-import { hubConnection } from '../../services/signal-r.service';
+import {AfterViewInit, Component, Input, OnDestroy, OnInit} from '@angular/core';
+import {BehaviorSubject, Subscription} from 'rxjs';
+import {WebRtcClientOffer, WebrtcService} from './webrtc-service/webrtc.service';
+import {PlayerType} from "../../player/player.component";
+import {MediaDeviceService} from "./media-device-modal/media-device-service/media-device.service";
+
+declare var $: any;
+
 declare var adapter: any;
 
 @Component({
@@ -8,84 +13,175 @@ declare var adapter: any;
   templateUrl: './webrtc.component.html',
   styleUrls: ['./webrtc.component.scss']
 })
-export class WebrtcComponent implements OnInit, AfterViewInit {
+export class WebrtcComponent implements OnInit, AfterViewInit, OnDestroy {
 
-  constructor() { }
-  localStream: BehaviorSubject<MediaStream> = new BehaviorSubject(null);
+  configuration: RTCConfiguration = {
+    iceServers: [
+      {
+        urls: "stun:stun.relay.metered.ca:80",
+      },
+      {
+        urls: "turn:a.relay.metered.ca:443",
+        username: "e9741a368572eb0d70ed9c24",
+        credential: "42FqG9SKYwaiW1UZ",
+      }
+    ]
+  };
+  peerConnections: Map<string, RTCPeerConnection> = new Map();
+  peerConnection = new RTCPeerConnection(this.configuration);
+
+  constructor(private webRtcService: WebrtcService,
+              private mediaDeviceService: MediaDeviceService
+  ) {
+  }
+
+  @Input() UniqueId: string;
   remoteStreams: BehaviorSubject<Map<string, MediaStream>> = new BehaviorSubject(new Map());
-
-  preferredDisplaySurface;
-  startButton;
+  newStream: Subscription;
+  newCandidates: Subscription;
+  newViewer: Subscription;
+  newAnswer: Subscription;
+  newOffer: Subscription;
+  stopStream: Subscription;
+  startStream: Subscription;
 
   ngOnInit(): void {
-    hubConnection.on('ReceiveSignal', this.onReceiveSignal.bind(this));
+    this.startStream = this.webRtcService.startStream.subscribe(o => {
+      if (o) {
+        this.StartDisplay();
+      }
+    });
   }
 
-  private onReceiveSignal(fromConnectionId: string, signal: RTCSessionDescriptionInit | RTCIceCandidate): void {
-    // Handle incoming WebRTC signaling here
+  ngOnDestroy(): void {
+    this.newStream.unsubscribe();
+    this.newCandidates.unsubscribe();
+    this.newViewer.unsubscribe();
+    this.newAnswer.unsubscribe();
+    this.newOffer.unsubscribe();
+    this.stopStream.unsubscribe();
+    this.startStream.unsubscribe();
   }
 
-  async startLocalStream(videoConstraints: MediaTrackConstraints = { width: 1280, height: 720 }): Promise<void> {
-    const mediaStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: true });
-    this.localStream.next(mediaStream);
-  }
-
-  async createOffer(peerConnection: RTCPeerConnection, targetConnectionId: string): Promise<void> {
+  async createOffer(peerConnection: RTCPeerConnection): Promise<void> {
     const offer = await peerConnection.createOffer();
     await peerConnection.setLocalDescription(offer);
-
-    hubConnection.send('SendSignal', targetConnectionId, offer);
   }
 
-    ngAfterViewInit(): void {
-      this.preferredDisplaySurface = document.getElementById('displaySurface') as HTMLSelectElement;
-      this.startButton = document.getElementById('startButton') as HTMLButtonElement;
-      if (adapter.browserDetails.browser === 'chrome' &&
-          adapter.browserDetails.version >= 107) {
-        document.getElementById('options').style.display = 'block';
-      } else if (adapter.browserDetails.browser === 'firefox') {
-        adapter.browserShim.shimGetDisplayMedia(window, 'screen');
+  ngAfterViewInit(): void {
+    this.newStream = this.webRtcService.streamStart.subscribe(o => {
+      if (o) {
+        this.webRtcService.JoinWebRtcStream(this.UniqueId);
       }
-    }
-
-    StartDisplay() {
-      const options = {audio: true, video: true};
-      const displaySurface = this.preferredDisplaySurface.options[this.preferredDisplaySurface.selectedIndex].value;
-      if (displaySurface !== 'default') {
-        //options.video = {displaySurface};
+    })
+    this.newViewer = this.webRtcService.joinStream.subscribe(o => {
+      if (o) {
+        const video = document.querySelector('#webRtcVideo') as HTMLVideoElement;
+        this.createIce(o, video.srcObject as MediaStream);
       }
-      navigator.mediaDevices.getDisplayMedia(options)
-          .then(() => this.handleSuccess, (e) => {alert(`getDisplayMedia error: ${e}`)});
+    });
+    this.newCandidates = this.webRtcService.streamCandidates.subscribe(c => {
+      if (c && c.candidate) {
+        if (c.viewerId) {
+          const pc = this.peerConnections.get(c.viewerId);
+          if (!pc) return;
+          pc.addIceCandidate(new RTCIceCandidate(c))
+          return;
+        }
+        this.peerConnection.addIceCandidate(new RTCIceCandidate(c));
+      }
+    });
+    this.newAnswer = this.webRtcService.streamAnswers.subscribe(async a => {
+      if (a && a.sdp) {
+        const pc = this.peerConnections.get(a.viewerId);
+        if (!pc || pc.signalingState == "stable") return;
+        await pc.setRemoteDescription(new RTCSessionDescription({sdp: a.sdp, type: a.type as RTCSdpType}));
+        pc.onicecandidate = (c) => {
+          if (c.candidate) {
+            this.webRtcService.SendIceCandidateToViewer(c.candidate, a.viewerId);
+          }
+        };
+      }
+    });
+    this.newOffer = this.webRtcService.streamOffer.subscribe(async o => {
+      if (o && o.sdp) {
+        await this.onReceiveSignal(o);
+      }
+    });
+    this.stopStream = this.webRtcService.streamStop.subscribe(o => {
+      if (o) {
+        this.peerConnection.close();
+      }
+    });
+    if (adapter.browserDetails.browser === 'chrome' &&
+      adapter.browserDetails.version >= 107) {
+    } else if (adapter.browserDetails.browser === 'firefox') {
+      adapter.browserShim.shimGetDisplayMedia(window, 'screen');
     }
+  }
 
-    handleSuccess(stream) {
+  StartDisplay() {
+    this.mediaDeviceService.getDevice()
+      .then((e) => this.handleSuccess(e), (e) => {
+        alert(`getDisplayMedia error: ${e}`)
+      });
+  }
+
+  handleSuccess(stream) {
+    this.webRtcService.StartWebRtcStream(this.UniqueId);
+    const video = document.querySelector('#webRtcVideo') as HTMLVideoElement;
+    video.srcObject = stream;
+    stream.getVideoTracks()[0].addEventListener('ended', () => {
+      this.webRtcService.StopWebRtcStream(this.UniqueId);
+      this.peerConnections.forEach((pc) => {
+        pc.close();
+      });
+      this.peerConnections.clear();
+    });
+  }
+
+  async createIce(viewerId: string, stream: MediaStream) {
+    try {
+      const peerConnection = new RTCPeerConnection(this.configuration);
+      this.peerConnections.set(viewerId, peerConnection);
       const video = document.querySelector('#webRtcVideo') as HTMLVideoElement;
       video.srcObject = stream;
-      this.createIce(stream);
-      stream.getVideoTracks()[0].addEventListener('ended', () => {
-        alert('The user has ended sharing the screen');
-      });
-    }
-
-    async createIce(stream) {
-      try {
-        var config = {
-        }
-        const offerOptions: RTCOfferOptions = {offerToReceiveAudio: true, offerToReceiveVideo: true};
-        var pc = new RTCPeerConnection(config);
-        pc.onicecandidate = (c) => {console.log(c)};
-        pc.onicegatheringstatechange = (c) => {console.log(c)};
-        pc.onicecandidateerror = (c) => {console.log(c)};
-        if (stream) {
-          stream.getTracks().forEach(track => pc.addTrack(track, stream));
-        }
-        var desc = await pc.createOffer(offerOptions);
-        console.log("----------------")
-        console.log(desc);
-      } catch (err) {
-        alert(`Error creating offer: ${err}`);
-        return;
+      if (stream) {
+        stream.getTracks().forEach(track => {
+          peerConnection.addTrack(track, stream);
+        });
       }
+      const offerOptions: RTCOfferOptions = {offerToReceiveAudio: true, offerToReceiveVideo: true};
+      var desc = await peerConnection.createOffer(offerOptions);
+      let offer: WebRtcClientOffer = {sdp: desc.sdp, type: desc.type.toString(), viewerId: null};
+      await peerConnection.setLocalDescription(desc);
+      this.webRtcService.SendOfferToViewer(offer, viewerId);
+    } catch (err) {
+      alert(`Error creating offer: ${err}`);
+      return;
     }
+  }
 
+  async onReceiveSignal(signal: WebRtcClientOffer): Promise<void> {
+    if (signal.type === 'answer') {
+    } else if (signal.type === 'offer') {
+      this.peerConnection = new RTCPeerConnection(this.configuration);
+      this.peerConnection.onicecandidate = c => {
+        if (c.candidate) {
+          this.webRtcService.SendIceCandidate(c.candidate, this.UniqueId);
+        }
+      };
+      const video = document.querySelector('#webRtcVideo') as HTMLVideoElement;
+      this.peerConnection.ontrack = event => {
+        video.srcObject = event.streams[0];
+      };
+      this.peerConnection.setRemoteDescription(new RTCSessionDescription({type: signal.type, sdp: signal.sdp}));
+      const desc = await this.peerConnection.createAnswer();
+      this.peerConnection.setLocalDescription(desc);
+      let offer: WebRtcClientOffer = {sdp: desc.sdp, type: desc.type.toString(), viewerId: null};
+      this.webRtcService.CreateStreamAnswer(offer, this.UniqueId);
+    }
+  }
+
+  protected readonly PlayerType = PlayerType;
 }

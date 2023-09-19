@@ -4,6 +4,8 @@ import { BehaviorSubject, from } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { User } from '../../Interfaces/User';
 import { RememberToken } from '../../Interfaces/RememberToken';
+import { AlertType } from '../../Interfaces/Dialog';
+import { ServerHealth } from '../../Interfaces/ServerHealth';
 
 @Injectable({
   providedIn: 'root'
@@ -11,19 +13,26 @@ import { RememberToken } from '../../Interfaces/RememberToken';
 export class UserAdminService {
 
   Users: BehaviorSubject<User[]> = new BehaviorSubject(null);
+  ServerHealth: BehaviorSubject<ServerHealth> = new BehaviorSubject(null);
   constructor(private http: HttpClient, private signalRService: SignalRService) {
     signalRService.connectionClosed.subscribe(isClosed => {
       if (isClosed===false) {
         this.addUserListener();
+        this.addServerHealthListener();
       }
       if (isClosed===true) {
         this.removeUserListener();
+        this.removeServerHealthListener();
       }
     });
    }
 
   public NullAllSubs() {
     this.Users.next(null);
+  }
+
+  public PublicAnnouncement(token: string, message: string, alertType: AlertType) {
+    hubConnection.invoke('PublicAnnouncement', token, message, alertType);
   }
 
   public GetUsers(token: string, userID: number) {
@@ -50,6 +59,17 @@ export class UserAdminService {
 
   public removeUserListener() {
     hubConnection.off('getusers');
+    this.Users.next(null);
+  }
+
+  public addServerHealthListener() {
+    hubConnection.on('serverHealth', (data: ServerHealth) => {
+      this.ServerHealth.next(data);
+    });
+  }
+
+  public removeServerHealthListener() {
+    hubConnection.off('serverHealth');
     this.Users.next(null);
   }
 }

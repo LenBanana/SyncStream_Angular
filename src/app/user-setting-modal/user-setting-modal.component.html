@@ -47,6 +47,8 @@
                       <input [(ngModel)]="BrowserSettings.layoutSettings.bigSideNav" type="checkbox" class="custom-control-input" id="sideNavCheck" (change)="changeSettings()">
                       <label class="custom-control-label" for="sideNavCheck">Show room sidemenu text</label>
                     </div>
+                    <label class="mt-2" for="audioVolumeCtrl">Menu size - {{BrowserSettings.layoutSettings.menuSize ? BrowserSettings.layoutSettings.menuSize : 90}}% - <span class="badge badge-dreck bg-secondary"><i class="fa fa-key" [ngStyle]="{'font-size.%': GetFontSize()}"></i></span></label>
+                    <input type="range" [(ngModel)]="BrowserSettings.layoutSettings.menuSize" (change)="changeSettings()" class="form-control-range" id="menuSizeCtrl" value="90" max="150" min="70" style="max-width: 33%;">
                     <div class="mt-3" *ngIf="User.userprivileges>=UserPrivileges.Administrator">
                       <h3 class="pt-3">Download Manager</h3>
                       <label for="audioVolumeCtrl">Audio volume - {{BrowserSettings.generalSettings.audioVolume}}%</label>

@@ -20,7 +20,7 @@
                   type="text" class="form-control rounded-0 bg-dark text-light border-dark" placeholder="Name...">
                 <select *ngIf="!IsYt()&&!IsTwitch()" [(ngModel)]="CurrentPreset"
                   class="form-control px-4 rounded-0 bg-dark text-light border-dark">
-                  <option value="0">Very Slow</option>
+                  <!--<option value="0">Very Slow</option>
                   <option value="1">Slower</option>
                   <option value="2">Slow</option>
                   <option value="3">Medium</option>
@@ -28,8 +28,15 @@
                   <option value="5">Faster</option>
                   <option value="6">Very Fast</option>
                   <option value="7">Super Fast</option>
-                  <option value="8">Ultra Fast</option>
+                  <option value="8">Ultra Fast</option>-->
+                  <option value="4">4 Threads</option>
+                  <option value="8">8 Threads (small files)</option>
                 </select>
+                <button class="btn btn-dark"
+                  (click)="DownloadSubtitles=!DownloadSubtitles">
+                  <i class="fa" [class.fa-commenting]="DownloadSubtitles" [class.fa-commenting-o]="!DownloadSubtitles"
+                    [title]="DownloadSubtitles ? 'Embed Subtitles' : 'Exclude Subtitles'"></i>
+                </button>
                 <select *ngIf="PossibleYtQuality.length>0&&!LoadingQuality&&(IsYt()||IsTwitch())&&!YtAudioOnly"
                   [(ngModel)]="CurrentYtQuality" class="form-control px-4 rounded-0 bg-dark text-light border-dark">
                   <option *ngFor="let quality of PossibleYtQuality" value="{{quality}}">{{quality}}p</option>
@@ -51,7 +58,7 @@
                     aria-hidden="true"></i></button>
               </div>
             </div>
-            <input type="file" id="fileSelect" style="display: none;" (change)="FileSelected($event)"
+            <input type="file" multiple id="fileSelect" style="display: none;" (change)="FileSelected($event)"
               accept="image/*,video/*" #fileSelect />
           </div>
           <div class="border-dark col-12 mb-3 mr-4" style="height: 1px;"></div>
@@ -124,7 +131,8 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-info font-weight-bold mr-auto" data-toggle="modal"
-          data-target="#storageInfoModal" *ngIf="User.username&&User.userprivileges>3"><i class="fa fa-hdd-o mr-1" aria-hidden="true"></i>Storage</button>
+          data-target="#storageInfoModal" *ngIf="User.username&&User.userprivileges>3"><i class="fa fa-hdd-o mr-1"
+            aria-hidden="true"></i>Storage</button>
         <button type="button" class="btn btn-danger font-weight-bold" data-dismiss="modal">Close <i
             class="fa ml-1 fa-times-circle" aria-hidden="true"></i></button>
       </div>

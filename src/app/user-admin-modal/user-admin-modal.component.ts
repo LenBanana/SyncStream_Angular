@@ -4,6 +4,7 @@ import { User } from '../Interfaces/User';
 import { SignalRService } from '../services/signal-r.service';
 import { UserAdminService } from './user-admin-service/user-admin.service';
 import { NgbdSortableHeader, SortEvent, compare } from '../Interfaces/SortableHeader';
+import { AlertType } from '../Interfaces/Dialog';
 declare var $:any
 
 @Component({
@@ -15,6 +16,9 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
 
   constructor(public userAdminService: UserAdminService, public signalRService: SignalRService) { }
   @Input() user: User;
+  CurrentSettings: AdminSettingsMenu = AdminSettingsMenu.User;
+  AnnouncementAlertType = AlertType.Info;
+  SettingsMenu = AdminSettingsMenu;
   Users: User[] = [];
   FilteredUsers: User[] = [];
   DialogQuestion: string;
@@ -26,6 +30,7 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
   page = 1;
   pageSize = 5;
   FilterTerm = "";
+  Announcement = "";
   userUpdate;
   tokenUpdate;
   loginUpdate;
@@ -88,6 +93,12 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
 		}
 	}
 
+  MakeAnnouncement() {
+    if (this.Announcement.length > 5) {
+      this.userAdminService.PublicAnnouncement(token, this.Announcement, this.AnnouncementAlertType);
+    }
+  }
+
   DeleteUser() {
     this.userAdminService.DeleteUser(token, userId, this.LastSelectedUser.id);
   }
@@ -116,6 +127,12 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
     this.NoAnswer = "No";
     $('#dialogModal-UserAdminQ').modal('show');
   }
+}
+
+export enum AdminSettingsMenu {
+  User,
+  Server,
+  Dashboard
 }
 
 export enum UserPrivileges

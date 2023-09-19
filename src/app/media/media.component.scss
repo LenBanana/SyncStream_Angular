@@ -2,6 +2,12 @@
   height: 100vh;
   width: 100%;
 }
+.zoom-out {
+  animation: ZoomOut .25s ease-out forwards;
+}
+.zoom-in {
+  animation: ZoomIn .25s ease-in forwards;
+}
 .BlackjackBg {
   background-image: url(/assets/img/bg_green.jpg);
 }
@@ -64,7 +70,9 @@
 .hideChat {
   right: -25%;
 }
-
+.bg-black {
+  background: #000000;
+}
 .chat-height {
   height: 50vh;
 }
@@ -75,4 +83,22 @@
   text-align: center;
   border: 1px solid #4d5678;
   border-right: 0;
+}
+
+
+@keyframes ZoomIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes ZoomOut {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
 }
