@@ -1,13 +1,14 @@
-import { Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
-import { MatMenuTrigger } from '@angular/material/menu';
-import { Subscription } from 'rxjs';
-import { DownloadManagerService } from '../download-manager/download-manger-service/download-manager.service';
-import { getCookie, userId } from '../global.settings';
-import { DownloadFile, FileFolder } from '../Interfaces/DownloadInfo';
-import { SharedUser, User } from '../Interfaces/User';
-import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
-import { UserAdminService } from '../user-admin-modal/user-admin-service/user-admin.service';
-import { BrowserSettings } from '../Interfaces/BrowserSettings';
+import {Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, ViewChild} from '@angular/core';
+import {MatMenuTrigger} from '@angular/material/menu';
+import {Subscription} from 'rxjs';
+import {DownloadManagerService} from '../download-manager/download-manger-service/download-manager.service';
+import {getCookie, getRandomColor, userId} from '../global.settings';
+import {DownloadFile, FileFolder} from '../Interfaces/DownloadInfo';
+import {SharedUser, User} from '../Interfaces/User';
+import {UserPrivileges} from '../user-admin-modal/user-admin-modal.component';
+import {UserAdminService} from '../user-admin-modal/user-admin-service/user-admin.service';
+import {BrowserSettings} from '../Interfaces/BrowserSettings';
+
 declare var $: any;
 
 @Component({
@@ -17,7 +18,9 @@ declare var $: any;
 })
 export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
 
-  constructor(private downloadService: DownloadManagerService, private userAdminService: UserAdminService) { }
+  constructor(private downloadService: DownloadManagerService, private userAdminService: UserAdminService) {
+  }
+
   @Input() filterFiles: DownloadFile[];
   @Input() folder: FileFolder;
   @Input() currentFolder: FileFolder;
@@ -37,10 +40,14 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
   editName = "";
   Users: User[] = [];
   FilteredUsers: SharedUser[] = [];
+  paginatedUsers: SharedUser[] = [];
+  searchTerm: string = '';
+  currentSharePage: number = 1;
+  sharePageSize: number = 12;
 
   ngOnInit(): void {
     this.getFolders = this.downloadService.folders.subscribe(f => {
-      if (f && f != null && f.id == this.folder.id) {
+      if (f && f.id == this.folder.id) {
         this.folder = f;
       }
     });
@@ -52,10 +59,24 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
       this.FilteredUsers = users.filter(x => x.userprivileges >= UserPrivileges.Administrator && x.id != userId).map(x => {
         return {
           ...x,
-          isShared: false
+          isShared: false,
+          randomColor: getRandomColor(x.username)
         }
       });
     });
+  }
+
+  searchUsers() {
+    this.FilteredUsers = this.Users.filter(x => x.userprivileges >= UserPrivileges.Administrator && x.id != userId).map(x => {
+      return {
+        ...x,
+        isShared: false,
+        randomColor: getRandomColor(x.username)
+      }
+    });
+    if (this.searchTerm) {
+      this.FilteredUsers = this.FilteredUsers.filter(user => user.username.toLowerCase().includes(this.searchTerm.toLowerCase()));
+    }
   }
 
   getUserId() {
@@ -68,7 +89,7 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   ngOnChanges() {
-    if (this.folder&&this.folder.children) {
+    if (this.folder && this.folder.children) {
       this.folder.children.sort((a, b) => {
         return a.name.localeCompare(b.name, undefined, {
           numeric: true,
@@ -77,7 +98,6 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
       })
     }
   }
-
   GoDeeper(folder: FileFolder) {
     if (folder.id != this.currentFolder.id) {
       this.downloadService.GetFolderFiles(folder.id);
@@ -123,7 +143,7 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   ToggleEdit() {
-    this.edit=!this.edit;
+    this.edit = !this.edit;
     if (this.edit) {
       this.editName = this.folder.name;
       setTimeout(() => {
@@ -135,7 +155,7 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
 
   ChangeName() {
     this.ToggleEdit();
-    if (this.folder.name.length==0||this.folder.name==this.editName) {
+    if (this.folder.name.length == 0 || this.folder.name == this.editName) {
       this.folder.name = this.editName;
       return;
     }
@@ -163,12 +183,12 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
         return;
       }
       this.FilteredUsers.forEach(a => {
-        a.isShared = false
-        if (users.some(b => a.id == b.id)) {
-          a.isShared = true;
-        }
+        a.isShared = users.some(b => a.id == b.id);
       });
-      this.FilteredUsers.sort((a, b) => a.isShared === b.isShared ? 0 : a.isShared ? 1 : -1);
+      this.FilteredUsers.sort((a, b) => a.isShared === b.isShared ? a.username.localeCompare(b.username, undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      }) : a.isShared ? 1 : -1);
       this.getFolderUsers?.unsubscribe();
     })
     this.downloadService.GetFolderUsers(this.folder.id);
@@ -176,9 +196,16 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   ShareFolder() {
-    var user = Number.parseFloat((document.getElementById('userSel1' + this.folder.id) as HTMLSelectElement).value);
+    const user = Number.parseFloat((document.getElementById('userSel1' + this.folder.id) as HTMLSelectElement).value);
     this.downloadService.ShareFolder(this.folder.id, user);
+  }
+
+  HideModal() {
     $('#chooseUserModal' + this.folder.id).modal('hide');
+  }
+
+  ShareFolderById(user: number) {
+    this.downloadService.ShareFolder(this.folder.id, user);
   }
 
   drop(file) {

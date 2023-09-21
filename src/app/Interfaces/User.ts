@@ -3,6 +3,7 @@ import { UserPrivileges } from "../user-admin-modal/user-admin-modal.component";
 export interface User {
     id: number,
     username: string,
+    image?: string,
     password: string,
     approved: number,
     userprivileges: UserPrivileges,
@@ -11,5 +12,6 @@ export interface User {
 }
 
 export interface SharedUser extends User {
-  isShared: boolean
+  isShared: boolean,
+  randomColor: string
 }

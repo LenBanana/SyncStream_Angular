@@ -38,7 +38,7 @@ export function IsTwitch(url: string) {
 }
 
 export function changeSettings(browserSettings) {
-  var settingsJson = JSON.stringify(browserSettings);
+  const settingsJson = JSON.stringify(browserSettings);
   localStorage.setItem(browserSettingName, settingsJson);
   settingsUpdate.next(true);
 }

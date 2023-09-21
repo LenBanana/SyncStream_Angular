@@ -115,7 +115,7 @@ export class RoomsComponent implements OnInit {
     this.route.paramMap.subscribe(async params => {
       this.user.username = 'Anon' + "#" + randomIntFromInterval(100, 10000);
       await this.signalR();
-      var room = params.get('UniqueId');
+      const room = params.get('UniqueId');
       this.fetchSettings();
       if (room && room.length > 0) {
         this.JoinRoom(room, 0);
@@ -124,7 +124,7 @@ export class RoomsComponent implements OnInit {
   }
 
   fetchSettings() {
-    var itemBackup = localStorage.getItem(browserSettingName);
+    const itemBackup = localStorage.getItem(browserSettingName);
     if (!itemBackup || itemBackup.length == 0) {
       this.browserSettings = new BrowserSettings();
       return;

@@ -1,2 +1,43 @@
-<video class="media-player" id="webRtcVideo" controls autoplay playsInline></video>
-<app-media-device-modal></app-media-device-modal>
+<div class="nothing-playing vh-big none"> <!--  [class.none]="!peerConnections||peerConnections.size==0" -->
+  <span><i class="fa fa-pause-circle" aria-hidden="true"></i> You are streaming...</span>
+</div>
+<video #webRtcVideo class="media-player" id="webRtcVideo" autoplay playsInline></video>
+
+
+<!-- Modal -->
+<div class="modal fade" id="webRtcSettingsModal" tabindex="-1" role="dialog" aria-labelledby="settingsModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content bg-dark text-white">
+      <div class="modal-header">
+        <h5 class="modal-title" id="settingsModalLabel">WebRTC Stream Settings</h5>
+      </div>
+      <div class="modal-body">
+        <div class="custom-control custom-switch">
+          <input type="checkbox" class="custom-control-input bg-dark text-light border-dark" id="shareScreen"
+                 [(ngModel)]="settings.shareScreen">
+          <label class="custom-control-label" for="shareScreen">Share Screen</label>
+        </div>
+        <div class="custom-control custom-switch mb-2">
+          <input type="checkbox" class="custom-control-input bg-dark text-light border-dark" id="shareMicrophone"
+                 [(ngModel)]="settings.shareMicrophone">
+          <label class="custom-control-label" for="shareMicrophone">Share Microphone</label>
+        </div>
+        <label>Max Video Bitrate</label>
+        <input type="number" class="form-control my-2 bg-dark text-light border-dark" placeholder="Max Video Bitrate"
+               [(ngModel)]="settings.maxVideoBitrate">
+        <label>Resolution</label>
+        <select class="form-control my-2 bg-dark text-light border-dark" [(ngModel)]="settings.idealResolution">
+          <option *ngFor="let res of resolutions" [value]="Resolution[res]">{{ res }} - {{Resolution[res]}}</option>
+        </select>
+        <label>Framerate</label>
+        <input type="number" max="60" class="form-control my-2 bg-dark text-light border-dark"
+               placeholder="Ideal Frame Rate" [(ngModel)]="settings.idealFrameRate">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" (click)="startDisplay()">Start Streaming</button>
+        <button type="button" class="btn btn-danger" (click)="cancelSettings()">Close</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -61,7 +61,7 @@
   </div>
   <span [ngStyle]="{'font-size.%': GetFontSize()}" class="badge badge-dreck p-2  block pointer" title="Skip to next video" (click)="nextVideo()"><i
       class="fa fa-forward "></i><span class="menu-hide menu-msg unselectable"> Next</span></span>
-      <span [ngStyle]="{'font-size.%': GetFontSize()}" class="badge badge-dreck p-2  block pointer" title="Stream" (click)="StartStream()">
+      <span *ngIf="Privileges>=1" [ngStyle]="{'font-size.%': GetFontSize()}" class="badge badge-dreck p-2  block pointer" title="Stream" (click)="StartStream()">
         <i class="fa fa-display"></i><span class="menu-hide menu-msg unselectable"> Stream</span></span>
   <span (click)="ToggleMemberlist()" [ngStyle]="{'font-size.%': GetFontSize()}" class="badge badge-dreck p-2  block dreck-tooltip Memberlist"> <i
       class="fa fa-users "></i><span class="menu-hide menu-msg unselectable">User</span><span *ngIf="Members&&Members.length>0" class="messages-count font-weight-bold left-user-count">{{Members.length < 99 ? Members.length : '...'}}</span></span>

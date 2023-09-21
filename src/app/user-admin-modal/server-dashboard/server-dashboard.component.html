@@ -1,0 +1,44 @@
+<h2 *ngIf="ServerHealth">Admin Dashboard - {{ServerHealth.upTime}}</h2>
+<div class="row mt-4" *ngIf="ServerHealth">
+  <!-- Disk Usage -->
+  <div class="col-md-4">
+    <div class="card bg-secondary">
+      <div class="card-body">
+        <h5 class="card-title">Disk Usage</h5>
+        <p class="card-text">Used: <span id="diskUsed">{{ServerHealth.diskUsage | number : '.2-2'}}%</span></p>
+        <div class="progress">
+          <div class="progress-bar" role="progressbar" [style.width.%]="ServerHealth.diskUsage" aria-valuenow="{{ServerHealth.diskUsage}}" aria-valuemin="0"
+            aria-valuemax="100"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Memory Usage -->
+  <div class="col-md-4">
+    <div class="card bg-secondary">
+      <div class="card-body">
+        <h5 class="card-title">Memory Usage</h5>
+        <p class="card-text">Used: <span id="memoryUsed">{{ServerHealth.memoryUsage | number : '.2-2'}}%</span></p>
+        <div class="progress">
+          <div class="progress-bar bg-success" role="progressbar" [style.width.%]="ServerHealth.memoryUsage" aria-valuenow="{{ServerHealth.memoryUsage}}"
+            aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CPU Usage -->
+  <div class="col-md-4">
+    <div class="card bg-secondary">
+      <div class="card-body">
+        <h5 class="card-title">CPU Usage</h5>
+        <p class="card-text">Used: <span id="cpuUsed">{{ServerHealth.cpuUsage | number : '.2-2'}}%</span></p>
+        <div class="progress">
+          <div class="progress-bar bg-danger" role="progressbar" [style.width.%]="ServerHealth.cpuUsage" aria-valuenow="{{ServerHealth.cpuUsage}}"
+            aria-valuemin="0" aria-valuemax="100"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

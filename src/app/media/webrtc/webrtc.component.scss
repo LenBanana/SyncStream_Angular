@@ -1,0 +1,26 @@
+.nothing-playing {
+  text-align: center;
+  display: table;
+  background-color: rgba($color: #000000, $alpha: 0.5);
+}
+
+.none {
+  display: none !important;
+}
+
+.nothing-playing > span {
+  display: table-cell;
+  vertical-align: middle;
+  font-size: 50px;
+}
+.vh-big {
+  height: 100vh;
+  width: 100%;
+}
+
+.bg-dark {
+  background-color: #323342 !important;
+}
+.bg-secondary {
+  background-color: #45465c !important;
+}

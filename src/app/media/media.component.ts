@@ -41,28 +41,17 @@ export class MediaComponent implements OnInit, OnDestroy {
   CurrentPing = 0;
   readyEvent: Subject<void> = new Subject<void>();
   CurrentPlayerType: PlayerType = PlayerType.Nothing;
+  LastPlayerType: PlayerType = PlayerType.Nothing;
   PlayerType = PlayerType;
   Playlist: VideoDTO[] = [];
   CurrentlyPlaying: VideoDTO;
   LastTime: number = 0;
 
-  PlayerTypeListener: Subscription;
-  IsPlayingListener: Subscription;
-  PlayerTimeListener: Subscription;
-  PlaylistUpdate: Subscription;
-  PingUpdate: Subscription;
-  VideoUpdate: Subscription;
+  Subscriptions: Subscription[] = [];
   PingInterval: NodeJS.Timeout;
-  WebRtcStreamStart: Subscription;
-  WebRtcStreamStop: Subscription;
 
   ngOnDestroy() {
-    this.PlayerTypeListener.unsubscribe();
-    this.IsPlayingListener.unsubscribe();
-    this.PlaylistUpdate.unsubscribe();
-    this.PlayerTimeListener.unsubscribe();
-    this.PingUpdate.unsubscribe();
-    this.VideoUpdate.unsubscribe();
+    this.Subscriptions.forEach(s => s.unsubscribe());
     clearInterval(this.PingInterval);
   }
 
@@ -70,17 +59,18 @@ export class MediaComponent implements OnInit, OnDestroy {
     this.PingInterval = setInterval(() => {
       this.pingService.GetPing();
     }, 5000);
-    this.WebRtcStreamStart = this.webRtcService.streamStart.subscribe(o => {
+    this.Subscriptions.push(this.webRtcService.streamStart.subscribe(o => {
       if (o) {
+        this.LastPlayerType = this.CurrentPlayerType;
         this.CurrentPlayerType = PlayerType.WebRtc;
       }
-    });
-    this.WebRtcStreamStop = this.webRtcService.streamStop.subscribe(o => {
+    }));
+    this.Subscriptions.push(this.webRtcService.streamStop.subscribe(o => {
       if (o && this.CurrentPlayerType === PlayerType.WebRtc) {
-        this.CurrentPlayerType = PlayerType.Nothing;
+        this.CurrentPlayerType = this.LastPlayerType;
       }
-    });
-    this.PingUpdate = this.signalrService.pingStream.subscribe(ping => {
+    }));
+    this.Subscriptions.push(this.signalrService.pingStream.subscribe(ping => {
       if (!ping) {
         return;
       }
@@ -93,48 +83,42 @@ export class MediaComponent implements OnInit, OnDestroy {
         }
         this.threshholdChange.emit(this.Threshhold);
       }
-    });
-    this.PlayerTypeListener = this.playerService.playerType.subscribe(async type => {
-      if (!type || type == null) {
+    }));
+    this.Subscriptions.push(this.playerService.playerType.subscribe(async type => {
+      if (!type) {
         this.CurrentPlayerType = PlayerType.Nothing;
         this.hideChat.emit(false);
         return;
       }
-      this.CurrentPlayerType = type as PlayerType;
-      this.hideChat.emit(this.CurrentPlayerType === PlayerType.Blackjack);
-    });
-    this.IsPlayingListener = this.playerService.isplaying.subscribe(play => {
+      if (this.CurrentPlayerType !== type) {
+        this.LastPlayerType = this.CurrentPlayerType;
+        this.CurrentPlayerType = type as PlayerType;
+        this.hideChat.emit(this.CurrentPlayerType === PlayerType.Blackjack);
+      }
+    }));
+    this.Subscriptions.push(this.playerService.isplaying.subscribe(play => {
       if (play != null) {
         this.isPlayingEvent.emit(play);
       }
-    })
-    this.PlaylistUpdate = this.playlistService.playlist.subscribe(result => {
+    }));
+    this.Subscriptions.push(this.playlistService.playlist.subscribe(result => {
       if (!result) {
         return;
       }
       this.Playlist = result;
-    });
-    this.PlayerTimeListener = this.mediaService.playerTime.subscribe(t => {
+    }));
+    this.Subscriptions.push(this.mediaService.playerTime.subscribe(t => {
       if (t > 0) {
         this.SetTime(t);
       }
-    })
-    this.VideoUpdate = this.playerService.player.subscribe(async vid => {
-      if (vid) {
-        $('#playerContainer').addClass('zoom-out');
-        await delay(500)
-        $('#playerContainer').addClass('zoom-in');
-        await delay(150)
-        $('#playerContainer').removeClass('zoom-out').removeClass('zoom-in');
-      }
-    });
+    }));
   }
 
   nowPlaying(video: VideoDTO) {
     this.CurrentlyPlaying = video;
   }
 
-  private async SetTime(currentTime: number) {
+  private SetTime(currentTime: number) {
     if ((currentTime > (this.LastTime + this.Threshhold) || currentTime < (this.LastTime - this.Threshhold))) {
       this.LastTime = currentTime;
       this.playerService.SetTime(currentTime, this.UniqueId);

@@ -1,8 +1,9 @@
-import {AfterViewInit, Component, Input, OnDestroy, OnInit} from '@angular/core';
-import {BehaviorSubject, Subscription} from 'rxjs';
-import {WebRtcClientOffer, WebrtcService} from './webrtc-service/webrtc.service';
+import {AfterViewInit, Component, ElementRef, Input, OnDestroy, OnInit, ViewChild} from '@angular/core';
+import {Subscription} from 'rxjs';
+import {Resolution, WebRtcClientOffer, WebrtcService, WebRtcSettings} from './webrtc-service/webrtc.service';
 import {PlayerType} from "../../player/player.component";
 import {MediaDeviceService} from "./media-device-modal/media-device-service/media-device.service";
+import {MediaService} from "../media-service/media.service";
 
 declare var $: any;
 
@@ -14,53 +15,66 @@ declare var adapter: any;
   styleUrls: ['./webrtc.component.scss']
 })
 export class WebrtcComponent implements OnInit, AfterViewInit, OnDestroy {
-
-  configuration: RTCConfiguration = {
-    iceServers: [
-      {
-        urls: "stun:stun.relay.metered.ca:80",
-      },
-      {
-        urls: "turn:a.relay.metered.ca:443",
-        username: "e9741a368572eb0d70ed9c24",
-        credential: "42FqG9SKYwaiW1UZ",
-      }
-    ]
+  @Input() UniqueId: string;
+  @ViewChild('webRtcVideo') webRtcVideo: ElementRef<HTMLVideoElement>;  // Using ViewChild
+  settings: WebRtcSettings = {
+    shareScreen: true,
+    shareMicrophone: false,
+    maxVideoBitrate: 300000, // 300 kbps
+    idealResolution: Resolution.FHD,
+    idealFrameRate: 60
   };
+  resolutions = Object.keys(Resolution).filter(key => isNaN(Number(key)));
+  subscriptions: Subscription[] = [];
   peerConnections: Map<string, RTCPeerConnection> = new Map();
-  peerConnection = new RTCPeerConnection(this.configuration);
+  peerConnection = new RTCPeerConnection();
+  iceCandidateQueue: RTCIceCandidate[] = [];
+  ShareScreen: boolean = true;
+  ShareMicrophone: boolean = false;
+  SharedMediaStream: MediaStream;
 
   constructor(private webRtcService: WebrtcService,
-              private mediaDeviceService: MediaDeviceService
+              private mediaDeviceService: MediaDeviceService,
+              private mediaService: MediaService
   ) {
   }
 
-  @Input() UniqueId: string;
-  remoteStreams: BehaviorSubject<Map<string, MediaStream>> = new BehaviorSubject(new Map());
-  newStream: Subscription;
-  newCandidates: Subscription;
-  newViewer: Subscription;
-  newAnswer: Subscription;
-  newOffer: Subscription;
-  stopStream: Subscription;
-  startStream: Subscription;
-
   ngOnInit(): void {
-    this.startStream = this.webRtcService.startStream.subscribe(o => {
+    const storedSettings = localStorage.getItem('webRtcSettings');
+    if (storedSettings) {
+      this.settings = JSON.parse(storedSettings);
+    }
+    this.subscriptions.push(this.webRtcService.startStream.subscribe(o => {
       if (o) {
-        this.StartDisplay();
+        //this.StartDisplay();
+        this.showSettingsModal();
       }
-    });
+    }));
+  }
+
+  showSettingsModal() {
+    const video = this.webRtcVideo.nativeElement;
+    if (video.srcObject && this.peerConnection.signalingState != "stable") {
+      this.stopStreaming();
+      video.srcObject = null;
+      return;
+    }
+    $('#webRtcSettingsModal').modal('show');
+  }
+
+  cancelSettings() {
+    $('#webRtcSettingsModal').modal('hide');
+    this.webRtcService.streamStop.next("stop");
+  }
+
+  saveChanges() {
+    localStorage.setItem('webRtcSettings', JSON.stringify(this.settings));
   }
 
   ngOnDestroy(): void {
-    this.newStream.unsubscribe();
-    this.newCandidates.unsubscribe();
-    this.newViewer.unsubscribe();
-    this.newAnswer.unsubscribe();
-    this.newOffer.unsubscribe();
-    this.stopStream.unsubscribe();
-    this.startStream.unsubscribe();
+    this.subscriptions.forEach(s => s.unsubscribe());
+    this.webRtcService.CleanUpWebRtc();
+    this.SharedMediaStream = null;
   }
 
   async createOffer(peerConnection: RTCPeerConnection): Promise<void> {
@@ -69,50 +83,51 @@ export class WebrtcComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    this.newStream = this.webRtcService.streamStart.subscribe(o => {
+    this.subscriptions.push(this.webRtcService.streamStart.subscribe(o => {
       if (o) {
+        if (this.peerConnections.size > 0) {
+          this.stopStreaming();
+        }
         this.webRtcService.JoinWebRtcStream(this.UniqueId);
       }
-    })
-    this.newViewer = this.webRtcService.joinStream.subscribe(o => {
+    }));
+    this.subscriptions.push(this.webRtcService.joinStream.subscribe(async o => {
       if (o) {
-        const video = document.querySelector('#webRtcVideo') as HTMLVideoElement;
-        this.createIce(o, video.srcObject as MediaStream);
+        await this.createIce(o);
       }
-    });
-    this.newCandidates = this.webRtcService.streamCandidates.subscribe(c => {
+    }));
+    this.subscriptions.push(this.webRtcService.streamCandidates.subscribe(async c => {
       if (c && c.candidate) {
         if (c.viewerId) {
           const pc = this.peerConnections.get(c.viewerId);
           if (!pc) return;
-          pc.addIceCandidate(new RTCIceCandidate(c))
+          await pc.addIceCandidate(new RTCIceCandidate(c));
           return;
         }
-        this.peerConnection.addIceCandidate(new RTCIceCandidate(c));
+        if (!this.peerConnection.remoteDescription) {
+          this.iceCandidateQueue.push(new RTCIceCandidate(c));
+        } else {
+          await this.peerConnection.addIceCandidate(new RTCIceCandidate(c));
+        }
       }
-    });
-    this.newAnswer = this.webRtcService.streamAnswers.subscribe(async a => {
+    }));
+    this.subscriptions.push(this.webRtcService.streamAnswers.subscribe(async a => {
       if (a && a.sdp) {
         const pc = this.peerConnections.get(a.viewerId);
-        if (!pc || pc.signalingState == "stable") return;
+        if (!pc) return;
         await pc.setRemoteDescription(new RTCSessionDescription({sdp: a.sdp, type: a.type as RTCSdpType}));
-        pc.onicecandidate = (c) => {
-          if (c.candidate) {
-            this.webRtcService.SendIceCandidateToViewer(c.candidate, a.viewerId);
-          }
-        };
       }
-    });
-    this.newOffer = this.webRtcService.streamOffer.subscribe(async o => {
+    }));
+    this.subscriptions.push(this.webRtcService.streamOffer.subscribe(async o => {
       if (o && o.sdp) {
         await this.onReceiveSignal(o);
       }
-    });
-    this.stopStream = this.webRtcService.streamStop.subscribe(o => {
+    }));
+    this.subscriptions.push(this.webRtcService.streamStop.subscribe(o => {
       if (o) {
         this.peerConnection.close();
       }
-    });
+    }));
     if (adapter.browserDetails.browser === 'chrome' &&
       adapter.browserDetails.version >= 107) {
     } else if (adapter.browserDetails.browser === 'firefox') {
@@ -120,44 +135,80 @@ export class WebrtcComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  StartDisplay() {
-    this.mediaDeviceService.getDevice()
-      .then((e) => this.handleSuccess(e), (e) => {
-        alert(`getDisplayMedia error: ${e}`)
+  startDisplay() {
+    $('#webRtcSettingsModal').modal('hide');
+    this.saveChanges();
+    this.mediaDeviceService.getDevice(this.settings)
+      .then((e) => {
+        this.SharedMediaStream = e;
+        this.handleSuccess();
+      }, (e) => {
+        console.log(`getDisplayMedia error: ${e}`)
+        this.webRtcService.streamStop.next("stop");
       });
   }
 
-  handleSuccess(stream) {
+  stopStreaming() {
+    this.webRtcService.StopWebRtcStream(this.UniqueId);
+    this.peerConnections.forEach((pc) => {
+      pc.close();
+    });
+    const tracks = this.SharedMediaStream?.getTracks();
+    for (let i = 0; i < tracks?.length; i++) tracks[i].stop();
+    this.peerConnections.clear();
+  }
+
+  handleSuccess() {
+    if (this.peerConnection.signalingState == "stable") {
+      this.peerConnection.close();
+    }
     this.webRtcService.StartWebRtcStream(this.UniqueId);
-    const video = document.querySelector('#webRtcVideo') as HTMLVideoElement;
-    video.srcObject = stream;
-    stream.getVideoTracks()[0].addEventListener('ended', () => {
-      this.webRtcService.StopWebRtcStream(this.UniqueId);
-      this.peerConnections.forEach((pc) => {
-        pc.close();
-      });
-      this.peerConnections.clear();
+    const video = this.webRtcVideo.nativeElement;
+    video.srcObject = this.SharedMediaStream;
+    this.SharedMediaStream.getVideoTracks()[0].addEventListener('ended', () => {
+      this.stopStreaming();
+      video.srcObject = null;
     });
   }
 
-  async createIce(viewerId: string, stream: MediaStream) {
+  async createIce(viewerId: string) {
     try {
-      const peerConnection = new RTCPeerConnection(this.configuration);
+      const configuration = await this.webRtcService.getWebRtcConfig();
+      const peerConnection = new RTCPeerConnection(configuration);
+      peerConnection.onconnectionstatechange = (e) => {
+        if (peerConnection.connectionState === 'disconnected') {
+          peerConnection.close();
+          this.peerConnections.delete(viewerId);
+        }
+      };
+      peerConnection.onicecandidate = (c) => {
+        if (c.candidate) {
+          this.webRtcService.SendIceCandidateToViewer(c.candidate, viewerId);
+        }
+      };
       this.peerConnections.set(viewerId, peerConnection);
-      const video = document.querySelector('#webRtcVideo') as HTMLVideoElement;
-      video.srcObject = stream;
-      if (stream) {
-        stream.getTracks().forEach(track => {
-          peerConnection.addTrack(track, stream);
+      if (this.SharedMediaStream) {
+        this.SharedMediaStream.getTracks().forEach(track => {
+          peerConnection.addTrack(track, this.SharedMediaStream);
         });
       }
+      const videoSender = peerConnection.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (videoSender) {
+        const parameters = videoSender.getParameters();
+        if (!parameters.encodings) {
+          parameters.encodings = [{}];
+        }
+        parameters.encodings[0].maxBitrate = this.settings.maxVideoBitrate;
+        await videoSender.setParameters(parameters);
+      }
+
       const offerOptions: RTCOfferOptions = {offerToReceiveAudio: true, offerToReceiveVideo: true};
-      var desc = await peerConnection.createOffer(offerOptions);
+      const desc = await peerConnection.createOffer(offerOptions);
       let offer: WebRtcClientOffer = {sdp: desc.sdp, type: desc.type.toString(), viewerId: null};
       await peerConnection.setLocalDescription(desc);
       this.webRtcService.SendOfferToViewer(offer, viewerId);
     } catch (err) {
-      alert(`Error creating offer: ${err}`);
+      console.log(`Error creating offer: ${err}`);
       return;
     }
   }
@@ -165,23 +216,29 @@ export class WebrtcComponent implements OnInit, AfterViewInit, OnDestroy {
   async onReceiveSignal(signal: WebRtcClientOffer): Promise<void> {
     if (signal.type === 'answer') {
     } else if (signal.type === 'offer') {
-      this.peerConnection = new RTCPeerConnection(this.configuration);
+      const configuration = await this.webRtcService.getWebRtcConfig();
+      this.peerConnection = new RTCPeerConnection(configuration);
       this.peerConnection.onicecandidate = c => {
         if (c.candidate) {
           this.webRtcService.SendIceCandidate(c.candidate, this.UniqueId);
         }
       };
-      const video = document.querySelector('#webRtcVideo') as HTMLVideoElement;
       this.peerConnection.ontrack = event => {
+        const video = this.webRtcVideo.nativeElement;
         video.srcObject = event.streams[0];
       };
-      this.peerConnection.setRemoteDescription(new RTCSessionDescription({type: signal.type, sdp: signal.sdp}));
+      await this.peerConnection.setRemoteDescription(new RTCSessionDescription({type: signal.type, sdp: signal.sdp}));
+      for (let candidate of this.iceCandidateQueue) {
+        await this.peerConnection.addIceCandidate(candidate);
+      }
+      this.iceCandidateQueue = [];
       const desc = await this.peerConnection.createAnswer();
-      this.peerConnection.setLocalDescription(desc);
+      await this.peerConnection.setLocalDescription(desc);
       let offer: WebRtcClientOffer = {sdp: desc.sdp, type: desc.type.toString(), viewerId: null};
       this.webRtcService.CreateStreamAnswer(offer, this.UniqueId);
     }
   }
 
   protected readonly PlayerType = PlayerType;
+  protected readonly Resolution = Resolution;
 }

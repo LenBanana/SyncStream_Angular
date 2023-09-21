@@ -2,33 +2,40 @@
   height: 100vh;
   width: 100%;
 }
+
 .zoom-out {
   animation: ZoomOut .25s ease-out forwards;
 }
+
 .zoom-in {
   animation: ZoomIn .25s ease-in forwards;
 }
+
 .BlackjackBg {
   background-image: url(/assets/img/bg_green.jpg);
 }
+
 .PlayerWindow {
   padding-right: 0;
   overflow: hidden;
 }
+
 .nothing-playing {
   text-align: center;
   display: table;
   background-color: rgba($color: #000000, $alpha: 0.5);
 }
+
 .none {
-    display: none !important;
+  display: none !important;
 }
 
-.nothing-playing>span {
+.nothing-playing > span {
   display: table-cell;
   vertical-align: middle;
   font-size: 50px;
 }
+
 .center-mid {
   position: absolute;
   left: 50%;
@@ -45,8 +52,9 @@
   -webkit-transform: translate(-50%, -50%);
   transform: translate(-50%, -50%);
 }
+
 .bg-canvas {
-    background-color: #EEE;
+  background-color: #EEE;
 }
 
 .ChatView {
@@ -70,11 +78,19 @@
 .hideChat {
   right: -25%;
 }
+
 .bg-black {
   background: #000000;
 }
+
 .chat-height {
   height: 50vh;
+}
+
+@media (max-width: 844px) { /* tablet, landscape iPad, lo-res laptops ands desktops */
+  .chat-height {
+    height: 100vh;
+  }
 }
 
 .CardBack {
@@ -94,6 +110,7 @@
     opacity: 1;
   }
 }
+
 @keyframes ZoomOut {
   0% {
     opacity: 1;

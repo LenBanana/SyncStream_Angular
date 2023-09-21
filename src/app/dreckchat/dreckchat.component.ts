@@ -38,7 +38,7 @@ export class DreckchatComponent implements OnInit, OnDestroy {
   @Output() ChangeToAi = new EventEmitter();
   Messages: ChatMessage[] = [];
   CurrentDate: Date = new Date();
-  smileys = smileys;
+  smileyCategories = smileys;
   showSmileys: boolean = false;
   messages: any;
   message: any;

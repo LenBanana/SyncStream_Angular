@@ -1,7 +1,7 @@
 <div class="p-1">
   <div *ngIf="folder.id==currentFolder.id" class="w-100 mb-1">
     <div *ngFor="let f of backFolder; let i = index;" class="badge badge-secondary mr-1 pointer"
-      (click)="GoBackIndex(i)">
+         (click)="GoBackIndex(i)">
       {{f.name}}<i class="fa fa-angle-right pl-1 font-weight-bold" aria-hidden="true"></i>
     </div>
     <div class="badge badge-secondary mr-1 pointer">
@@ -9,38 +9,41 @@
     </div>
   </div>
   <div class="card text-white mr-1 ml-1 p-0 folderContainer" [class.bg-dark]="folder.id==getUserId()"
-    [class.bg-secondary]="folder.id!=getUserId()" cdkDropListSortingDisabled="true" [cdkDropListData]="folder"
-    [class.col-lg-3]="folder.id==currentFolder.id" [class.col-5]="folder.id==currentFolder.id"
-    (cdkDropListDropped)="drop($event)" cdkDropList [class.pointer]="folder.id!=currentFolder.id||folder.parent"
-    [class.actionable]="folder.id!=currentFolder.id">
+       [class.bg-secondary]="folder.id!=getUserId()" cdkDropListSortingDisabled="true" [cdkDropListData]="folder"
+       [class.col-lg-3]="folder.id==currentFolder.id" [class.col-5]="folder.id==currentFolder.id"
+       (cdkDropListDropped)="drop($event)" cdkDropList [class.pointer]="folder.id!=currentFolder.id||folder.parent"
+       [class.actionable]="folder.id!=currentFolder.id">
     <div class="card-body" style="max-height: 3.5rem;" [class.p-2]="folder.id==currentFolder.id"
-      [class.p-3]="folder.id!=currentFolder.id" [matMenuTriggerFor]="folder.id==currentFolder.id?null:menu"
-      #menuTrigger="matMenuTrigger" (contextmenu)="$event.preventDefault();menuTrigger.openMenu();getEvent()"
-      (click)="$event.stopPropagation();folder.id!=currentFolder.id&&GoDeeper(folder)"
-      (click)="$event.stopPropagation();folder.id==currentFolder.id&&GoBack()">
+         [class.p-3]="folder.id!=currentFolder.id" [matMenuTriggerFor]="folder.id==currentFolder.id?null:menu"
+         #menuTrigger="matMenuTrigger" (contextmenu)="$event.preventDefault();menuTrigger.openMenu();getEvent()"
+         (click)="$event.stopPropagation();folder.id!=currentFolder.id&&GoDeeper(folder)"
+         (click)="$event.stopPropagation();folder.id==currentFolder.id&&GoBack()">
       <h6 *ngIf="!edit" class="m-0 ml-1 short-text"><i class="fa mr-1"
-          [class.fa-folder-open]="folder.id==currentFolder.id" [class.fa-folder]="folder.id!=currentFolder.id"
-          aria-hidden="true"></i> {{folder.name}}</h6>
+                                                       [class.fa-folder-open]="folder.id==currentFolder.id"
+                                                       [class.fa-folder]="folder.id!=currentFolder.id"
+                                                       aria-hidden="true"></i> {{folder.name}}</h6>
       <input *ngIf="edit" id="editFolderInput{{folder.id}}"
-        class="form-control font-weight-bold bg-transparent text-light border-dark w-100" style="display: inline;"
-        [(ngModel)]="folder.name" (keyup.enter)="$event.target.blur();" (click)="$event.stopPropagation();"
-        (focusout)="ChangeName()" />
+             class="form-control font-weight-bold bg-transparent text-light border-dark w-100" style="display: inline;"
+             [(ngModel)]="folder.name" (keyup.enter)="$event.target.blur();" (click)="$event.stopPropagation();"
+             (focusout)="ChangeName()"/>
       <i (click)="$event.stopPropagation();AddFolder();" *ngIf="folder.id==currentFolder.id&&!edit"
-        class="fa fa-plus-circle pull-right mr-3 pointer mt-1" aria-hidden="true"></i>
+         class="fa fa-plus-circle pull-right mr-3 pointer mt-1" aria-hidden="true"></i>
       <!--<i (click)="$event.stopPropagation();DeleteFolder();" *ngIf="folder.id!=currentFolder.id&&!edit" class="fa fa-times-circle pull-right mr-3 pointer mt-1 text-danger hidden" aria-hidden="true"></i>-->
     </div>
   </div>
 </div>
 <div class="border-dark mb-3 mt-3 mr-4 ml-3" style="height: 1px;"
-  *ngIf="folder.id==currentFolder.id&&folder.children&&folder.children.length>0"></div>
+     *ngIf="folder.id==currentFolder.id&&folder.children&&folder.children.length>0"></div>
 <div *ngIf="folder.id==currentFolder.id">
   <div class="container-fluid">
     <div class="row justify-content-start mr-1">
       <div class="col-lg-2 col-6 m-0 p-0" *ngFor="let child of folder.children">
         <!-- cdkDropListSortingDisabled="true" [cdkDropListData]="child" (cdkDropListDropped)="dropThrough($event)" cdkDropList {{child.id}}-->
-        <app-file-folder [browserSettings]="browserSettings" [UniqueId]="UniqueId" [folder]="child" [currentFolder]="currentFolder"
-          [filterFiles]="filterFiles" [page]="page" [pageSize]="pageSize" (goDeeper)="GoThroughDeeper($event)"
-          [IsInRoom]="IsInRoom"></app-file-folder>
+        <app-file-folder [browserSettings]="browserSettings" [UniqueId]="UniqueId" [folder]="child"
+                         [currentFolder]="currentFolder"
+                         [filterFiles]="filterFiles" [page]="page" [pageSize]="pageSize"
+                         (goDeeper)="GoThroughDeeper($event)"
+                         [IsInRoom]="IsInRoom"></app-file-folder>
       </div>
     </div>
   </div>
@@ -51,11 +54,12 @@
   <div class="border-dark mb-3 mt-3 mr-4 ml-3" style="height: 1px;"></div>
 </div>
 <div class="border-dark mb-3 mt-3 mr-4 ml-4" style="height: 1px;"
-  *ngIf="folder.id==currentFolder.id&&filterFiles&&filterFiles.length>0"></div>
+     *ngIf="folder.id==currentFolder.id&&filterFiles&&filterFiles.length>0"></div>
 <div class="ml-2">
-  <app-file-view *ngIf="folder.id==currentFolder.id&&filterFiles&&filterFiles.length>0" [browserSettings]="browserSettings" [UniqueId]="UniqueId"
-    [filterFiles]="filterFiles" [page]="page" [IsInRoom]="IsInRoom" [pageSize]="pageSize"
-    [currentId]="currentFolder.id"></app-file-view>
+  <app-file-view *ngIf="folder.id==currentFolder.id&&filterFiles&&filterFiles.length>0"
+                 [browserSettings]="browserSettings" [UniqueId]="UniqueId"
+                 [filterFiles]="filterFiles" [page]="page" [IsInRoom]="IsInRoom" [pageSize]="pageSize"
+                 [currentId]="currentFolder.id"></app-file-view>
 </div>
 <mat-menu #menu="matMenu" style="z-index: 10000;">
   <button mat-menu-item (click)="(backFolder.length>0||folder.id!=currentFolder.id)&&ToggleEdit()" class="text-light">
@@ -69,8 +73,8 @@
   </button>
   <hr class="m-0 p-0">
   <button mat-menu-item (click)="DeleteFolder();" class="text-light"
-    [class.disabled]="(folder.files&&folder.files.length!=0)||(folder.children&&folder.children.length!=0)"
-    [disabled]="(folder.files&&folder.files.length==0)||(folder.children&&folder.children.length==0)?null:true">
+          [class.disabled]="(folder.files&&folder.files.length!=0)||(folder.children&&folder.children.length!=0)"
+          [disabled]="(folder.files&&folder.files.length==0)||(folder.children&&folder.children.length==0)?null:true">
     <!--[class.disabled]="(!folder.files||folder.files.length==0)" [disabled]="(!folder.files||folder.files.length==0)?true:null"-->
     <i class="fa fa-times-circle text-danger mr-1" aria-hidden="true"></i>
     <span> Delete</span>
@@ -80,18 +84,42 @@
 <div class="modal hide fade in" id="chooseUserModal{{folder.id}}">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content bg-secondary">
-      <div class="modal-body explain-text">
+      <div class="modal-body">
         <div class="form-group text-center">
-          <label for="userSel1" class="mb-2">Select user</label>
-          <select class="form-control bg-dark border-dark text-light" id="userSel1{{folder.id}}">
-            <option class="font-weight-bold" *ngFor="let user of FilteredUsers" value="{{user.id}}" [class.text-warning]="!user.isShared" [class.text-success]="user.isShared">{{user.username}}</option>
-          </select>
+          <label for="userSel1{{folder.id}}" class="mb-2">Select Users to Share With</label>
+          <input type="text" class="form-control mb-3 bg-dark text-light border-dark" placeholder="Search users..."
+                 [(ngModel)]="searchTerm" (keyup)="searchUsers()">
+          <div class="row justify-content-start mt-2">
+            <div class="col-3 mb-2"
+                 *ngFor="let user of FilteredUsers | slice: (currentSharePage-1) * sharePageSize : currentSharePage * sharePageSize;">
+              <div (click)="user.isShared=!user.isShared;ShareFolderById(user.id);"
+                   title="{{ user.username }}"
+                   class="bg-dark p-2 rounded shadow pointer user-card justify-content-center d-flex">
+                <img *ngIf="user.image" [src]="user.image" alt="{{ user.username }}"
+                     class="mr-2 rounded-circle" style="width: 40px; height: 40px;">
+                <div *ngIf="!user.image" class="rounded-circle img-placeholder"
+                     [style.background-color]="user.randomColor">{{ user.username.charAt(0).toUpperCase() }}</div>
+                <span class="flex-grow-1 px-1 pt-2 {{ !user.isShared ? 'text-warning' : 'text-success' }}"
+                      style="text-overflow: ellipsis;overflow: hidden;">
+                {{ user.username }}
+              </span>
+                <i class="fa" [class.fa-square-o]="!user.isShared"
+                   [class.fa-check-square-o]="user.isShared"
+                   [class.text-warning]="!user.isShared"
+                   [class.text-success]="user.isShared" aria-hidden="true"></i>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-success mr-auto" (click)="ShareFolder()">Ok</button>
-        <button class="btn btn-danger" (click)="ShareFolderModal()">Close</button>
+        <ngb-pagination *ngIf="FilteredUsers.length>sharePageSize" [collectionSize]="FilteredUsers.length"
+                        [(page)]="currentSharePage" [pageSize]="sharePageSize"
+                        class="w-100 p-0 m-0 mt-2"></ngb-pagination>
+        <button type="button" class="btn btn-danger font-weight-bold" (click)="HideModal()">Close <i class="fa ml-1 fa-times-circle" aria-hidden="true"></i></button>
       </div>
     </div>
   </div>
 </div>
+
+
