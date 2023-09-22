@@ -1,4 +1,5 @@
-import { BehaviorSubject } from "rxjs";
+import {BehaviorSubject} from "rxjs";
+import {Resolution} from "../media/webrtc/webrtc-service/webrtc.service";
 
 export var browserSettingName = "userSettings";
 export var settingsUpdate: BehaviorSubject<boolean> = new BehaviorSubject(null);
@@ -7,6 +8,7 @@ export class LayoutSettings {
   showCountInfo: boolean;
   bigSideNav: boolean;
   menuSize: number;
+
   constructor() {
     this.showCountInfo = true;
     this.bigSideNav = false;
@@ -17,14 +19,44 @@ export class LayoutSettings {
 export class GeneralSettings {
   firstVisit: boolean = true;
   audioVolume: number = 100;
+  defaultVoip: boolean = false;
+  playVoipJoinSound: boolean = true;
 }
+
+export class WebRtcSettings {
+  playerWidth: number;
+  shareScreen: boolean;
+  shareMicrophone: boolean;
+  maxVideoBitrate: number;
+  idealResolution: Resolution;
+  idealFrameRate: number;
+  microphoneId: string;
+  cameraId: string;
+  microphoneVolume: number;
+
+  constructor() {
+    this.shareScreen = true;
+    this.shareMicrophone = false;
+    this.maxVideoBitrate = 300000;
+    this.idealResolution = Resolution.FHD;
+    this.idealFrameRate = 60;
+    this.playerWidth = window.screen.width;
+    this.microphoneId = null;
+    this.cameraId = null;
+    this.microphoneVolume = 100;
+  }
+}
+
 
 export class BrowserSettings {
   layoutSettings: LayoutSettings;
   generalSettings: GeneralSettings;
+  webRtcSettings: WebRtcSettings;
+
   constructor() {
     this.layoutSettings = new LayoutSettings();
     this.generalSettings = new GeneralSettings();
+    this.webRtcSettings = new WebRtcSettings();
   }
 }
 

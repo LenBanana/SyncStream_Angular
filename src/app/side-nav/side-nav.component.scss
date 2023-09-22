@@ -31,6 +31,11 @@
     display: block;
 }
 
+.voip-active {
+  transform: rotate(135deg);
+  color: #802e2e;
+}
+
 .first-playlist-element {
   background-color: rgba(55,65,81, .75);
 }

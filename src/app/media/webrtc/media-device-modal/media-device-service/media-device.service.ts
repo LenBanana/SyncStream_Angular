@@ -1,5 +1,5 @@
 import {Injectable} from '@angular/core';
-import {WebRtcSettings} from "../../webrtc-service/webrtc.service";
+import {WebRtcSettings} from "../../../../Interfaces/BrowserSettings";
 
 @Injectable({
   providedIn: 'root'

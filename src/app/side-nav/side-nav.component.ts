@@ -1,21 +1,34 @@
-import { Component, OnInit, Input, ViewChild, Output, EventEmitter, OnDestroy, AfterViewInit, OnChanges, SimpleChanges } from '@angular/core';
-import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
-import { PlaylistService } from '../playlist/playlist-service/playlist.service';
-import { UserlistService } from '../userlist/userlist-service/userlist.service';
-import { VideoDTO } from '../Interfaces/VideoDTO';
-import { Member } from '../Interfaces/Member';
+import {
+  Component,
+  OnInit,
+  Input,
+  ViewChild,
+  Output,
+  EventEmitter,
+  OnDestroy,
+  AfterViewInit,
+  OnChanges,
+  SimpleChanges
+} from '@angular/core';
+import {CdkDragDrop, moveItemInArray} from '@angular/cdk/drag-drop';
+import {PlaylistService} from '../playlist/playlist-service/playlist.service';
+import {UserlistService} from '../userlist/userlist-service/userlist.service';
+import {VideoDTO} from '../Interfaces/VideoDTO';
+import {Member} from '../Interfaces/Member';
 import {PlayerComponent, PlayerType} from '../player/player.component';
-import { Location } from '@angular/common';
-import { PlayerService } from '../player/player-service/player.service';
-import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
-import { AlertType, Dialog } from '../Interfaces/Dialog';
-import { BrowserSettings, changeSettings } from '../Interfaces/BrowserSettings';
-import { DreckchatService } from '../dreckchat/dreckchat-service/dreckchat.service';
-import { ChatMessage } from '../Interfaces/Chatmessage';
-import { Subscription } from 'rxjs';
-import { LiveStreamService } from '../live-stream-view/live-stream-service/live-stream.service';
-import { LiveUser } from '../Interfaces/liveStream';
+import {Location} from '@angular/common';
+import {PlayerService} from '../player/player-service/player.service';
+import {DialogService} from '../text-dialog/text-dialog-service/dialog-service.service';
+import {AlertType, Dialog} from '../Interfaces/Dialog';
+import {BrowserSettings, changeSettings} from '../Interfaces/BrowserSettings';
+import {DreckchatService} from '../dreckchat/dreckchat-service/dreckchat.service';
+import {ChatMessage} from '../Interfaces/Chatmessage';
+import {Subscription} from 'rxjs';
+import {LiveStreamService} from '../live-stream-view/live-stream-service/live-stream.service';
+import {LiveUser} from '../Interfaces/liveStream';
 import {WebrtcService} from "../media/webrtc/webrtc-service/webrtc.service";
+import {WebrtcVoipService} from "../media/webrtc-voip/webrtc-voip-service/webrtc-voip.service";
+
 declare var $: any;
 
 @Component({
@@ -32,8 +45,10 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
               private userService: UserlistService,
               private location: Location,
               private dialogService: DialogService,
-              private webRtcService: WebrtcService
-  ) { }
+              private webRtcService: WebrtcService,
+              public voipService: WebrtcVoipService
+  ) {
+  }
 
   @Input() logout: boolean;
   @Input() nav: boolean;
@@ -62,13 +77,10 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   showMemberlist = false;
   WhiteboardActive = false;
   BlackjackActive = false;
-  liveChannelSub: Subscription;
-  playingGallows: Subscription;
-  playingBlackjack: Subscription;
-  message: Subscription;
-  playFile: Subscription;
+  Voip = false;
   Messages: ChatMessage[];
   LiveUsers: LiveUser[] = [];
+  Subscriptions: Subscription[] = [];
   pasteFn = (event) => {
     if ($('#downloadManagerModal').hasClass('show')) {
       return;
@@ -137,55 +149,67 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
       this.ThreshholdNumber = .5;
       this.threshholdChange.emit(this.ThreshholdNumber);
     }
-    this.playingGallows = this.playerService.playingGallows.subscribe(playGallows => {
-      if (playGallows == null||!playGallows) {
-        return;
-      }
-      if (playGallows=="$clearboard$") {
-        this.WhiteboardActive = false;
-        return;
-      }
-      this.BlackjackActive = false;
-      this.WhiteboardActive = true;
-    });
-    this.playFile = this.playerService.playFile.subscribe(x => {
-      if (x && x.length > 0) {
-        this.PlayVideo(x);
-      }
-    });
-    this.message = this.chatService.message.subscribe(result => {
-      if (result == null || this.ChatOpen) {
-        this.Messages = [];
-        return;
-      }
-      if (this.Messages==null) {
-        this.Messages = [];
-      }
-      this.Messages.push(result);
-      if (this.Messages.length >= 100) {
-        this.Messages.shift();
-      }
-      setTimeout(() => $('#messagebox').scrollTop($('#messagebox')[0]?.scrollHeight), 100);
-    });
-    this.liveChannelSub = this.liveStreamService.liveChannels.subscribe(c => {
-      if (c == null) {
-        this.LiveUsers = [];
-        return;
-      }
-      this.LiveUsers = c;
-    });
-    this.playingBlackjack = this.playerService.playingBlackjack.subscribe(playBlackjack => {
-      if (playBlackjack == null) {
-        return;
-      }
-      if (playBlackjack === true) {
-        this.WhiteboardActive = false;
-        this.BlackjackActive = true;
-      }
-      if (playBlackjack === false) {
+    this.Subscriptions.push(this.playerService.playingGallows.subscribe(playGallows => {
+        if (playGallows == null || !playGallows) {
+          return;
+        }
+        if (playGallows == "$clearboard$") {
+          this.WhiteboardActive = false;
+          return;
+        }
         this.BlackjackActive = false;
-      }
-    });
+        this.WhiteboardActive = true;
+      }), this.playerService.playFile.subscribe(x => {
+        if (x && x.length > 0) {
+          this.PlayVideo(x);
+        }
+      }), this.chatService.message.subscribe(result => {
+        if (result == null || this.ChatOpen) {
+          this.Messages = [];
+          return;
+        }
+        if (this.Messages == null) {
+          this.Messages = [];
+        }
+        this.Messages.push(result);
+        if (this.Messages.length >= 100) {
+          this.Messages.shift();
+        }
+        setTimeout(() => $('#messagebox').scrollTop($('#messagebox')[0]?.scrollHeight), 100);
+      }), this.liveStreamService.liveChannels.subscribe(c => {
+        if (c == null) {
+          this.LiveUsers = [];
+          return;
+        }
+        this.LiveUsers = c;
+      }), this.playerService.playingBlackjack.subscribe(playBlackjack => {
+        if (playBlackjack == null) {
+          return;
+        }
+        if (playBlackjack === true) {
+          this.WhiteboardActive = false;
+          this.BlackjackActive = true;
+        }
+        if (playBlackjack === false) {
+          this.BlackjackActive = false;
+        }
+      }),
+      this.voipService.joinRoom.subscribe(result => {
+        if (result == null) {
+          return;
+        }
+        if (result == this.UniqueId) {
+          this.Voip = true;
+        }
+      }),
+      this.voipService.leaveRoom.subscribe(result => {
+        if (result == null) {
+          return;
+        }
+        if (result == this.UniqueId) {
+          this.Voip = false;
+        }
+      }));
   }
 
   changeSettings() {
@@ -193,18 +217,12 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy() {
-    this.playingGallows.unsubscribe();
-    this.playingBlackjack.unsubscribe();
-    this.message.unsubscribe();
-    this.playFile.unsubscribe();
-    this.liveChannelSub.unsubscribe();
+    this.Subscriptions.forEach(s => s.unsubscribe());
     document.removeEventListener('paste', this.pasteFn);
   }
-  StartStream() {
-    this.playerService.playerType.next(PlayerType.WebRtc);
-    setTimeout(() => {
-      this.webRtcService.startStream.next(this.UniqueId);
-    }, 25);
+
+  StartVoip() {
+    this.chatService.joinVoice.next(this.UniqueId);
   }
 
   refresh(): void {
@@ -360,22 +378,31 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   quickPlay() {
-    if (!navigator||!navigator.clipboard||!navigator.clipboard.readText) {
+    if (!navigator || !navigator.clipboard || !navigator.clipboard.readText) {
       this.showInput = !this.showInput;
       return;
     }
     navigator.clipboard.readText()
-    .then(text => {
-      this.PlayVideo(text);
-    })
-    .catch(async err => {
-      const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' as PermissionName});
-      if (permissionStatus.state !== "granted") {
-        const dialog: Dialog = { id: "clipboard-perm", header: "Permission error", question: "Please grant clipboard permissions.", answer1: null, answer2: null, yes: null, no: null, alertType: AlertType.Warning };
-        this.dialogService.newDialog.next(dialog);
-        return;
-      }
-    });
+      .then(text => {
+        this.PlayVideo(text);
+      })
+      .catch(async err => {
+        const permissionStatus = await navigator.permissions.query({name: 'clipboard-read' as PermissionName});
+        if (permissionStatus.state !== "granted") {
+          const dialog: Dialog = {
+            id: "clipboard-perm",
+            header: "Permission error",
+            question: "Please grant clipboard permissions.",
+            answer1: null,
+            answer2: null,
+            yes: null,
+            no: null,
+            alertType: AlertType.Warning
+          };
+          this.dialogService.newDialog.next(dialog);
+          return;
+        }
+      });
   }
 
   PlayVideo(url: string) {

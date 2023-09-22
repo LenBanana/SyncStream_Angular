@@ -10,6 +10,8 @@ import { RememberToken } from '../../Interfaces/RememberToken';
 })
 export class RoomService {
 
+  public JoinRoom: BehaviorSubject<string> = new BehaviorSubject(null);
+  public LeaveRoom: BehaviorSubject<string> = new BehaviorSubject(null);
   constructor(private http: HttpClient) { }
 
 

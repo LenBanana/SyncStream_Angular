@@ -109,7 +109,7 @@ export class UserSettingModalComponent implements OnInit {
 
 enum SettingsMenu {
   User,
-  Layout,
+  General,
   Stream,
   Api
 }

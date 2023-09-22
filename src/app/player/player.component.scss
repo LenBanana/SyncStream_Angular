@@ -37,6 +37,7 @@
   z-index: 10;
   text-align: left !important;
   transition: all 0.5s ease;
+  min-width: 250px;
 }
 
 .chatBtn {
@@ -48,6 +49,8 @@
 
 .hideChat {
   right: -25%;
+  width: 0 !important;
+  min-width: 0 !important;
 }
 
 .chat-height {

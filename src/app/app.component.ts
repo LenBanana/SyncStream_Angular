@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { AlertType, Dialog } from './Interfaces/Dialog';
 import { DialogService } from './text-dialog/text-dialog-service/dialog-service.service';
+import {setVolume} from "./Interfaces/Sounds";
 declare var $:any
 
 @Component({
@@ -16,6 +17,7 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor(public dialogService: DialogService) {}
 
   ngOnInit()  {
+    setVolume(0.25);
     this.dialogUpdate = this.dialogService.newDialog.subscribe(dialog => {
       if (dialog == null) {
         return;

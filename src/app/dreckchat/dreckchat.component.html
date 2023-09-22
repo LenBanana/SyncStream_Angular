@@ -28,6 +28,9 @@
       <button type="button" class="btn btn-dark" (click)="showSmileys=!showSmileys"><i class="fa fa-smile-o"
                                                                                        aria-hidden="true"></i></button>
     </div>
+    <div class="input-group-append" *ngIf="Privileges>=UserPrivileges.Approved">
+      <button type="button" class="btn btn-dark" (click)="toggleAudio()"><i class="fa fa-phone" [class.text-success]="Voip" aria-hidden="true"></i></button>
+    </div>
     <div class="input-group-append">
       <button type="button" class="btn btn-dark px-3" (click)="SendMessage()"><i class="fa fa-paper-plane"
                                                                                  aria-hidden="true"></i></button>

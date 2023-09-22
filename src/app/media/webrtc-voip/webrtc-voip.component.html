@@ -1,0 +1,156 @@
+<!-- webrtc-voip.component.html -->
+<div *ngIf="isInRoom" class="d-flex justify-content-end">
+  <button class="btn btn-outline-dark rounded-circle" type="button" data-toggle="modal" data-target="#videoCallModal">
+    <i class="fa fa-video-camera" [class.text-success]="shareVideo"></i>
+  </button>
+</div>
+
+<!-- Video Call Modal -->
+<ng-template #participantTemplate let-name="name" let-stream="stream" let-speaking="speaking" let-muted="muted">
+  <div class="col-md-4 mb-3">
+    <div class="row text-center d-flex border-dark rounded p-3 m-0">
+      <div class="input-group">
+        <div class="input-group-prepend">
+          <div class="btn btn-outline-secondary img-placeholder flex-shrink-0 text-light"
+               [class.active-border]="speaking"
+               [class.unactive-border]="muted"
+               [style.background-color]="getRandomColor(name)">{{ name.charAt(0).toUpperCase() }}</div>
+        </div>
+        <div class="input-group-prepend">
+          <button class="btn btn-outline-secondary" (click)="openSettings()">
+            <i class="fa fa-cog"></i></button>
+        </div>
+        <div class="input-group-prepend flex-grow-1">
+          <div
+            class="btn btn-dark btn-outline-secondary text-light input-group-text pt-2 pl-2 text-left font-weight-bold w-100 border-right-0">{{name}}</div>
+        </div>
+        <div class="input-group-append" *ngIf="!stream">
+          <button class="btn btn-outline-secondary" (click)="toggleAudio()">
+            <i class="fa" [class.fa-microphone]="!localParticipant.isMuted"
+               [class.fa-microphone-slash]="localParticipant.isMuted"
+               [class.text-danger]="localParticipant.isMuted"
+               [class.text-success]="!localParticipant.isMuted"></i>
+          </button>
+          <button class="btn btn-outline-secondary" (click)="toggleVideo('webcam')">
+            <i class="fa fa-video-camera" [class.text-primary]="!localParticipant.isVideoMuted"></i>
+          </button>
+          <button class="btn btn-outline-secondary" (click)="toggleVideo('screen')">
+            <i class="fa fa-desktop" [class.text-primary]="!localParticipant.isScreenMuted"></i>
+          </button>
+        </div>
+        <div class="input-group-append" *ngIf="(stream ? hasVideoTrack(stream) : hasVideoTrack(localStream))">
+          <button class="btn btn-outline-secondary" (click)="popOutVideo(webVideoPlayerParent, webVideoPlayer)">
+            <i class="fa fa-external-link-alt"></i>
+          </button>
+        </div>
+      </div>
+      <div class="col-12 mt-2" #webVideoPlayerParent>
+        <video #webVideoPlayer [class.visually-hidden]="(stream ? !hasVideoTrack(stream) : !hasVideoTrack(localStream))"
+               [srcObject]="stream || localStream"
+               autoplay [muted]="stream ? null : 'muted'" class="video rounded">
+        </video>
+        <!-- Placeholder for video -->
+        <div *ngIf="false" class="video-placeholder">
+          <i class="fa fa-video-camera"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</ng-template>
+
+
+<div class="modal fade" id="videoCallModal" *ngIf="localParticipant">
+  <div class="modal-dialog modal-dialog-centered modal-xxl">
+    <div class="modal-content bg-dark text-light rounded">
+      <div class="modal-header text-center">
+        <h5 class="modal-title"><span class="text-main-color font-weight-bold">Dreck</span>Call</h5>
+        <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="card card-body bg-dark rounded">
+          <div class="row">
+            <div class="offset-4"></div>
+            <ng-container
+              *ngTemplateOutlet="participantTemplate; context: {name: localParticipant.participantName, stream: undefined, speaking: localParticipant.isSpeaking, muted: localParticipant.isMuted}"></ng-container>
+            <div class="offset-4 mt-2"></div>
+            <ng-container *ngFor="let participant of remoteParticipants">
+              <ng-container
+                *ngTemplateOutlet="participantTemplate; context: {name: participant.participantName, stream: participant.stream, speaking: participant.isSpeaking, muted: participant.isMuted}"></ng-container>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-danger" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Device Modal -->
+<div class="modal fade" id="deviceModal" tabindex="-1" aria-labelledby="deviceModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content bg-dark text-light rounded">
+      <div class="modal-header border-bottom-0">
+        <h5 class="modal-title" id="deviceModalLabel">Select Audio and Video Devices</h5>
+        <button type="button" class="close text-light" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="audioDevice">Audio Device</label>
+          <select class="form-control bg-secondary text-light border-0 rounded" id="audioDevice"
+                  [(ngModel)]="videoSettings.microphoneId">
+            <option *ngFor="let device of audioDevices" [value]="device.deviceId">{{ device.label }}</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="videoDevice">Video Device</label>
+          <select class="form-control bg-secondary text-light border-0 rounded" id="videoDevice"
+                  [(ngModel)]="videoSettings.cameraId">
+            <option *ngFor="let device of videoDevices" [value]="device.deviceId">{{ device.label }}</option>
+          </select>
+        </div>
+        <div class="form-group form-check">
+          <input type="checkbox" class="form-check-input bg-secondary text-light border-0 rounded" id="shareVideo"
+                 [(ngModel)]="shareVideo">
+          <label class="form-check-label" for="shareVideo">Share Video</label>
+        </div>
+      </div>
+      <div class="modal-footer border-top-0">
+        <button type="button" class="btn btn-outline-primary" (click)="joinRoomWithSelectedDevices()">Join Room</button>
+        <button type="button" class="btn btn-outline-danger" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="webRtcVideoSettingsModal" tabindex="-1" role="dialog" aria-labelledby="settingsModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content bg-dark text-white">
+      <div class="modal-header">
+        <h5 class="modal-title" id="settingsModalLabel">Stream Settings</h5>
+      </div>
+      <div class="modal-body">
+        <label>Max Video Bitrate</label>
+        <input type="number" class="form-control my-2 bg-dark text-light border-dark" placeholder="Max Video Bitrate"
+               [(ngModel)]="videoSettings.maxVideoBitrate">
+        <label>Resolution</label>
+        <select class="form-control my-2 bg-dark text-light border-dark" [(ngModel)]="videoSettings.idealResolution">
+          <option *ngFor="let res of resolutions" [value]="Resolution[res]">{{ res }} - {{Resolution[res]}}</option>
+        </select>
+        <label>Framerate</label>
+        <input type="number" max="60" class="form-control my-2 bg-dark text-light border-dark"
+               placeholder="Ideal Frame Rate" [(ngModel)]="videoSettings.idealFrameRate">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-success" (click)="saveSettings()">Save</button>
+        <button type="button" class="btn btn-outline-danger" (click)="cancelSettings()">Close</button>
+      </div>
+    </div>
+  </div>

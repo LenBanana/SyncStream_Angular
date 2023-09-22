@@ -198,14 +198,6 @@ export interface WebRtcClientOffer {
   viewerId: string,
 }
 
-export interface WebRtcSettings {
-  shareScreen: boolean;
-  shareMicrophone: boolean;
-  maxVideoBitrate: number;
-  idealResolution: Resolution;
-  idealFrameRate: number;
-}
-
 export enum Resolution {
   HD = 720,
   FHD = 1080,

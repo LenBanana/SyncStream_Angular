@@ -1,9 +1,10 @@
 import {AfterViewInit, Component, ElementRef, Input, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {Subscription} from 'rxjs';
-import {Resolution, WebRtcClientOffer, WebrtcService, WebRtcSettings} from './webrtc-service/webrtc.service';
+import {Resolution, WebRtcClientOffer, WebrtcService} from './webrtc-service/webrtc.service';
 import {PlayerType} from "../../player/player.component";
 import {MediaDeviceService} from "./media-device-modal/media-device-service/media-device.service";
 import {MediaService} from "../media-service/media.service";
+import {WebRtcSettings} from "../../Interfaces/BrowserSettings";
 
 declare var $: any;
 
@@ -17,13 +18,7 @@ declare var adapter: any;
 export class WebrtcComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() UniqueId: string;
   @ViewChild('webRtcVideo') webRtcVideo: ElementRef<HTMLVideoElement>;  // Using ViewChild
-  settings: WebRtcSettings = {
-    shareScreen: true,
-    shareMicrophone: false,
-    maxVideoBitrate: 300000, // 300 kbps
-    idealResolution: Resolution.FHD,
-    idealFrameRate: 60
-  };
+  settings: WebRtcSettings = new WebRtcSettings();
   resolutions = Object.keys(Resolution).filter(key => isNaN(Number(key)));
   subscriptions: Subscription[] = [];
   peerConnections: Map<string, RTCPeerConnection> = new Map();

@@ -1,4 +1,4 @@
-import {Component, EventEmitter, Input, OnDestroy, OnInit, Output} from '@angular/core';
+import {AfterContentInit, Component, EventEmitter, Input, OnDestroy, OnInit, Output} from '@angular/core';
 import {Subject, Subscription} from 'rxjs';
 import {VideoDTO} from '../Interfaces/VideoDTO';
 import {PlayerService} from '../player/player-service/player.service';
@@ -9,6 +9,10 @@ import {SignalRService} from '../services/signal-r.service';
 import {MediaService} from './media-service/media.service';
 import {delay} from '../helper/generic';
 import {WebrtcService} from "./webrtc/webrtc-service/webrtc.service";
+import {browserSettingName, BrowserSettings} from "../Interfaces/BrowserSettings";
+import {WebrtcVoipService} from "./webrtc-voip/webrtc-voip-service/webrtc-voip.service";
+import {DreckchatService} from "../dreckchat/dreckchat-service/dreckchat.service";
+import {UserPrivileges} from "../user-admin-modal/user-admin-modal.component";
 
 declare var $: any;
 
@@ -17,18 +21,21 @@ declare var $: any;
   templateUrl: './media.component.html',
   styleUrls: ['./media.component.scss']
 })
-export class MediaComponent implements OnInit, OnDestroy {
+export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
 
   constructor(private playerService: PlayerService,
               private playlistService: PlaylistService,
               private mediaService: MediaService,
               private pingService: PingService,
               private signalrService: SignalRService,
-              private webRtcService: WebrtcService
+              private webRtcService: WebrtcService,
+              private voipService: WebrtcVoipService,
+              private chatService: DreckchatService
   ) {
   }
 
   @Input() UniqueId: string;
+  @Input() Privileges: number;
   @Input() logout: boolean;
   @Input() Username = "";
   @Input() IsHost: boolean;
@@ -46,6 +53,7 @@ export class MediaComponent implements OnInit, OnDestroy {
   Playlist: VideoDTO[] = [];
   CurrentlyPlaying: VideoDTO;
   LastTime: number = 0;
+  Voip: boolean = false;
 
   Subscriptions: Subscription[] = [];
   PingInterval: NodeJS.Timeout;
@@ -55,63 +63,91 @@ export class MediaComponent implements OnInit, OnDestroy {
     clearInterval(this.PingInterval);
   }
 
+  async ngAfterContentInit() {
+    this.fetchSettings();
+  }
+
   ngOnInit(): void {
     this.PingInterval = setInterval(() => {
       this.pingService.GetPing();
     }, 5000);
     this.Subscriptions.push(this.webRtcService.streamStart.subscribe(o => {
-      if (o) {
-        this.LastPlayerType = this.CurrentPlayerType;
-        this.CurrentPlayerType = PlayerType.WebRtc;
-      }
-    }));
-    this.Subscriptions.push(this.webRtcService.streamStop.subscribe(o => {
-      if (o && this.CurrentPlayerType === PlayerType.WebRtc) {
-        this.CurrentPlayerType = this.LastPlayerType;
-      }
-    }));
-    this.Subscriptions.push(this.signalrService.pingStream.subscribe(ping => {
-      if (!ping) {
-        return;
-      }
-      this.CurrentPing = Number.parseFloat(ping.toFixed(2));
-      if (this.Threshhold < this.CurrentPing || (this.IsHost && this.Threshhold > 2 && this.CurrentPing < 2) || (!this.IsHost && this.Threshhold > .5 && this.CurrentPing < .5)) {
-        if (!this.IsHost) {
-          this.Threshhold = this.CurrentPing < .5 ? .5 : Number.parseFloat(ping.toFixed(2));
-        } else {
-          this.Threshhold = (this.CurrentPing < 2 ? 2 : Number.parseFloat(ping.toFixed(2))) * 2;
+        if (o) {
+          this.LastPlayerType = this.CurrentPlayerType;
+          this.CurrentPlayerType = PlayerType.WebRtc;
         }
-        this.threshholdChange.emit(this.Threshhold);
-      }
-    }));
-    this.Subscriptions.push(this.playerService.playerType.subscribe(async type => {
-      if (!type) {
-        this.CurrentPlayerType = PlayerType.Nothing;
-        this.hideChat.emit(false);
-        return;
-      }
-      if (this.CurrentPlayerType !== type) {
-        this.LastPlayerType = this.CurrentPlayerType;
-        this.CurrentPlayerType = type as PlayerType;
-        this.hideChat.emit(this.CurrentPlayerType === PlayerType.Blackjack);
-      }
-    }));
-    this.Subscriptions.push(this.playerService.isplaying.subscribe(play => {
-      if (play != null) {
-        this.isPlayingEvent.emit(play);
-      }
-    }));
-    this.Subscriptions.push(this.playlistService.playlist.subscribe(result => {
-      if (!result) {
-        return;
-      }
-      this.Playlist = result;
-    }));
-    this.Subscriptions.push(this.mediaService.playerTime.subscribe(t => {
-      if (t > 0) {
-        this.SetTime(t);
-      }
-    }));
+      }),
+      this.webRtcService.streamStop.subscribe(o => {
+        if (o && this.CurrentPlayerType === PlayerType.WebRtc) {
+          this.CurrentPlayerType = this.LastPlayerType;
+        }
+      }),
+      this.signalrService.pingStream.subscribe(ping => {
+        if (!ping) {
+          return;
+        }
+        this.CurrentPing = Number.parseFloat(ping.toFixed(2));
+        if (this.Threshhold < this.CurrentPing || (this.IsHost && this.Threshhold > 2 && this.CurrentPing < 2) || (!this.IsHost && this.Threshhold > .5 && this.CurrentPing < .5)) {
+          if (!this.IsHost) {
+            this.Threshhold = this.CurrentPing < .5 ? .5 : Number.parseFloat(ping.toFixed(2));
+          } else {
+            this.Threshhold = (this.CurrentPing < 2 ? 2 : Number.parseFloat(ping.toFixed(2))) * 2;
+          }
+          this.threshholdChange.emit(this.Threshhold);
+        }
+      }),
+      this.playerService.playerType.subscribe(async type => {
+        if (!type) {
+          this.CurrentPlayerType = PlayerType.Nothing;
+          this.hideChat.emit(false);
+          return;
+        }
+        if (this.CurrentPlayerType !== type) {
+          this.LastPlayerType = this.CurrentPlayerType;
+          this.CurrentPlayerType = type as PlayerType;
+          this.hideChat.emit(this.CurrentPlayerType === PlayerType.Blackjack);
+        }
+      }),
+      this.playerService.isplaying.subscribe(play => {
+        if (play != null) {
+          this.isPlayingEvent.emit(play);
+        }
+      }),
+      this.playlistService.playlist.subscribe(result => {
+        if (!result) {
+          return;
+        }
+        this.Playlist = result;
+      }),
+      this.mediaService.playerTime.subscribe(t => {
+        if (t > 0) {
+          this.SetTime(t);
+        }
+      }),
+      this.voipService.joinRoom.subscribe(result => {
+        if (result == null) {
+          return;
+        }
+        if (result == this.UniqueId) {
+          this.Voip = true;
+        }
+      }),
+      this.voipService.leaveRoom.subscribe(result => {
+        if (result == null) {
+          return;
+        }
+        if (result == this.UniqueId) {
+          this.Voip = false;
+        }
+      }));
+  }
+
+  fetchSettings() {
+    const itemBackup = localStorage.getItem(browserSettingName);
+    const browserSettings = JSON.parse(itemBackup) as BrowserSettings;
+    if (browserSettings && browserSettings.generalSettings.defaultVoip && !this.Voip) {
+      this.chatService.joinVoice.next(this.UniqueId);
+    }
   }
 
   nowPlaying(video: VideoDTO) {
@@ -124,4 +160,6 @@ export class MediaComponent implements OnInit, OnDestroy {
       this.playerService.SetTime(currentTime, this.UniqueId);
     }
   }
+
+  protected readonly UserPrivileges = UserPrivileges;
 }

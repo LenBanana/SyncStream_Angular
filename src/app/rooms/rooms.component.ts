@@ -20,6 +20,7 @@ import { LiveUser } from '../Interfaces/liveStream';
 import { MatMenuTrigger } from '@angular/material/menu';
 import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
 import { PlayerType } from '../player/player.component';
+import {WebrtcVoipService} from "../media/webrtc-voip/webrtc-voip-service/webrtc-voip.service";
 declare var $: any
 
 
@@ -70,6 +71,7 @@ export class RoomsComponent implements OnInit {
     private chessService: ChessService,
     private ngxChessBoardService: NgxChessBoardService,
     private userService: UserlistService,
+    private voipService: WebrtcVoipService,
     public signalRService: SignalRService,
     public roomService: RoomService,
     public dialogService: DialogService,
@@ -218,6 +220,7 @@ export class RoomsComponent implements OnInit {
       this.currentTime = time;
       this.delInterval = false;
       this.playerService.currentTime.next(time);
+      this.roomService.JoinRoom.next(uniqueId);
       $('#join-animation-placeholder').removeClass('join-room').addClass('none');
     }, 250);
   }
@@ -229,6 +232,7 @@ export class RoomsComponent implements OnInit {
     this.currentRoom = undefined;
     this.delInterval = true;
     this.playerService.playerType.next(PlayerType.Nothing);
+    this.roomService.LeaveRoom.next(this.currentRoom);
     setTimeout(() => {
       $('#join-animation-placeholder').removeClass('leave-room').addClass('none');
     }, 250);

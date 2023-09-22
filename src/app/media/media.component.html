@@ -30,6 +30,7 @@
       <app-blackjack-game [UniqueId]="UniqueId" [logout]="logout" [class.vh-90]="!nav">
       </app-blackjack-game>
     </div>
+    <app-webrtc-voip [UniqueId]="UniqueId" [Username]="Username"></app-webrtc-voip>
     <div class="center-content" *ngIf="CurrentPlayerType==PlayerType.Chess">
       <app-chess-game class="center-mid" [UniqueId]="UniqueId" [Username]="Username"></app-chess-game>
     </div>
@@ -37,7 +38,7 @@
       class="ChatView col-3 CardBack border-around-nobot rounded-left" [class.hideChat]="!twitchChat">
       <div class="chat-height">
         <div class="chat-height ml-1">
-          <app-dreckchat [nav]="false" [logout]="logout" [UniqueId]="UniqueId" [Username]="Username"
+          <app-dreckchat [nav]="false" [logout]="logout" [UniqueId]="UniqueId" [Username]="Username" [Privileges]="Privileges"
             [WhiteBoard]="false"></app-dreckchat>
         </div>
       </div>

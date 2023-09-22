@@ -57,6 +57,7 @@ import { LiveStreamDirectComponent } from './media/live-stream-direct/live-strea
 import { ServerDashboardComponent } from './user-admin-modal/server-dashboard/server-dashboard.component';
 import {MediaDeviceModalComponent} from "./media/webrtc/media-device-modal/media-device-modal.component";
 import { WebrtcSfuComponent } from './media/webrtc-sfu/webrtc-sfu.component';
+import { WebrtcVoipComponent } from './media/webrtc-voip/webrtc-voip.component';
 const DragConfig = {
   dragStartThreshold: 0,
   pointerDirectionChangeThreshold: 5,
@@ -109,7 +110,8 @@ const DragConfig = {
     ServerDashboardComponent,
     MediaDeviceModalComponent,
     MediaDeviceModalComponent,
-    WebrtcSfuComponent
+    WebrtcSfuComponent,
+    WebrtcVoipComponent
   ],
   imports: [
     MatMenuModule,

@@ -2,7 +2,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content bg-dark">
             <div class="modal-header">
-                <h4><span class="text-main-color font-weight-bold">Sync</span>Stream User</h4>
+                <h4><span class="text-main-color font-weight-bold">Dreck</span>Tube User</h4>
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body explain-text">
@@ -11,8 +11,8 @@
                     <li class="nav-item mr-1" (click)="CurrentSettings=SettingsMenu.User">
                       <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.User}">User settings</a>
                     </li>
-                    <li class="nav-item mr-1" (click)="CurrentSettings=SettingsMenu.Layout">
-                      <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Layout}">General</a>
+                    <li class="nav-item mr-1" (click)="CurrentSettings=SettingsMenu.General">
+                      <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.General}">General</a>
                     </li>
                     <li class="nav-item mr-1" *ngIf="User.approved" (click)="CurrentSettings=SettingsMenu.Stream">
                       <a class="nav-link text-light border-bottom border-dark pointer rounded" [ngClass]="{'active bg-secondary' : CurrentSettings==SettingsMenu.Stream}">Streaming</a>
@@ -37,7 +37,7 @@
                     <label class="mt-3">Password (confirmation)<span class="text-danger"> *</span></label>
                     <input [(ngModel)]="Password" minlength="2" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
                   </div>
-                  <div *ngIf="CurrentSettings==SettingsMenu.Layout" class="container-fluid py-3">
+                  <div *ngIf="CurrentSettings==SettingsMenu.General" class="container-fluid py-3">
                     <h3>Layout</h3>
                     <div class="custom-control custom-checkbox pt-2">
                       <input [(ngModel)]="BrowserSettings.layoutSettings.showCountInfo" type="checkbox" class="custom-control-input" id="countInfoCheck" (change)="changeSettings()">
@@ -53,6 +53,17 @@
                       <h3 class="pt-3">Download Manager</h3>
                       <label for="audioVolumeCtrl">Audio volume - {{BrowserSettings.generalSettings.audioVolume}}%</label>
                       <input type="range" [(ngModel)]="BrowserSettings.generalSettings.audioVolume" (change)="changeSettings()" class="form-control-range" id="audioVolumeCtrl" value="100" style="max-width: 33%;">
+                    </div>
+                    <div class="mt-3" *ngIf="User.userprivileges>=UserPrivileges.Approved">
+                      <h3 class="pt-3">VoIP</h3>
+                      <div class="custom-control custom-checkbox pt-2">
+                        <input [(ngModel)]="BrowserSettings.generalSettings.defaultVoip" type="checkbox" class="custom-control-input" id="voipCheck" (change)="changeSettings()">
+                        <label class="custom-control-label" for="voipCheck">Always join</label>
+                      </div>
+                      <div class="custom-control custom-checkbox pt-2">
+                        <input [(ngModel)]="BrowserSettings.generalSettings.playVoipJoinSound" type="checkbox" class="custom-control-input" id="voipAudioCheck" (change)="changeSettings()">
+                        <label class="custom-control-label" for="voipAudioCheck">Play sound</label>
+                      </div>
                     </div>
                   </div>
                   <div *ngIf="CurrentSettings==SettingsMenu.Stream" class="container-fluid py-3">
