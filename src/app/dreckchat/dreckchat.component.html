@@ -1,4 +1,4 @@
-<div class="chat">
+<div class="chat" id="chat-window">
   <p class="text-center m-0">Hello <span class="username" [class.text-warning]="logout">{{Username}}</span></p>
   <ul class="chat-style pt-2 pr-4" id="messagebox">
     <li *ngFor="let Message of Messages; let i=index;" tabindex="{{i}}">
@@ -29,7 +29,7 @@
                                                                                        aria-hidden="true"></i></button>
     </div>
     <div class="input-group-append" *ngIf="Privileges>=UserPrivileges.Approved">
-      <button type="button" class="btn btn-dark" (click)="toggleAudio()"><i class="fa fa-phone" [class.text-success]="Voip" aria-hidden="true"></i></button>
+      <button type="button" class="btn btn-dark" (click)="toggleAudio()"><i class="fa fa-phone transition fa-flip-horizontal" [class.voip-active]="Voip"></i></button>
     </div>
     <div class="input-group-append">
       <button type="button" class="btn btn-dark px-3" (click)="SendMessage()"><i class="fa fa-paper-plane"

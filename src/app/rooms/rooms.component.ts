@@ -21,6 +21,7 @@ import { MatMenuTrigger } from '@angular/material/menu';
 import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
 import { PlayerType } from '../player/player.component';
 import {WebrtcVoipService} from "../media/webrtc-voip/webrtc-voip-service/webrtc-voip.service";
+import {LiveStreamService} from "../live-stream-view/live-stream-service/live-stream.service";
 declare var $: any
 
 
@@ -75,6 +76,7 @@ export class RoomsComponent implements OnInit {
     public signalRService: SignalRService,
     public roomService: RoomService,
     public dialogService: DialogService,
+    public liveStreamService: LiveStreamService,
     private cdRef: ChangeDetectorRef,
     private loc: Location) {
     this.onResize();
@@ -149,6 +151,7 @@ export class RoomsComponent implements OnInit {
   private async signalR() {
     await this.signalRService.startConnection().finally(() => {
       this.SignalR = true;
+      this.liveStreamService.GetLiveUsers();
       this.cdRef.detectChanges();
     });
 

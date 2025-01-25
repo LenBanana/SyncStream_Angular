@@ -1,5 +1,6 @@
 import {BehaviorSubject} from "rxjs";
 import {Resolution} from "../media/webrtc/webrtc-service/webrtc.service";
+import {Point} from "@angular/cdk/drag-drop";
 
 export var browserSettingName = "userSettings";
 export var settingsUpdate: BehaviorSubject<boolean> = new BehaviorSubject(null);
@@ -8,11 +9,13 @@ export class LayoutSettings {
   showCountInfo: boolean;
   bigSideNav: boolean;
   menuSize: number;
+  menuPosition: Point;
 
   constructor() {
     this.showCountInfo = true;
     this.bigSideNav = false;
     this.menuSize = 90;
+    this.menuPosition = {x: 0, y: 0};
   }
 }
 

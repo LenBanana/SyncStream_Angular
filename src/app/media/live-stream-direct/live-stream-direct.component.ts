@@ -25,12 +25,6 @@ export class LiveStreamDirectComponent implements OnInit, AfterViewInit {
   liveChannelSub: Subscription;
   isLive = false;
   ngOnInit(): void {
-    this.route.paramMap.subscribe(params => {
-      this.liveStream = params.get('UniqueId');
-      if (this.liveStream && this.liveStream.length > 0) {
-        this.liveStream = this.lowerFirstLetter(this.liveStream);
-      }
-    });
   }
   async signalR() {
     await this.signalRService.startConnection().finally(() => {
@@ -43,26 +37,35 @@ export class LiveStreamDirectComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.signalR();
+    this.signalR().then(r => {
+      this.route.paramMap.subscribe(params => {
+        this.liveStream = params.get('UniqueId');
+        if (this.liveStream && this.liveStream.length > 0) {
+          this.liveStream = this.lowerFirstLetter(this.liveStream);
+          this.liveStreamService.GetLiveUsers();
+        }
+      });
+    });
   }
 
   addSubs() {
-    var timeOut = setTimeout(() => {
+    const timeOut = setTimeout(() => {
       this.LeaveRoom();
     }, 2500);
     this.liveChannelSub = this.liveStreamService.liveChannels.subscribe(c => {
       if (!c || c == null) {
         return;
       }
+      console.log(c);
       clearTimeout(timeOut);
-      var idx = c.findIndex(x => x.userName.toLowerCase() == this.liveStream.toLowerCase());
+      const idx = c.findIndex(x => x.userName.trim().toLowerCase() == this.liveStream.trim().toLowerCase());
       if (idx == -1) {
         this.LeaveRoom();
         return;
       }
       this.isLive = true;
-      var user = c[idx].userName;
-      var url = "https://live.drecktu.be/live?stream=" + this.liveStream
+      const user = c[idx].userName;
+      const url = "https://live.drecktu.be/live?stream=" + this.liveStream;
       this.playerService.player.next({title: user, url: url});
       this.liveChannelSub.unsubscribe();
     })

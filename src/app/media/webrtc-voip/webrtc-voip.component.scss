@@ -64,7 +64,7 @@
   outline: 1px solid #ff0000;
 }
 .modal-xxl {
-  max-width: 75%;
+  min-width: 75%;
 }
 .text-main-color {
   color: #3369e7;
@@ -77,7 +77,12 @@
   background-color: #7a7da8;
   color: #fff;
 }
+.chat-container {
+  height: 50vh;
+}
+.user-list-container {
+  overflow-y: auto;
+}
 #videoCallModal>.modal-dialog>.modal-content>.modal-body>.card-body {
   z-index: 9999;
-  min-height: 25vh;
 }

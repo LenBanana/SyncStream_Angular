@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { YoutubeService } from './youtube.service';
+import { HttpRtmpService } from './http-rtmp.service';
 
-describe('YoutubeService', () => {
-  let service: YoutubeService;
+describe('HttpRtmpService', () => {
+  let service: HttpRtmpService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(YoutubeService);
+    service = TestBed.inject(HttpRtmpService);
   });
 
   it('should be created', () => {

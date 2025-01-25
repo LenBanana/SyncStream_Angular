@@ -1,23 +1,24 @@
-import {Injectable} from '@angular/core';
+import {Injectable, OnDestroy} from '@angular/core';
 import {BehaviorSubject} from 'rxjs';
 import {SignalRService, hubConnection} from '../../../services/signal-r.service';
 import {token} from '../../../global.settings';
 import {WebrtcService} from "../../webrtc/webrtc-service/webrtc.service";
+import {WebRtcSettings} from "../../../Interfaces/BrowserSettings";
 
 @Injectable({
   providedIn: 'root'
 })
-export class WebrtcVoipService {
-  private peerConnections: Map<string, RTCPeerConnection> = new Map();
+export class WebrtcVoipService implements OnDestroy {
+  public peerConnections: Map<string, RTCPeerConnection> = new Map();
+  public gatheredIceCandidates: Map<string, RTCIceCandidate[]> = new Map();
   public onNewParticipant: BehaviorSubject<VoipParticipant> = new BehaviorSubject(null);
   public onParticipantLeave: BehaviorSubject<VoipParticipant> = new BehaviorSubject(null);
   public joinRoom: BehaviorSubject<string> = new BehaviorSubject(null);
   public leaveRoom: BehaviorSubject<string> = new BehaviorSubject(null);
-  public peerMuteStatus: BehaviorSubject<VoipParticipantDTO> = new BehaviorSubject(null);
-  private localStream: MediaStream;
+  public peerStatus: BehaviorSubject<VoipParticipantDTO> = new BehaviorSubject(null);
+  public localStream: MediaStream;
 
   constructor(private signalRService: SignalRService, private webRtcService: WebrtcService) {
-    // Add listeners for SignalR events
     signalRService.connectionClosed.subscribe(isClosed => {
       if (isClosed === false) {
         this.addListeners();
@@ -26,6 +27,11 @@ export class WebrtcVoipService {
         this.removeListeners();
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.cleanUp();
+    this.removeListeners();
   }
 
   async addVideoTrackToConnection(stream: MediaStreamTrack) {
@@ -49,11 +55,56 @@ export class WebrtcVoipService {
     });
   }
 
+  async replaceVideoTrack(cameraId: string, videoSettings: WebRtcSettings) {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        deviceId: cameraId,
+        width: videoSettings.playerWidth,
+        frameRate: videoSettings.idealFrameRate
+      }
+    });
+    const videoTracks = this.localStream.getVideoTracks();
+    videoTracks.forEach(track => {
+      this.localStream.removeTrack(track);
+      track.stop();
+    });
+    stream.getVideoTracks().forEach(track => {
+      this.localStream.addTrack(track);
+    });
+    this.peerConnections.forEach(pc => {
+      const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender) {
+        sender.replaceTrack(stream.getVideoTracks()[0]);
+      }
+    });
+  }
+
+  async replaceAudioTrack(microphoneId: string) {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        deviceId: microphoneId
+      }
+    });
+    const audioTracks = this.localStream.getAudioTracks();
+    audioTracks.forEach(track => {
+      this.localStream.removeTrack(track);
+      track.stop();
+    });
+    stream.getAudioTracks().forEach(track => {
+      this.localStream.addTrack(track);
+    });
+    this.peerConnections.forEach(pc => {
+      const sender = pc.getSenders().find(s => s.track && s.track.kind === 'audio');
+      if (sender) {
+        sender.replaceTrack(stream.getAudioTracks()[0]);
+      }
+    });
+  }
+
   async joinAudioRoom(roomName: string, localStream: MediaStream) {
     try {
       if (token) {
         this.localStream = localStream;
-        const configuration = await this.webRtcService.getWebRtcConfig();
         await hubConnection.invoke('JoinAudioRoom', token, roomName);
       }
     } catch (error) {
@@ -97,58 +148,138 @@ export class WebrtcVoipService {
     }
   }
 
-  async initiateConnectionToParticipant(participant: VoipParticipantDTO, localStream: MediaStream) {
-    let pc: RTCPeerConnection;
+  private async createPeerConnection(participant: VoipParticipantDTO, localStream: MediaStream): Promise<RTCPeerConnection> {
+    const configuration = await this.webRtcService.getWebRtcConfig();
+    const pc = new RTCPeerConnection(configuration);
 
-    if (this.peerConnections.has(participant.participantId)) {
-      pc = this.peerConnections.get(participant.participantId);
-    } else {
-      const configuration = await this.webRtcService.getWebRtcConfig();
-      pc = new RTCPeerConnection(configuration);
-      this.peerConnections.set(participant.participantId, pc);
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
 
-      localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    pc.onnegotiationneeded = async () => {
+      await this.createAndSendOffer(pc, participant.participantId);
+    };
 
-      pc.onnegotiationneeded = async () => {
-        console.log('onnegotiationneeded for participant');
-        await this.createAndSendOffer(pc, participant.participantId);
-      };
-
-      pc.onicecandidate = event => {
-        if (event.candidate && token) {
-          try {
-            hubConnection.invoke('SendIceCandidateToParticipant', token, participant.participantId, event.candidate);
-          } catch (error) {
-            console.error('Error sending ICE candidate:', error);
-          }
+    pc.onicecandidate = event => {
+      if (event.candidate && token) {
+        try {
+          hubConnection.invoke('SendIceCandidateToParticipant', token, participant.participantId, event.candidate);
+        } catch (error) {
+          console.error('Error sending ICE candidate:', error);
         }
-      };
+      }
+    };
 
-      pc.ontrack = event => {
+    pc.onconnectionstatechange = event => {
+      if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+        this.handleParticipantLeave(participant.participantId);
+      }
+    };
+
+    pc.onsignalingstatechange = async event => {
+      if (pc.signalingState === 'have-remote-offer') {
+        const offer = {
+          participantName: participant.participantName,
+          type: pc.remoteDescription.type,
+          sdp: pc.remoteDescription.sdp
+        };
+        const gatheredIceCandidates = this.gatheredIceCandidates.get(participant.participantId);
+        if (gatheredIceCandidates) {
+          console.log('Adding gathered ICE candidates')
+          gatheredIceCandidates.forEach(candidate => {
+            pc.addIceCandidate(candidate).catch(error => {
+              console.error('Error adding ICE candidate:', error);
+            });
+          });
+          this.gatheredIceCandidates.delete(participant.participantId);
+        }
+        await this.createAndSendAnswer(pc, participant.participantId, offer);
+      }
+    };
+
+    pc.ontrack = event => {
+      if (participant.participantName) {
         const voipParticipant: VoipParticipant = {
           participantId: participant.participantId,
           stream: event.streams[0],
           participantName: participant.participantName
         };
         this.onNewParticipant.next(voipParticipant);
-      };
-    }
+      }
+    };
 
-    // This part is now only necessary if you want to force sending an offer right away
-    // Otherwise, the onnegotiationneeded event will handle it
-    //await this.createAndSendOffer(pc, participant);
+    return pc;
   }
 
+  async initiateConnectionToParticipant(participant: VoipParticipantDTO, localStream: MediaStream) {
+    let pc: RTCPeerConnection;
+    if (!this.peerConnections.has(participant.participantId)) {
+      pc = await this.createPeerConnection(participant, localStream);
+      this.peerConnections.set(participant.participantId, pc);
+    } else {
+      pc = this.peerConnections.get(participant.participantId);
+    }
+    return pc;
+  }
 
-  async handleParticipantLeave(participant: VoipParticipantDTO) {
-    const pc = this.peerConnections.get(participant.participantId);
+  async handleIncomingOffer(participantId: string, offer: VoipOffer) {
+    let pc: RTCPeerConnection = await this.initiateConnectionToParticipant({
+      participantId: participantId,
+      participantName: offer.participantName
+    }, this.localStream);
+    try {
+      await pc.setRemoteDescription(new RTCSessionDescription({sdp: offer.sdp, type: offer.type as RTCSdpType}));
+      await this.addGatheredIceCandidates(participantId);
+      const existingSenders = pc.getSenders();
+      this.localStream.getTracks().forEach(track => {
+        const sender = existingSenders.find(s => s.track && s.track.kind === track.kind);
+        if (sender) {
+          sender.replaceTrack(track);
+        } else {
+          pc.addTrack(track, this.localStream)
+        }
+      });
+    } catch (error) {
+      console.error('Error handling incoming offer:', error);
+    }
+  }
+
+  async handleIncomingAnswer(participantId: string, answer: VoipOffer) {
+    const pc = this.peerConnections.get(participantId);
+    if (pc) {
+      await pc.setRemoteDescription(new RTCSessionDescription({
+        sdp: answer.sdp,
+        type: answer.type as RTCSdpType
+      })).catch(error => {
+        console.error('Error setting remote description:', error);
+      });
+      await this.addGatheredIceCandidates(participantId);
+    }
+  }
+
+  private async addGatheredIceCandidates(participantId: string) {
+    const pc = this.peerConnections.get(participantId);
+    if (!pc) return;
+
+    const gatheredIceCandidates = this.gatheredIceCandidates.get(participantId);
+    if (gatheredIceCandidates) {
+      gatheredIceCandidates.forEach(candidate => {
+        pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(error => {
+          console.error('Error adding ICE candidate:', error);
+        });
+      });
+      // Remove the participant's entry from the map after adding the candidates
+      this.gatheredIceCandidates.delete(participantId);
+    }
+  }
+
+  async handleParticipantLeave(participantId: string) {
+    const pc = this.peerConnections.get(participantId);
     if (pc) {
       pc.close();
-      this.peerConnections.delete(participant.participantId);
+      this.peerConnections.delete(participantId);
       this.onParticipantLeave.next({
-        participantId: participant.participantId,
+        participantId: participantId,
         stream: null,
-        participantName: participant.participantName
+        participantName: participantId
       });
     }
   }
@@ -170,76 +301,20 @@ export class WebrtcVoipService {
     }
   }
 
-  async handleIncomingOffer(participantId: string, offer: VoipOffer) {
-    let pc: RTCPeerConnection;
 
-    if (this.peerConnections.has(participantId)) {
-      pc = this.peerConnections.get(participantId);
-    } else {
-      const configuration = await this.webRtcService.getWebRtcConfig();
-      pc = new RTCPeerConnection(configuration);
-      this.peerConnections.set(participantId, pc);
-
-      pc.onnegotiationneeded = async () => {
-        console.log('onnegotiationneeded for offer');
-        await this.createAndSendOffer(pc, participantId);
-      };
-
-      pc.onicecandidate = event => {
-        if (event.candidate && token) {
-          try {
-            hubConnection.invoke('SendIceCandidateToParticipant', token, participantId, event.candidate);
-          } catch (error) {
-            console.error('Error sending ICE candidate:', error);
-          }
-        }
-      };
-
-      pc.ontrack = event => {
-        this.onNewParticipant.next({participantId, stream: event.streams[0], participantName: offer.participantName});
-      };
-    }
-
-    try {
-      await pc.setRemoteDescription(new RTCSessionDescription({sdp: offer.sdp, type: offer.type as RTCSdpType}));
-      const existingSenders = pc.getSenders();
-      this.localStream.getTracks().forEach(track => {
-        const sender = existingSenders.find(s => s.track && s.track.kind === track.kind);
-        if (sender) {
-          sender.replaceTrack(track);
-        } else {
-          pc.addTrack(track, this.localStream)
-        }
-      });
-      if (pc.signalingState === 'stable') {
-        await this.createAndSendOffer(pc, participantId);
-      } else {
-        await this.createAndSendAnswer(pc, participantId, offer);
-      }
-    } catch (error) {
-      console.error('Error handling incoming offer:', error);
-    }
-  }
-
-
-  async handleIncomingAnswer(participantId: string, answer: VoipOffer) {
-    const pc = this.peerConnections.get(participantId);
-    if (pc) {
-      await pc.setRemoteDescription(new RTCSessionDescription({
-        sdp: answer.sdp,
-        type: answer.type as RTCSdpType
-      })).catch(error => {
-        console.error('Error setting remote description:', error);
-      });
-    }
-  }
-
-  handleIncomingIceCandidate(participantId: string, candidate: RTCIceCandidate) {
-    const pc = this.peerConnections.get(participantId);
-    if (pc) {
-      pc.addIceCandidate(candidate).catch(error => {
+  async handleIncomingIceCandidate(participantId: string, candidate) {
+    let pc = this.peerConnections.get(participantId);
+    if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+      // Directly add the ICE candidate if the handshake is complete
+      pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(error => {
         console.error('Error adding ICE candidate:', error);
       });
+    } else {
+      // Store the ICE candidate if the handshake is not complete
+      if (!this.gatheredIceCandidates.has(participantId)) {
+        this.gatheredIceCandidates.set(participantId, []);
+      }
+      this.gatheredIceCandidates.get(participantId).push(candidate);
     }
   }
 
@@ -249,7 +324,7 @@ export class WebrtcVoipService {
     });
 
     hubConnection.on('participantLeft', (participant: VoipParticipantDTO) => {
-      this.handleParticipantLeave(participant);
+      this.handleParticipantLeave(participant.participantId);
     });
 
     hubConnection.on('receiveOfferFromParticipant', (participantId, offer) => {
@@ -263,7 +338,7 @@ export class WebrtcVoipService {
       this.handleIncomingIceCandidate(participantId, candidate);
     });
     hubConnection.on('receiveStatusFromParticipant', (participant: VoipParticipantDTO) => {
-      this.peerMuteStatus.next(participant);
+      this.peerStatus.next(participant);
     });
   }
 
@@ -282,26 +357,35 @@ export class WebrtcVoipService {
     this.leaveRoom.next(null);
   }
 
-  popOutVideo(videoElement: HTMLVideoElement, originalParent: HTMLElement) {
-    const screenWidth = window.screen.width;
-    const initialWidth = Math.floor(screenWidth * 0.25);
-    const initialHeight = Math.floor((initialWidth * 9) / 16);
-    const popOutWindow = window.open('', 'Pop Out Video', `width=${initialWidth},height=${initialHeight}`);
-    if (popOutWindow) {
-      popOutWindow.document.body.appendChild(videoElement);
-      videoElement.style.width = '100%';
-      videoElement.style.height = '100%';
-      popOutWindow.document.body.style.margin = '0';
-      popOutWindow.document.body.style.padding = '0';
-      popOutWindow.document.body.style.backgroundColor = '#222222';
-      popOutWindow.addEventListener('unload', () => {
-        originalParent.appendChild(videoElement);
-        videoElement.style.width = '';
-        videoElement.style.height = '';
-      });
+  async popOutVideo(videoElement: HTMLVideoElement, originalParent: HTMLElement) {
+    const isFirefox = navigator.userAgent.toLowerCase().includes('firefox');
+    if (isFirefox) {
+      const screenWidth = window.screen.width;
+      const initialWidth = Math.floor(screenWidth * 0.25);
+      const initialHeight = Math.floor((initialWidth * 9) / 16);
+      const popOutWindow = window.open('', 'Pop Out Video', `width=${initialWidth},height=${initialHeight}`);
+      if (popOutWindow) {
+        popOutWindow.document.body.appendChild(videoElement);
+        videoElement.style.width = '100%';
+        videoElement.style.height = '100%';
+        popOutWindow.document.body.style.margin = '0';
+        popOutWindow.document.body.style.padding = '0';
+        popOutWindow.document.body.style.backgroundColor = '#222222';
+        await videoElement.play();
+        popOutWindow.addEventListener('unload', () => {
+          originalParent.appendChild(videoElement);
+          videoElement.style.width = '';
+          videoElement.style.height = '';
+        });
+      }
+    } else {
+      if (document.pictureInPictureElement !== null && document.pictureInPictureElement === videoElement) {
+        await document.exitPictureInPicture();
+        return;
+      }
+      await videoElement.requestPictureInPicture();
     }
   }
-
 }
 
 export interface VoipParticipantDTO {

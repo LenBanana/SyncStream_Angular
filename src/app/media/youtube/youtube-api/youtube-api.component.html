@@ -1,0 +1,39 @@
+<div class="container-fluid min-vh-50">
+  <h2 class="mb-4 text-center mt-1">YouTube Search</h2>
+  <!-- dummy inputs for autocomplete -->
+  <input type="text" name="dummyUser" autocomplete="off" style="display:none;">
+  <input type="password" name="dummyPass" autocomplete="off" style="display:none;">
+  <!-- end dummy inputs -->
+  <div class="input-group mb-4">
+    <input [(ngModel)]="searchTerm" [ngbTypeahead]="search" (focus)="focus$.next($event.target.value)" (click)="click$.next($event.target.value)" #instance="ngbTypeahead" type="text" class="form-control bg-dark text-light border-dark" autocomplete="off" name="youtubeSearchField" placeholder="Search for videos..." (keydown)="searchYoutubeEvent($event)">
+    <div class="input-group-append">
+      <select [(ngModel)]="sortOption" class="form-control rounded-0 bg-dark border-dark text-light w-auto">
+        <option *ngFor="let option of sortOptionsKeys" value="{{option}}">{{sortOptions.get(option)}}</option>
+      </select>
+      <select [(ngModel)]="pageSize" class="form-control rounded-0 bg-dark border-dark text-light w-auto">
+        <option *ngFor="let option of possiblePageSizes" value="{{option}}">{{option}}</option>
+      </select>
+      <button *ngIf="searchResult&&searchResult.items.length>0" (click)="searchResult = null;" class="btn btn-secondary bg-secondary border-dark" type="button">
+        <i class="fas fa-trash"></i>
+      </button>
+      <button class="btn btn-secondary bg-secondary border-dark" type="button" (click)="searchYoutube()">
+        <i class="fas fa-search"></i>
+      </button>
+    </div>
+  </div>
+  <div class="row" *ngIf="searchResult">
+    <div class="col-md-6 mb-4" *ngFor="let result of searchResult.items">
+      <div class="card bg-secondary pointer" (click)="sendVideoToRoom(result)">
+        <img src="{{result.snippet.thumbnails.high.url}}" class="card-img-top" alt="Video Thumbnail">
+        <div [class.op-0]="!result.addedToPlaylist" [class.click-through]="!result.addedToPlaylist" [class.op-1]="result.addedToPlaylist" class="overlay position-absolute w-100 h-100 top-0 left-0 op-50-dark d-flex justify-content-center align-items-center">
+          <i class="fa transition fa-3x text-success" [class.fa-check]="result.addedToPlaylist" [class.fa-plus]="!result.addedToPlaylist" aria-hidden="true"></i>
+        </div>
+        <div class="card-body">
+          <p class="card-title">{{result.snippet.title}}</p>
+          <small class="card-text d-block">Uploaded: {{result.snippet.publishedAt | date: "dd.MM.yyyy HH:mm"}}</small>
+          <small class="card-text d-block"><small class="text-muted">Channel: {{result.snippet.channelTitle}}</small></small>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

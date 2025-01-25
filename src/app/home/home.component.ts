@@ -61,7 +61,8 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
       this.fullscreen = false;
       this.isInMenu.emit(true);
     }
-    if (this.fullscreen==false&&this.nav==false&&this.inMenu==false) {
+    const isMobile = window.innerWidth <= 800;
+    if (this.isPlaying&&!isMobile&&!this.inMenu) {
       this.currentTimeout = setTimeout(() => {
         this.fullscreen = true;
         this.isInMenu.emit(false);
@@ -70,9 +71,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   }
 
   ngOnChanges() {
-    if (this.isPlaying==false) {
-      this.fullscreen = false;
-    }
   }
 
   DrawWhiteboard() {
@@ -111,6 +109,25 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
 
   menuEnter(enter) {
     this.inMenu=enter;
+    if (!enter && this.isPlaying) {
+      this.fullscreen = true;
+      this.isInMenu.emit(false);
+    }
+  }
+
+  isPlayingEvent(isPlaying) {
+    this.isPlaying = isPlaying;
+    const isMobile = window.innerWidth <= 800;
+    if (isMobile) {
+      return;
+    }
+    if (this.isPlaying==false) {
+      this.fullscreen = false;
+      this.isInMenu.emit(false);
+    } else {
+      this.fullscreen = true;
+      this.isInMenu.emit(true);
+    }
   }
 
   ChangeHost(isHost: boolean) {

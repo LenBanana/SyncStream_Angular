@@ -17,7 +17,6 @@ export class LiveStreamService {
       if (isClosed===false) {
         this.addLiveChannelListener();
         this.addWatchingChannelListener();
-        //this.GetLiveUsers();
       }
       if (isClosed===true) {
         this.removeLiveChannelListener();

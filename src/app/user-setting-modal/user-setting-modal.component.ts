@@ -27,8 +27,13 @@ export class UserSettingModalComponent implements OnInit {
     this.User.password = "";
   }
 
-  changeSettings() {
+  ChangeSettings() {
     changeSettings(this.BrowserSettings);
+  }
+
+  ResetMenuPosition() {
+    this.BrowserSettings.layoutSettings.menuPosition = null;
+    this.ChangeSettings();
   }
 
   GetFontSize() {

@@ -156,5 +156,8 @@
         }
       }
     }},
-  "defaultProject": "SyncStream"
+  "defaultProject": "SyncStream",
+  "cli": {
+    "analytics": false
+  }
 }

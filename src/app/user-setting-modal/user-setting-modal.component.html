@@ -40,28 +40,39 @@
                   <div *ngIf="CurrentSettings==SettingsMenu.General" class="container-fluid py-3">
                     <h3>Layout</h3>
                     <div class="custom-control custom-checkbox pt-2">
-                      <input [(ngModel)]="BrowserSettings.layoutSettings.showCountInfo" type="checkbox" class="custom-control-input" id="countInfoCheck" (change)="changeSettings()">
+                      <input [(ngModel)]="BrowserSettings.layoutSettings.showCountInfo" type="checkbox" class="custom-control-input" id="countInfoCheck" (change)="ChangeSettings()">
                       <label class="custom-control-label" for="countInfoCheck">Always show user/playlist information</label>
                     </div>
                     <div class="custom-control custom-checkbox pt-2">
-                      <input [(ngModel)]="BrowserSettings.layoutSettings.bigSideNav" type="checkbox" class="custom-control-input" id="sideNavCheck" (change)="changeSettings()">
+                      <input [(ngModel)]="BrowserSettings.layoutSettings.bigSideNav" type="checkbox" class="custom-control-input" id="sideNavCheck" (change)="ChangeSettings()">
                       <label class="custom-control-label" for="sideNavCheck">Show room sidemenu text</label>
                     </div>
                     <label class="mt-2" for="audioVolumeCtrl">Menu size - {{BrowserSettings.layoutSettings.menuSize ? BrowserSettings.layoutSettings.menuSize : 90}}% - <span class="badge badge-dreck bg-secondary"><i class="fa fa-key" [ngStyle]="{'font-size.%': GetFontSize()}"></i></span></label>
-                    <input type="range" [(ngModel)]="BrowserSettings.layoutSettings.menuSize" (change)="changeSettings()" class="form-control-range" id="menuSizeCtrl" value="90" max="150" min="70" style="max-width: 33%;">
+                    <input type="range" [(ngModel)]="BrowserSettings.layoutSettings.menuSize" (change)="ChangeSettings()" class="form-control-range" id="menuSizeCtrl" value="90" max="150" min="70" style="max-width: 33%;">
+                    <ng-container *ngIf="BrowserSettings.layoutSettings.menuPosition?.x">
+                      <label for="menuPositionCtrlX">Menu Position X</label>
+                      <input type="number" [(ngModel)]="BrowserSettings.layoutSettings.menuPosition.x" (change)="ChangeSettings()" class="form-control bg-dark border-dark text-light" id="menuPositionCtrlX" style="max-width: 33%;">
+                    </ng-container>
+                    <ng-container *ngIf="BrowserSettings.layoutSettings.menuPosition?.x">
+                      <label for="menuPositionCtrlY">Menu Position Y</label>
+                      <input type="number" [(ngModel)]="BrowserSettings.layoutSettings.menuPosition.y" (change)="ChangeSettings()" class="form-control bg-dark border-dark text-light" id="menuPositionCtrlY" style="max-width: 33%;">
+                    </ng-container>
+                    <ng-container *ngIf="BrowserSettings.layoutSettings.menuPosition?.x||BrowserSettings.layoutSettings.menuPosition?.y">
+                      <button class="btn btn-dark border-dark border mt-2" (click)="ResetMenuPosition()"><i class="fa fa-undo"></i></button>
+                    </ng-container>
                     <div class="mt-3" *ngIf="User.userprivileges>=UserPrivileges.Administrator">
                       <h3 class="pt-3">Download Manager</h3>
                       <label for="audioVolumeCtrl">Audio volume - {{BrowserSettings.generalSettings.audioVolume}}%</label>
-                      <input type="range" [(ngModel)]="BrowserSettings.generalSettings.audioVolume" (change)="changeSettings()" class="form-control-range" id="audioVolumeCtrl" value="100" style="max-width: 33%;">
+                      <input type="range" [(ngModel)]="BrowserSettings.generalSettings.audioVolume" (change)="ChangeSettings()" class="form-control-range" id="audioVolumeCtrl" value="100" style="max-width: 33%;">
                     </div>
                     <div class="mt-3" *ngIf="User.userprivileges>=UserPrivileges.Approved">
                       <h3 class="pt-3">VoIP</h3>
                       <div class="custom-control custom-checkbox pt-2">
-                        <input [(ngModel)]="BrowserSettings.generalSettings.defaultVoip" type="checkbox" class="custom-control-input" id="voipCheck" (change)="changeSettings()">
+                        <input [(ngModel)]="BrowserSettings.generalSettings.defaultVoip" type="checkbox" class="custom-control-input" id="voipCheck" (change)="ChangeSettings()">
                         <label class="custom-control-label" for="voipCheck">Always join</label>
                       </div>
                       <div class="custom-control custom-checkbox pt-2">
-                        <input [(ngModel)]="BrowserSettings.generalSettings.playVoipJoinSound" type="checkbox" class="custom-control-input" id="voipAudioCheck" (change)="changeSettings()">
+                        <input [(ngModel)]="BrowserSettings.generalSettings.playVoipJoinSound" type="checkbox" class="custom-control-input" id="voipAudioCheck" (change)="ChangeSettings()">
                         <label class="custom-control-label" for="voipAudioCheck">Play sound</label>
                       </div>
                     </div>

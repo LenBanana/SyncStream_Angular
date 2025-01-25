@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
+import {AfterViewInit, Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output} from '@angular/core';
 import { Subscription } from 'rxjs';
 import { getCookie } from '../../global.settings';
 import { delay } from '../../helper/generic';
@@ -24,6 +24,7 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
   @Input() UniqueId = "";
   @Input() CurrentPing = 0;
   @Input() Threshhold = .5;
+  @Output() NetworkError = new EventEmitter();
   PlayerType = PlayerType;
   IsPlaying = false;
   IsReady = false;
@@ -135,6 +136,7 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
         return;
       }
       if (event == "NetworkError") {
+        this.NetworkError.emit();
         if ((!this.IsPlaying || this.errorCount >= this.maxErrorCount) && this.UniqueId && this.UniqueId.length > 0) {
           this.playlistService.nextVideo(this.UniqueId);
         }

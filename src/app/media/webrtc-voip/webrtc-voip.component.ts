@@ -8,6 +8,9 @@ import {RoomService} from "../../rooms/rooms-service/rooms.service";
 import {DreckchatService} from "../../dreckchat/dreckchat-service/dreckchat.service";
 import {MediaDeviceService} from "../webrtc/media-device-modal/media-device-service/media-device.service";
 import {Resolution} from "../webrtc/webrtc-service/webrtc.service";
+import {ChatMessage} from "../../Interfaces/Chatmessage";
+import {UserPrivileges} from "../../user-admin-modal/user-admin-modal.component";
+import {skip} from "rxjs/operators";
 
 declare var $: any;
 
@@ -19,8 +22,9 @@ declare var $: any;
 export class WebrtcVoipComponent implements OnInit, OnDestroy {
   @Input() Username: string;
   @Input() UniqueId: string;
+  @Input() Privileges: UserPrivileges;
+  @Input() logout: boolean;
   isInRoom: boolean = false;
-  localStream: MediaStream;
   remoteStreams: Map<string, MediaStream> = new Map();
   remoteParticipants: VoipParticipant[] = [];
   localParticipant: VoipParticipant;
@@ -40,6 +44,7 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
   };
   previousVideoSettings: WebRtcSettings;
   resolutions = Object.keys(Resolution).filter(key => isNaN(Number(key)));
+  chatMessages: ChatMessage[] = [];
 
   constructor(private voipService: WebrtcVoipService,
               private roomService: RoomService,
@@ -56,26 +61,44 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
     this.browserSettings = JSON.parse(itemBackup) as BrowserSettings;
   }
 
-  async enumerateDevices() {
+  async getDevicePermission() {
     try {
-      //const permissions = await navigator.mediaDevices.getUserMedia({audio: true, video: true});
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      this.audioDevices = devices.filter(device => device.kind === 'audioinput');
-      this.videoDevices = devices.filter(device => device.kind === 'videoinput');
+      const stream = await navigator.mediaDevices.getUserMedia({audio: true, video: this.shareVideo});
+      stream.getTracks().forEach(track => track.stop());
     } catch (err) {
-      console.log('Error fetching devices: ', err);
+      console.log('Error fetching devices or permission denied: ', err);
     }
   }
 
   async openSettings() {
+    if (this.audioDevices.length === 0 && this.videoDevices.length === 0) {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      this.audioDevices = devices.filter(device => device.kind === 'audioinput');
+      this.videoDevices = devices.filter(device => device.kind === 'videoinput');
+      if (this.audioDevices.length > 0 && !this.videoSettings.microphoneId) {
+        this.videoSettings.microphoneId = this.audioDevices[0].deviceId;
+      }
+      if (this.videoDevices.length > 0 && !this.videoSettings.cameraId) {
+        this.videoSettings.cameraId = this.videoDevices[0].deviceId;
+      }
+    }
     this.previousVideoSettings = JSON.parse(JSON.stringify(this.videoSettings));
     $('#webRtcVideoSettingsModal').modal({backdrop: 'static', keyboard: false}, 'show');
   }
 
-  saveSettings() {
-    $('#webRtcVideoSettingsModal').modal('hide');
+  async saveSettings() {
+    const changedMicrophone = this.videoSettings.microphoneId !== this.previousVideoSettings.microphoneId;
+    if (changedMicrophone) {
+      await this.voipService.replaceAudioTrack(this.videoSettings.microphoneId);
+      this.setupAudioAnalysis(this.localParticipant);
+    }
+    const changedCamera = this.videoSettings.cameraId !== this.previousVideoSettings.cameraId;
+    if (changedCamera && this.hasVideoTrack(this.voipService.localStream)) {
+      await this.voipService.replaceVideoTrack(this.videoSettings.cameraId, this.videoSettings);
+    }
     this.browserSettings.webRtcSettings = this.videoSettings;
     changeSettings(this.browserSettings)
+    $('#webRtcVideoSettingsModal').modal('hide');
   }
 
   cancelSettings() {
@@ -87,16 +110,18 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
     return stream && stream.getVideoTracks().length > 0;
   }
 
+  togglePeerMute(stream: MediaStream) {
+    stream.getAudioTracks().forEach(t => {
+      t.enabled = !t.enabled;
+    });
+  }
+
+  isPeerMuted(stream: MediaStream): boolean {
+    return stream && stream.getAudioTracks().some(t => !t.enabled);
+  }
+
   ngOnInit(): void {
     this.fetchSettings();
-    this.enumerateDevices().then(() => {
-      if (this.audioDevices.length > 0) {
-        this.videoSettings.microphoneId = this.audioDevices[0].deviceId;
-      }
-      if (this.videoDevices.length > 0) {
-        this.videoSettings.cameraId = this.videoDevices[0].deviceId;
-      }
-    });
     this.subscriptions.push(
       this.voipService.onNewParticipant.subscribe(async e => {
         if (!e) {
@@ -110,7 +135,7 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
         }
         await this.handleParticipantLeave(participant.participantId);
       }),
-      this.voipService.peerMuteStatus.subscribe(async (participant) => {
+      this.voipService.peerStatus.subscribe(async (participant) => {
         if (!participant) {
           return;
         }
@@ -125,14 +150,20 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
         }
         await this.leaveRoom();
       }),
-      this.chatService.joinVoice.subscribe(async (roomId: string) => {
-        if (!roomId) {
-          return;
-        }
+      this.chatService.joinVoice.pipe(skip(1)).subscribe(async (roomId: string) => {
         if (roomId === this.UniqueId && !this.isInRoom) {
-          await this.joinRoom();
+          this.getDevicePermission().then(async () => {
+            this.videoSettings.microphoneId = this.browserSettings?.webRtcSettings?.microphoneId ?? null;
+            this.videoSettings.cameraId = this.browserSettings?.webRtcSettings?.cameraId ?? null;
+            await this.joinRoomWithSelectedDevices();
+          });
         } else {
           await this.leaveRoom();
+        }
+      }),
+      this.chatService.openChat.pipe(skip(1)).subscribe(async (roomId: string) => {
+        if (roomId === this.UniqueId) {
+          $('#videoCallModal').modal('show');
         }
       })
     );
@@ -146,17 +177,17 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
     this.voipService.cleanUp();
   }
 
-  async joinRoom() {
-    $('#deviceModal').modal('show');
+  getLocalStream(): MediaStream {
+    return this.voipService.localStream;
   }
 
   async toggleAudio() {
     const isMuted = !this.localParticipant.isMuted;
-    this.localStream.getAudioTracks().forEach(t => {
+    this.voipService.localStream.getAudioTracks().forEach(t => {
       t.enabled = !isMuted;
     });
     this.localParticipant.isMuted = isMuted;
-    await this.voipService.sendStatus(this.localParticipant, this.UniqueId);
+    await this.voipService.sendStatus(this.localParticipant, this.localParticipant.participantId);
   }
 
   popOutVideo(parent: HTMLElement, videoElement: HTMLVideoElement) {
@@ -164,7 +195,7 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
   }
 
   async toggleVideo(source: 'webcam' | 'screen') {
-    if (this.hasVideoTrack(this.localStream)) {
+    if (this.hasVideoTrack(this.voipService.localStream)) {
       await this.voipService.removeVideoTrackFromConnection();
       if ((source === 'webcam' && !this.localParticipant.isVideoMuted) || (source === 'screen' && !this.localParticipant.isScreenMuted)) {
         this.localParticipant.isVideoMuted = true;
@@ -212,7 +243,7 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
   async getMediaStream(constraints) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      this.localStream = stream;
+      this.voipService.localStream = stream;
       return stream;
     } catch (err) {
       console.error("Error accessing media devices.", err);
@@ -227,7 +258,6 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
   async postJoinActions() {
     this.isInRoom = true;
     this.voipService.joinRoom.next(this.UniqueId);
-    $('#deviceModal').modal('hide');
     if (this.browserSettings && this.browserSettings.generalSettings.playVoipJoinSound) {
       await voipJoinAudio.play();
     }
@@ -249,7 +279,7 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
         sum += dataArray[i];
       }
       const average = sum / bufferLength;
-      participant.isSpeaking = average > 1;
+      participant.isSpeaking = average > 0.1;
       requestAnimationFrame(checkMicActivity);
     };
 
@@ -299,11 +329,11 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
     await this.voipService.leaveAudioRoom(this.UniqueId);
     setTimeout(async () => {
       this.isInRoom = false;
-      this.localStream.getTracks().forEach(track => track.stop());
+      this.voipService.localStream.getTracks().forEach(track => track.stop());
       this.remoteStreams.clear();
       this.remoteParticipants = [];
       this.voipService.leaveRoom.next(this.UniqueId);
-      $('#videoCallModal').modal('hide');
+      this.localParticipant = null;
       if (this.browserSettings && this.browserSettings.generalSettings.playVoipJoinSound) {
         await voipLeaveAudio.play();
       }

@@ -102,16 +102,16 @@ export class SignalRService {
         this.AddTokenListener();
         this.connectionClosed.next(false);
 
-        var token = getCookie("login-token");
-        var userId = getCookie("user-id");
+        let token = getCookie("login-token");
+        let userId = getCookie("user-id");
         if (token==undefined) {
           token = "";
         }
-        var userNo = Number.parseInt(userId);
+        let userNo = Number.parseInt(userId);
         if (!userId || userId == undefined || isNaN(userNo)) {
           userId = "-1";
         }
-        var numberId = Number.parseInt(userId);
+        let numberId = Number.parseInt(userId);
         this.ValidateToken(token, numberId);
       })
       .catch(async err => {
@@ -147,7 +147,7 @@ export class SignalRService {
   }
 
   public addRoom(room: Room) {
-    var tk = "";
+    let tk = "";
     if (token) {
       tk = token;
     }
@@ -155,16 +155,14 @@ export class SignalRService {
   }
 
   public removeRoom(UniqueId: string) {
-    var tk = "";
     if (token) {
-      tk = token;
+      hubConnection.invoke('RemoveRoom', UniqueId, token);
     }
-    hubConnection.invoke('RemoveRoom', UniqueId, tk);
   }
 
   public AddTokenListener() {
     hubConnection.on('rememberToken', (data) => {
-      var token = data as RememberToken;
+      let token = data as RememberToken;
       Token.token = token.token;
       Token.id = token.id;
       Token.userID = token.userID;

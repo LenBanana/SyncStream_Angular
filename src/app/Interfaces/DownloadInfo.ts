@@ -18,6 +18,7 @@ export class DownloadFile {
   player: HTMLAudioElement;
   selected: boolean;
   dateToBeDeleted: Date;
+  public: boolean;
 }
 
 export class FileFolder {

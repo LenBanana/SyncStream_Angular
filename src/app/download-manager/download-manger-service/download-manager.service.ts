@@ -185,6 +185,12 @@ export class DownloadManagerService {
     }
   }
 
+  public ToggleFilePublic(id: number) {
+    if (token) {
+      hubConnection.invoke('ToggleFilePublic', token, id);
+    }
+  }
+
   public addgetFolderUsersListener() {
     hubConnection.on('getFolderUsers', (data) => {
       this.folderShared.next(data);

@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { WebrtcComponent } from './webrtc.component';
+import { HttpRtmpStreamComponent } from './http-rtmp-stream.component';
 
-describe('WebrtcComponent', () => {
-  let component: WebrtcComponent;
-  let fixture: ComponentFixture<WebrtcComponent>;
+describe('HttpRtmpStreamComponent', () => {
+  let component: HttpRtmpStreamComponent;
+  let fixture: ComponentFixture<HttpRtmpStreamComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [ WebrtcComponent ]
+      declarations: [ HttpRtmpStreamComponent ]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(WebrtcComponent);
+    fixture = TestBed.createComponent(HttpRtmpStreamComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

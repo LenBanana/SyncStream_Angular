@@ -14,6 +14,7 @@ export class DreckchatService {
   messages: BehaviorSubject<ChatMessage[]> = new BehaviorSubject([]);
   message: BehaviorSubject<ChatMessage> = new BehaviorSubject(null);
   joinVoice: BehaviorSubject<string> = new BehaviorSubject(null);
+  openChat: BehaviorSubject<string> = new BehaviorSubject(null);
   constructor(private http: HttpClient, private signalRService: SignalRService) {
     signalRService.connectionClosed.subscribe(isClosed => {
       if (isClosed===false) {

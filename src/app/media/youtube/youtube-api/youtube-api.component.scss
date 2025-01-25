@@ -1,0 +1,55 @@
+.form-control:focus {
+  outline: none;
+  box-shadow: none;
+}
+.btn:focus {
+  outline: none;
+  box-shadow: none;
+}
+.min-vh-50 {
+  min-height: 50vh;
+}
+.bg-dark {
+  background-color: #323342 !important;
+}
+
+.bg-secondary {
+  background-color: #45465c !important;
+}
+
+.card-img-top {
+  aspect-ratio: 16/10;
+  object-fit: cover;
+}
+
+.op-50-dark {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.card:hover>.op-50-dark {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.click-through {
+  pointer-events: none;
+}
+
+.card-title, .card-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90%; /* Adjust based on your preference */
+}
+
+/* For mobile devices, make the card take full width */
+@media (max-width: 767px) {
+  .col-md-4 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .card {
+    width: 100%;
+  }
+}

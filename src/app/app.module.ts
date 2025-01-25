@@ -6,7 +6,7 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HomeComponent } from './home/home.component';
 import { RoomsComponent } from './rooms/rooms.component';
-import { HttpClientModule } from '@angular/common/http';
+import {HttpClientJsonpModule, HttpClientModule} from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { SafePipe } from './pipes/safe-urlpipe.pipe';
 import { PlaylistComponent } from './playlist/playlist.component';
@@ -48,7 +48,6 @@ import { VideojsPlayerComponent } from './media/videojs-player/videojs-player.co
 import { MpegtsPlayerComponent } from './media/mpegts-player/mpegts-player.component';
 import { LiveStreamViewComponent } from './live-stream-view/live-stream-view.component';
 import { DateLivePipe } from './live-stream-view/date-live-pipe/date-live.pipe';
-import { WebrtcComponent } from './media/webrtc/webrtc.component';
 import { MediaEditorComponent } from './media-editor/media-editor.component';
 import { PermissionViewComponent } from './permission-view/permission-view.component';
 import { FilestorageViewComponent } from './filestorage-view/filestorage-view.component';
@@ -56,8 +55,9 @@ import { NgbdSortableHeader } from './Interfaces/SortableHeader';
 import { LiveStreamDirectComponent } from './media/live-stream-direct/live-stream-direct.component';
 import { ServerDashboardComponent } from './user-admin-modal/server-dashboard/server-dashboard.component';
 import {MediaDeviceModalComponent} from "./media/webrtc/media-device-modal/media-device-modal.component";
-import { WebrtcSfuComponent } from './media/webrtc-sfu/webrtc-sfu.component';
 import { WebrtcVoipComponent } from './media/webrtc-voip/webrtc-voip.component';
+import { YoutubeApiComponent } from './media/youtube/youtube-api/youtube-api.component';
+import { HttpRtmpStreamComponent } from './media/http-rtmp-stream/http-rtmp-stream.component';
 const DragConfig = {
   dragStartThreshold: 0,
   pointerDirectionChangeThreshold: 5,
@@ -102,7 +102,6 @@ const DragConfig = {
     MpegtsPlayerComponent,
     LiveStreamViewComponent,
     DateLivePipe,
-    WebrtcComponent,
     MediaEditorComponent,
     PermissionViewComponent,
     FilestorageViewComponent,
@@ -110,13 +109,15 @@ const DragConfig = {
     ServerDashboardComponent,
     MediaDeviceModalComponent,
     MediaDeviceModalComponent,
-    WebrtcSfuComponent,
-    WebrtcVoipComponent
+    WebrtcVoipComponent,
+    YoutubeApiComponent,
+    HttpRtmpStreamComponent
   ],
   imports: [
     MatMenuModule,
     BrowserModule,
     HttpClientModule,
+    HttpClientJsonpModule,
     FormsModule,
     AppRoutingModule,
     DragDropModule,

@@ -37,7 +37,7 @@ export class TwitchComponent implements OnInit, OnChanges, OnDestroy, AfterViewI
     this.player = TwitchPlayer.FromOptions('twitchMediaPlayer', {
       height: '100%',
       width: '100%',
-      channel: 'LenBanana0',
+      channel: '',
       autoplay: true,
       muted: false
     });
@@ -114,7 +114,7 @@ export class TwitchComponent implements OnInit, OnChanges, OnDestroy, AfterViewI
   AddSubscriptions() {
     //Time update from server
     this.ServerTimeUpdate = this.playerService.currentTime.subscribe(t => {
-      if (!this.IsReady || !t || t == null || this.IsHost || this.CurrentPlayerType != PlayerType.Twitch) {
+      if (!this.IsReady || !t || this.IsHost || this.CurrentPlayerType != PlayerType.Twitch) {
         return;
       }
       let playerTime = this.player.getCurrentTime();
@@ -145,9 +145,9 @@ export class TwitchComponent implements OnInit, OnChanges, OnDestroy, AfterViewI
       if (this.CurrentPlayerType != PlayerType.Twitch || !vid) {
         return;
       }
-      var twitchVodRegexpString = /^\d+$/;
-      var twitchVodMatch = twitchVodRegexpString.test(vid.url);
-      if (twitchVodMatch) {
+      const twitchVodMatch = /^\d+$/.test(vid.url);
+      console.log(vid.url);
+      if (!twitchVodMatch) {
         this.player.setVideo(vid.url, 0);
       } else {
         this.player.setChannel(vid.title);

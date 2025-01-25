@@ -4,12 +4,16 @@
     min-height: 50px;
     border-radius: 5px;
     width: 450px;
-    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1) ease;
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }
 
 .fade-out {
     opacity: 0 !important;
     //display: none !important;
+}
+
+.hidden {
+    display: none !important;
 }
 
 .nopointer {
@@ -63,7 +67,7 @@
 }
 
 .statusbtn {
-    transition: color 0.5 ease;
+    transition: color 0.5s ease;
     font-size: 20px;
     display: block;
     padding-bottom: 5px;
@@ -99,6 +103,15 @@
     background-color: rgba(17,24,39, .75);
 }
 
+.ytapi-preview {
+  position: relative;
+  max-height: 50vh;
+}
+
+.drag-handle {
+  cursor: move;
+}
+
 .add-playlist-fade {
     transition: opacity 0.5s ease;
     opacity: 1;
@@ -109,11 +122,22 @@
     position: absolute;
     margin-left: 44px;
     margin-top: -40px;
-    z-index: 1;
-    width: 500px;
+    width: 33vw;
     max-height: 100%;
     overflow: hidden auto;
     z-index: 200;
+}
+
+@media (max-width: 767px) {
+  .add-playlist-fade {
+    width: 80vw;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  .add-playlist-fade {
+    width: 50vw;
+  }
 }
 
 .left-tooltip {
@@ -212,6 +236,11 @@
     z-index: 10;
 }
 
+.mobile-menu {
+  top: 0;
+  left: 0;
+}
+
 .cdk-drag-preview {
     box-sizing: border-box;
     border-radius: 4px;
@@ -223,9 +252,9 @@
 }
 
 .cdk-drag-animating {
-    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1) ease;
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }
 
 .playlist-element.cdk-drop-list-dragging .playlist-element:not(.cdk-drag-placeholder) {
-    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1) ease;
+    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }

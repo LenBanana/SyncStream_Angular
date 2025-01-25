@@ -1,0 +1,47 @@
+{
+  "manifest_version": 2,
+  "name": "Drextension",
+  "version": "1.5",
+  "description": "Drextension is a browser extension for Chrome and Firefox that allows you to send YouTube videos to any drecktu.be room.",
+  "permissions": [
+    "contextMenus",
+    "activeTab",
+    "storage",
+    "tabs",
+    "notifications",
+    "https://sync.dreckbu.de/",
+    "https://www.youtube.com/"
+  ],
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "icons": {
+    "64": "img/icon_drextension.png"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "64": "img/icon_drextension.png"
+    }
+  },
+  "web_accessible_resources": [
+    "modal.html",
+    "modal.css"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ]
+    }
+  ]
+}

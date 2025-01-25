@@ -183,6 +183,10 @@ export class FileViewComponent implements OnInit {
     this.downloadService.MakeFilePermanent(file.id);
   }
 
+  ToggleFilePublic(file: DownloadFile) {
+    this.downloadService.ToggleFilePublic(file.id);
+  }
+
   ToggleDeleteModal(show) {
     if (show) {
       $('#dialogModal-delete-perm').modal('show');

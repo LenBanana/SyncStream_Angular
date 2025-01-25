@@ -1,13 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 
-import { WebrtcSfuService } from './webrtc-sfu.service';
+import { AppService } from './app.service';
 
-describe('WebrtcSfuService', () => {
-  let service: WebrtcSfuService;
+describe('AppService', () => {
+  let service: AppService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(WebrtcSfuService);
+    service = TestBed.inject(AppService);
   });
 
   it('should be created', () => {
