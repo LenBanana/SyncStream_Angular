@@ -23,7 +23,7 @@
       allowfullscreen allowtransparency allow="fullscreen" allowfullscreen></iframe>
 
     <div *ngIf="CurrentPlayerType==playerType.WhiteBoard" class="CanvasStyle" [class.bg-canvas]="CurrentPlayerType==playerType.WhiteBoard">
-      <app-whiteboard [UniqueId]="UniqueId" [IsDrawing]="IsHost" [class.vh-90]="!nav" [GallowWord]="GallowWord">
+      <app-whiteboard [UniqueId]="UniqueId" [IsDrawing]="IsHost" [class.vh-90]="!nav" [GallowWord]="GallowWord" [Username]="Username">
       </app-whiteboard>
     </div>
 

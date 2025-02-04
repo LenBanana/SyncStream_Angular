@@ -16,6 +16,7 @@ import { Member } from '../Interfaces/Member';
 import {
   WhiteboardService
 } from './whiteboard-service/whiteboard-service.service';
+import { PlayerService } from '../player/player-service/player.service';
 declare var $: any;
 
 @Component({
@@ -26,8 +27,9 @@ declare var $: any;
 })
 export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
 
-  constructor(private _canvasWhiteboardService: CanvasWhiteboardService, private whiteBoardSerive: WhiteboardService) {}
+  constructor(private _canvasWhiteboardService: CanvasWhiteboardService, private whiteBoardSerive: WhiteboardService, private playerService: PlayerService) {}
   @Input() UniqueId: string = "";
+  @Input() Username: string = "";
   @Input() IsDrawing = false;
   @Input() GallowWord = "";
   GallowMembers: Member[] = [];
@@ -58,6 +60,7 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
+  gallowWord;
   gallowMember;
   gallowTimer;
   gallowIsDrawing;
@@ -142,6 +145,20 @@ export class WhiteboardComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.gallowWord = this.playerService.playingGallows.subscribe(word => {
+      if (word == null) {
+        return;
+      }
+      this.GallowWord = word;
+      if (this.LastGallowWord!=this.GallowWord) {
+        this.ChangeWord = true;
+        setTimeout(() => {
+          this.LastGallowWord = this.GallowWord;
+          this.AnonGallowWord = this.getAnonWord(this.LastGallowWord);
+          this.ChangeWord = false;
+        }, 250);
+      }
+    });
     this.gallowTimer = this.whiteBoardSerive.gallowTimer.subscribe(time => {
       if (time == null) {
         return;

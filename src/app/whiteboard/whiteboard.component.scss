@@ -11,7 +11,7 @@
 }
 
 .DrawWord {
-    position: fixed;
+    position: absolute;
     left: 50%;
     transform: translateX(-50%);
     top: 10px;
@@ -41,7 +41,7 @@
 
 .GallowBoard {
     min-width: 20%;
-    position: fixed;
+    position: absolute;
     bottom: 10px;
     left: 25px;
     z-index: 10;
@@ -52,6 +52,10 @@
 }
 
 .Tools {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 10px;
     background-color: #333;
     padding: 10px;
     border-radius: 5px;
@@ -60,7 +64,7 @@
 .ColorBoard {
     display: flex;
     flex-wrap: wrap;
-    position: fixed;
+    position: absolute;
     max-width: 25%;
     padding: 10px;
     background: #333;

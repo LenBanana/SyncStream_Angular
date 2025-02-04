@@ -23,7 +23,7 @@
                   [Threshhold]="Threshhold"></app-twitch>
     </div>
     <div *ngIf="CurrentPlayerType==PlayerType.WhiteBoard" class="CanvasStyle bg-canvas">
-      <app-whiteboard [UniqueId]="UniqueId" [IsDrawing]="IsHost" [class.vh-90]="!nav" [GallowWord]="GallowWord">
+      <app-whiteboard [UniqueId]="UniqueId" [IsDrawing]="IsHost" [class.vh-90]="!nav" [GallowWord]="GallowWord" [Username]="Username">
       </app-whiteboard>
     </div>
     <div *ngIf="CurrentPlayerType==PlayerType.Blackjack">

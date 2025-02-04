@@ -81,7 +81,7 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   pasteFn = (event) => {
     const dlManager = $('#downloadManagerModal');
     const chat = $('#videoCallModal');
-    if ((dlManager && dlManager.hasClass('show') || (chat && chat.hasClass('show')))) {
+    if (this.BlackjackActive || this.WhiteboardActive || (dlManager && dlManager.hasClass('show') || (chat && chat.hasClass('show')))) {
       return;
     }
 
@@ -128,13 +128,13 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     const menuPosition = $('#side-nav-drag-menu').position();
-    if (menuPosition.left > window.innerWidth - 100 || menuPosition.left < 0) {
+    if (menuPosition?.left > window.innerWidth - 100 || menuPosition?.left < 0) {
       this.handlePositionTimeout(() => {
         this.setMenuPosition(null, window.innerWidth - 100);
       });
     }
 
-    if (menuPosition.top > window.innerHeight - 100 || menuPosition.top < 0) {
+    if (menuPosition?.top > window.innerHeight - 100 || menuPosition?.top < 0) {
       this.handlePositionTimeout(() => {
         this.setMenuPosition(window.innerHeight - 100, null);
       });

@@ -12,7 +12,6 @@ import {
 import {
   ChatMessage
 } from '../Interfaces/Chatmessage';
-import {Language} from '../Interfaces/Language';
 import {Observable, OperatorFunction, Subscription} from 'rxjs';
 import {debounceTime, distinctUntilChanged, map} from 'rxjs/operators';
 import {UserlistService} from '../userlist/userlist-service/userlist.service';
