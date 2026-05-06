@@ -1,15 +1,86 @@
-<h5 class="text-center">
-    Userlist</h5>
-<div class="ml-5">
-    <ul class="liststyle" style="max-height: 200px;">
-        <li *ngFor="let member of Members" class="pointer" [class.text-warning]="member.ishost" (click)="ChangeHost(member.username)">
-            <i *ngIf="Privileges>2&&member.username !== Username" class="fa fa-ban text-danger mr-5" (click)="BanUser(member.username)"></i>
-            <span [class.text-info]="member.username === Username" class="text-left">
-                        <span *ngIf="member.username === Username">You: </span></span>{{member.username}}
-            <!--<i *ngIf="member.ishost && IsPlaying" class="fa fa-pause-circle-o pl-3 text-left" aria-hidden="true"></i><i *ngIf="member.ishost && !IsPlaying" class="fa fa-play-circle-o pl-3 text-left" aria-hidden="true"></i>-->
-        </li>
-    </ul>
+<app-stream-start-dialog
+  *ngIf="showStreamDialog"
+  [browserSettings]="browserSettings"
+  (confirmed)="onStreamDialogConfirmed($event)"
+  (cancelled)="onStreamDialogCancelled()">
+</app-stream-start-dialog>
+
+<!-- Header -->
+<div class="userlist-header">
+    <span class="userlist-title">
+        <i class="fa fa-users mr-1 text-muted" aria-hidden="true"></i>
+        Members <span class="badge badge-secondary ml-1">{{Members.length}}</span>
+    </span>
+    <button *ngIf="!isStreaming" class="btn btn-sm btn-outline-danger go-live-btn"
+            title="Share your screen with the room" (click)="goLive()">
+        <i class="fa fa-circle live-pulse mr-1" aria-hidden="true"></i>Go Live
+    </button>
+    <button *ngIf="isStreaming" class="btn btn-sm btn-danger go-live-btn"
+            title="Stop sharing" (click)="stopLive()">
+        <i class="fa fa-stop-circle mr-1" aria-hidden="true"></i>Stop
+    </button>
 </div>
+
+<!-- Member cards -->
+<div class="member-list">
+    <div *ngFor="let member of Members"
+         class="member-card"
+         [class.member-card--host]="member.ishost"
+         [class.member-card--self]="member.username === Username"
+         [class.member-card--streaming]="member.isstreaming">
+
+        <!-- Avatar / role icon -->
+        <div class="member-avatar" (click)="ChangeHost(member.username)" title="{{ member.ishost ? 'Host' : 'Click to make host' }}">
+            <i class="fa" [class.fa-star]="member.ishost" [class.fa-user]="!member.ishost" aria-hidden="true"></i>
+        </div>
+
+        <!-- Name + live indicator -->
+        <div class="member-info">
+            <span class="member-name" [class.member-name--self]="member.username === Username">
+                <i *ngIf="member.isstreaming" class="fa fa-circle live-dot mr-1" aria-hidden="true" title="Live"></i>
+                {{ member.username }}
+                <span *ngIf="member.username === Username" class="you-badge">you</span>
+            </span>
+            <span *ngIf="member.ishost" class="role-badge">host</span>
+        </div>
+
+        <!-- Actions -->
+        <div class="member-actions">
+            <button *ngIf="member.isstreaming && member.username !== Username"
+                    class="btn-action btn-action--watch"
+                    title="Watch {{ member.username }}"
+                    (click)="watchStreamer(member)">
+                <i class="fa fa-eye" aria-hidden="true"></i>
+            </button>
+            <button *ngIf="Privileges > 2 && member.username !== Username"
+                    class="btn-action btn-action--ban"
+                    title="Kick {{ member.username }}"
+                    (click)="BanUser(member.username)">
+                <i class="fa fa-ban" aria-hidden="true"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade in" id="roomPwModal" data-keyboard="false" data-backdrop="false">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark">
+            <div class="modal-header">
+                <h4>Please enter the <span class="text-main-color font-weight-bold">Dreck</span>Room password</h4>
+            </div>
+            <div class="modal-body explain-text mb-4">
+                <label style="font-size: 1rem;">Room password</label>
+                <input [(ngModel)]="RoomPassword" type="password" class="form-control user-input bg-dark text-light" (keypress)="alphaKeys($event)" placeholder="Password" />
+                <small *ngIf="FailedPassword" class="text-danger">Password is incorrect</small>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success px-3" (click)="AddUser()">Submit <i class="fa fa-check" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-danger px-3" (click)="refresh()">Back <i class="fa fa-times" aria-hidden="true"></i></button>
+            </div>
+        </div>
+    </div>
+</div>
+<div (window:beforeunload)="userService.removeUser(UniqueId);"></div>
 
 <div class="modal fade in" id="roomPwModal" data-keyboard="false" data-backdrop="false">
     <div class="modal-dialog modal-lg">

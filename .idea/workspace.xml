@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="fe70217c-34f4-46e2-a5d4-187c0017c95c" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/src/app/dreckchat/dreckchat.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/dreckchat/dreckchat.component.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/dreckchat/dreckchat.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/dreckchat/dreckchat.component.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/home/home.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/home/home.component.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/home/home.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/home/home.component.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/media/media.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/media/media.component.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/media/webrtc-voip/webrtc-voip.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/media/webrtc-voip/webrtc-voip.component.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/media/webrtc-voip/webrtc-voip.component.spec.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/player/player.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/player/player.component.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/side-nav/side-nav.component.ts" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/side-nav/side-nav.component.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/app/whiteboard/whiteboard.component.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/app/whiteboard/whiteboard.component.html" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 0
+}]]></component>
+  <component name="ProjectId" id="2ySrqYJLkAhPiOQMyPxzrIv6hvv" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "main",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  }
+}]]></component>
+  <component name="RunManager" selected="npm.Angular CLI Server">
+    <configuration name="Tests (SyncStream)" type="JavaScriptTestRunnerKarma">
+      <config-file value="$PROJECT_DIR$/karma.conf.js" />
+      <working-directory value="$PROJECT_DIR$" />
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+    <configuration name="E2E Tests (SyncStream)" type="JavaScriptTestRunnerProtractor">
+      <config-file value="$PROJECT_DIR$/e2e/protractor.conf.js" />
+      <node-interpreter value="project" />
+      <protractor-options value="" />
+      <envs />
+      <scope-kind value="ALL" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Angular Application" type="JavascriptDebugType" uri="http://localhost:4200">
+      <method v="2" />
+    </configuration>
+    <configuration name="Angular CLI Server" type="js.build_tools.npm">
+      <package-json value="$PROJECT_DIR$/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="start" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-b26f3e71634d-JavaScript-WS-251.26094.131" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="fe70217c-34f4-46e2-a5d4-187c0017c95c" name="Changes" comment="" />
+      <created>1749839008857</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1749839008857</updated>
+      <workItem from="1749839008858" duration="57000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

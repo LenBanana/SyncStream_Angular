@@ -5,7 +5,7 @@ import {
   Output,
   EventEmitter,
   OnDestroy,
-  AfterViewInit, HostListener
+  AfterViewInit, HostListener, ElementRef, ViewChild
 } from '@angular/core';
 import { CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PlaylistService } from '../playlist/playlist-service/playlist.service';
@@ -25,6 +25,9 @@ import { LiveUser } from '../Interfaces/liveStream';
 import { WebrtcVoipService } from "../media/webrtc-voip/webrtc-voip-service/webrtc-voip.service";
 import { UserPrivileges } from "../user-admin-modal/user-admin-modal.component";
 import { AppService } from "../app.service";
+import { BlackjackService } from '../blackjack-game/blackjack-service/blackjack-service.service';
+import { WebrtcService } from '../media/webrtc/webrtc-service/webrtc.service';
+import { StreamStartConfig } from '../media/webrtc/stream-start-dialog/stream-start-dialog.component';
 
 declare var $: any;
 
@@ -35,14 +38,18 @@ declare var $: any;
 })
 export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
 
+  @ViewChild('fileSharePickerInput') fileSharePickerInputRef!: ElementRef<HTMLInputElement>;
+
   constructor(public chatService: DreckchatService,
     private liveStreamService: LiveStreamService,
     private playlistService: PlaylistService,
     private playerService: PlayerService,
     private userService: UserlistService,
     private dialogService: DialogService,
+    private blackjackService: BlackjackService,
     private voipService: WebrtcVoipService,
     private appService: AppService,
+    public webrtcService: WebrtcService,
   ) {
   }
 
@@ -75,6 +82,15 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   WhiteboardActive = false;
   BlackjackActive = false;
   Voip = false;
+  /** True while this user is broadcasting a P2P stream. */
+  isStreaming = false;
+  /** True while this user is sharing a local file via SFU. */
+  isFileSharingActive = false;
+  showStreamDialog = false;
+  /** Live reference to the captured stream so the preview can render it. */
+  localStream: MediaStream | null = null;
+  /** True while the watched stream is in the browser Picture-in-Picture window. */
+  pipIsActive = false;
   Messages: ChatMessage[];
   LiveUsers: LiveUser[] = [];
   Subscriptions: Subscription[] = [];
@@ -273,6 +289,13 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
         if (result == this.UniqueId) {
           this.Voip = false;
         }
+      }),
+      this.webrtcService.pipActive.subscribe(active => {
+        this.pipIsActive = active;
+      }),
+      // Track file-share state so the Share/Stop button reflects reality.
+      this.webrtcService.fileShareActive.subscribe(info => {
+        this.isFileSharingActive = info !== null && this.webrtcService.isFileShareHost;
       }));
   }
 
@@ -478,6 +501,78 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
 
   BanUser(username: string) {
     this.userService.banUser(username, this.UniqueId);
+  }
+
+  // ---------------------------------------------------------------
+  // Discord-style streaming
+  // ---------------------------------------------------------------
+
+  goLive(): void {
+    this.showStreamDialog = true;
+  }
+
+  onStreamDialogCancelled(): void {
+    this.showStreamDialog = false;
+  }
+
+  async onStreamDialogConfirmed(config: StreamStartConfig): Promise<void> {
+    this.showStreamDialog = false;
+    try {
+      await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
+      this.isStreaming = true;
+      this.localStream = config.stream;
+      config.stream.getVideoTracks()[0]?.addEventListener('ended', () => this.stopLive());
+    } catch (err) {
+      console.error('goLive: startStreaming failed', err);
+      config.stream.getTracks().forEach(t => t.stop());
+    }
+  }
+
+  async stopLive(): Promise<void> {
+    await this.webrtcService.stopStreaming(this.UniqueId);
+    this.isStreaming = false;
+    this.localStream = null;
+  }
+
+  watchStreamer(member: any): void {
+    if (!member.connectionId) return;
+    this.webrtcService.startWatching(this.UniqueId, member.connectionId, member.username)
+      .catch(err => console.error('startWatching failed', err));
+  }
+
+  /** Called from the side-nav "Pop back in" button — exits PiP so the popout reappears. */
+  returnFromPip(): void {
+    if ((document as any).pictureInPictureElement) {
+      (document as any).exitPictureInPicture().catch((err: any) => console.warn('exitPiP failed', err));
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // File sharing
+  // ---------------------------------------------------------------
+
+  /** Open the file-share player in the media area.  The FileSharePlayerComponent
+   *  will start the selected file once it renders. */
+  openFileShare(): void {
+    if (this.webrtcService.fileShareActive.value || this.webrtcService.isPreparingFileShareHost) return;
+    this.fileSharePickerInputRef?.nativeElement.click();
+  }
+
+  onFileSharePicked(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    input.value = '';
+    if (!file) {
+      return;
+    }
+
+    this.webrtcService.requestFileShareHostUi(file);
+  }
+
+  /** Stop the active file share. */
+  async stopFileShare(): Promise<void> {
+    await this.webrtcService.stopFileShare(this.UniqueId);
+    this.isFileSharingActive = false;
   }
 
   protected readonly UserPrivileges = UserPrivileges;

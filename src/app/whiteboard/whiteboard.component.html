@@ -1,5 +1,5 @@
 <div class="row">
-  <div class="col-8">
+  <div class="col-8 p-0">
     <span class="DrawWord no-pointer-events" [class.fade-out]="ChangeWord"><span
         class="no-pointer-events unselectable" [class.letter-space]="!IsDrawing">{{IsDrawing ? LastGallowWord :
         AnonGallowWord}}</span></span>
@@ -42,7 +42,7 @@
       (onBatchUpdate)="sendBatchUpdate($event)" (onUndo)="onCanvasUndo($event)" (onRedo)="onCanvasRedo($event)">
     </canvas-whiteboard>
   </div>
-  <div class="col-4">
+  <div class="col-4 p-0">
     <app-dreckchat class="bg-dark d-block vh-100 px-2" [nav]="false" [Username]="Username" [UniqueId]="UniqueId" [WhiteBoard]="true"></app-dreckchat>
   </div>
 </div>

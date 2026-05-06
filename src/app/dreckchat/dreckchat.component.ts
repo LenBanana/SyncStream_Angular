@@ -118,6 +118,7 @@ export class DreckchatComponent implements OnInit, OnDestroy {
   }
 
   public async SendMessage() {
+    console.log('SendMessage');
     const textelement = document.getElementById('textmessage') as HTMLInputElement;
     const msg = textelement.value.trim();
     const lowCase = msg.toLocaleLowerCase();

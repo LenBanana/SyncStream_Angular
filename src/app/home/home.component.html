@@ -10,11 +10,6 @@
                     <app-userlist [nav]="nav" [UniqueId]="UniqueId" [Username]="Username" [DelInterval]="DelInterval" (goBack)="refresh()" (userAdded)="UserAdded=true;" (intervalOff)="userIntervalOff()" (isHost)="ChangeHost($event)" (userlistChange)="Members=$event"></app-userlist>
                 </div>
             </div>
-            <div class="sidenav" [class.width-25]="nav" style="margin-top: 20%;">
-                <div class="leftbox" style="height: 55%;">
-                    <app-dreckchat *ngIf="nav&&!externalChat" [nav]="nav" [logout]="logout" [UniqueId]="UniqueId" [Username]="Username" style="max-height: inherit;"></app-dreckchat>
-                </div>
-            </div>
         </div>
         <div [ngClass]="{'col-9': nav, 'col-12': !nav}">
             <!--<app-player [nav]="nav" [logout]="logout" [Username]="Username" (toggleChat)="twitchChat=!twitchChat" [fullscreen]="fullscreen" [twitchChat]="twitchChat" [currentTime]="currentTime" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold" (threshholdChange)="Threshhold=$event" (isPlayingEvent)="isPlaying=$event"
@@ -22,5 +17,8 @@
                 <app-media [UniqueId]="UniqueId" [Privileges]="Privileges" [IsHost]="IsHost" [Threshhold]="Threshhold" [logout]="logout" [Username]="Username" [twitchChat]="twitchChat" (hideChat)="externalChat=$event" (threshholdChange)="Threshhold=$event" (isPlayingEvent)="isPlayingEvent($event)" (playlistChange)="Playlist=$event"></app-media>
         </div>
     </div>
+
+    <!-- Discord-style P2P stream popout: floats on top, draggable, opt-in per viewer -->
+    <app-stream-viewer-popout [RoomId]="UniqueId"></app-stream-viewer-popout>
 
 </ng-container>

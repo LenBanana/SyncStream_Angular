@@ -2,7 +2,23 @@
      [class.bg-black]="CurrentPlayerType!=PlayerType.Nothing">
   <div class="row m-0">
     <div id="playerContainer" class="vh-big">
-      <app-webrtc *ngIf="CurrentPlayerType==PlayerType.WebRtc"></app-webrtc>
+      <!-- WebRtc: P2P / SFU screen-share viewer -->
+      <app-webrtc *ngIf="CurrentPlayerType==PlayerType.WebRtc" [UniqueId]="UniqueId" [IsHost]="IsHost"></app-webrtc>
+
+       <!-- FileShare host instance: shown immediately after clicking Share, before the
+         SFU share has fully started, so the picker is always available locally. -->
+       <app-file-share-player *ngIf="CurrentPlayerType==PlayerType.FileShare && (webRtcService.isPreparingFileShareHost || webRtcService.isFileShareHost)"
+                  [UniqueId]="UniqueId"
+                  [IsHost]="true">
+       </app-file-share-player>
+
+       <!-- FileShare viewer instance: rendered only for non-host viewers while a
+         room member is actively sharing a file. -->
+       <app-file-share-player *ngIf="CurrentPlayerType==PlayerType.FileShare && !(webRtcService.isPreparingFileShareHost || webRtcService.isFileShareHost)"
+                  [UniqueId]="UniqueId"
+                  [IsHost]="false">
+      </app-file-share-player>
+
       <div [class.none]="CurrentPlayerType!=PlayerType.Nothing" class="nothing-playing vh-big">
         <span><i class="fa fa-pause-circle" aria-hidden="true"></i> Nothing playing</span>
       </div>
@@ -30,22 +46,12 @@
       <app-blackjack-game [UniqueId]="UniqueId" [logout]="logout" [class.vh-90]="!nav">
       </app-blackjack-game>
     </div>
-    <app-webrtc-voip *ngIf="Privileges>=UserPrivileges.Approved" [UniqueId]="UniqueId" [logout]="logout"
+    <app-webrtc-voip *ngIf="Privileges>=UserPrivileges.Approved&&CurrentPlayerType!==PlayerType.Blackjack&&CurrentPlayerType!==PlayerType.WhiteBoard" [UniqueId]="UniqueId" [logout]="logout"
                      [Privileges]="Privileges"
                      [Username]="Username"></app-webrtc-voip>
     <div class="center-content" *ngIf="CurrentPlayerType==PlayerType.Chess">
       <app-chess-game class="center-mid" [UniqueId]="UniqueId" [Username]="Username"></app-chess-game>
     </div>
-    <!--<div *ngIf="Username&&CurrentPlayerType!=PlayerType.Blackjack"
-         class="ChatView col-3 CardBack border-around-nobot rounded-left" [class.hideChat]="!twitchChat">
-      <div class="chat-height">
-        <div class="chat-height ml-1">
-          <app-dreckchat [nav]="false" [logout]="logout" [Privileges]="Privileges" [UniqueId]="UniqueId"
-                         [Username]="Username"
-                         [WhiteBoard]="false"></app-dreckchat>
-        </div>
-      </div>
-    </div>-->
   </div>
 
   <app-playlist [UniqueId]="UniqueId" (nowPlaying)="nowPlaying($event)" [ready]="readyEvent.asObservable()"

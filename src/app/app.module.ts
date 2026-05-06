@@ -58,6 +58,11 @@ import {MediaDeviceModalComponent} from "./media/webrtc/media-device-modal/media
 import { WebrtcVoipComponent } from './media/webrtc-voip/webrtc-voip.component';
 import { YoutubeApiComponent } from './media/youtube/youtube-api/youtube-api.component';
 import { HttpRtmpStreamComponent } from './media/http-rtmp-stream/http-rtmp-stream.component';
+import { WebrtcComponent } from './media/webrtc/webrtc.component';
+import { StreamViewerPopoutComponent } from './stream-viewer-popout/stream-viewer-popout.component';
+import { StreamStartDialogComponent } from './media/webrtc/stream-start-dialog/stream-start-dialog.component';
+import { SourceLabelPipe } from './media/webrtc/stream-start-dialog/source-label.pipe';
+import { FileSharePlayerComponent } from './media/file-share-player/file-share-player.component';
 const DragConfig = {
   dragStartThreshold: 0,
   pointerDirectionChangeThreshold: 5,
@@ -111,7 +116,12 @@ const DragConfig = {
     MediaDeviceModalComponent,
     WebrtcVoipComponent,
     YoutubeApiComponent,
-    HttpRtmpStreamComponent
+    HttpRtmpStreamComponent,
+    WebrtcComponent,
+    StreamViewerPopoutComponent,
+    StreamStartDialogComponent,
+    SourceLabelPipe,
+    FileSharePlayerComponent
   ],
   imports: [
     MatMenuModule,

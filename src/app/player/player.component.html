@@ -36,9 +36,6 @@
       <app-chess-game class="center-mid" [UniqueId]="UniqueId" [Username]="Username"></app-chess-game>
     </div>
   </div>
-  <!--<div *ngIf="CurrentPlayerType!=playerType.Blackjack" class="transition vh-big col-2 border-left-dark" [class.none]="(!twitchChat && CurrentPlayerType != playerType.WhiteBoard) || CurrentPlayerType==playerType.Twitch">
-    <app-dreckchat [nav]="nav" [logout]="logout" [UniqueId]="UniqueId" [Username]="Username" [WhiteBoard]="CurrentPlayerType==playerType.WhiteBoard"></app-dreckchat>
-  </div>-->
   <div class="col-12">
     <div class="row" [ngClass]="{'none': !nav}">
       <div class="transition pb-4 pt-2 col-12">
@@ -63,7 +60,7 @@
       [ready]="readyEvent.asObservable()" (playlistChange)="playlistChange.emit($event)"></app-playlist>
   </div>
 </div>
-<div *ngIf="Username" class="ChatView col-3 CardBack border-around-nobot rounded-left" [class.hideChat]="!twitchChat">
+<div *ngIf="Username&&CurrentPlayerType===playerType.Twitch" class="ChatView col-3 CardBack border-around-nobot rounded-left" [class.hideChat]="!twitchChat">
   <div class="chat-height">
     <div class="chat-height ml-1">
       <app-dreckchat [nav]="false" [logout]="logout" [UniqueId]="UniqueId" [Username]="Username" [WhiteBoard]="false" (NewMessage)="newMessage=true;"></app-dreckchat>

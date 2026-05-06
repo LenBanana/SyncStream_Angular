@@ -1,6 +1,6 @@
 <div class="chat" id="chat-window">
   <p class="text-center m-0">Hello <span class="username" [class.text-warning]="logout">{{Username}}</span></p>
-  <ul class="chat-style pt-2 pr-4" id="messagebox">
+  <ul class="chat-style pt-2 pr-4 pb-4" id="messagebox">
     <li *ngFor="let Message of Messages; let i=index;" tabindex="{{i}}">
       {{Message.time | date: 'HH:mm:ss'}}
       <span class="username" [ngStyle]="{'color': Message.usercolor.length > 0 ? Message.usercolor : ''}"

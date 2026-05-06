@@ -57,7 +57,7 @@
 </ng-template>
 
 
-<div class="modal fade" id="videoCallModal" (window:beforeunload)="leaveRoom()">
+<div class="modal fade" data-backdrop="false" id="videoCallModal" (window:beforeunload)="leaveRoom()">
   <div class="modal-dialog modal-dialog-centered modal-xxl">
     <div class="modal-content text-light rounded shadow-none" style="background-color: rgba(0, 0, 0, 0.5)">
       <div class="modal-header text-center">

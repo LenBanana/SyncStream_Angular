@@ -1,16 +1,14 @@
 import { Component, OnInit, Input, OnDestroy, Output, EventEmitter, AfterViewChecked, ChangeDetectorRef, ViewChild, HostListener, OnChanges } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import $ from 'jquery';
-import { hubConnection, SignalRService } from '../services/signal-r.service';
+import { SignalRService } from '../services/signal-r.service';
 import { PlaylistService } from '../playlist/playlist-service/playlist.service';
 import { UserlistService } from '../userlist/userlist-service/userlist.service';
-import { player, PlayerComponent } from '../player/player.component';
+import { PlayerComponent } from '../player/player.component';
 import { Location } from '@angular/common';
 import { Member } from '../Interfaces/Member';
 import { VideoDTO } from '../Interfaces/VideoDTO';
 import { ActivatedRoute, Router } from '@angular/router';
-import { randomIntFromInterval } from '../helper/generic';
-import { MainUser } from '../helper/Globals';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
 import { BrowserSettings, changeSettings, GeneralSettings } from '../Interfaces/BrowserSettings';
 

@@ -14,7 +14,8 @@ import { getCookie, token } from '../global.settings';
 export var hubConnection: signalR.HubConnection;
 export var CurrentPing: number = 0.5;
 export var baseUrl: string = "https://sync.dreckbu.de/";
-//export var baseUrl: string = "https://localhost:44371/";
+//export var baseUrl: string = "https://sync.drecktu.be/";
+//export var baseUrl: string = "https://localhost:5000/";
 //export var baseUrl: string = "https://localhost:32780/";
 @Injectable({
   providedIn: 'root'

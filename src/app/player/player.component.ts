@@ -10,6 +10,7 @@ import {
   OnChanges
 } from '@angular/core';
 import Plyr from 'plyr';
+import Hls from 'hls.js';
 import {
   PlayerService
 } from './player-service/player.service';
@@ -67,6 +68,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
   playingChess;
   endChess;
   playingBlackjack;
+  private hlsInstance: Hls | null = null;
 
   YTPlayer: YT.Player;
   readyEvent: Subject < void > = new Subject < void > ();
@@ -121,6 +123,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
     clearInterval(this.PingInterval);
     this.removeListener();
     this.playerService.NullAllSubs();
+    this.disposeHlsSource();
     player.destroy();
   }
 
@@ -451,14 +454,13 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
   setVideo(url: string) {
     $('#dialogModal-Sync').modal('hide');
     this.twitchChannel = undefined;
-    if (url.includes(".m3u8")) {
-      player.source = {
-        type: 'video',
-        sources: [{
-          src: url,
-          type: 'application/x-mpegURL',
-        }],
-      };
+
+    if (!url.includes('.m3u8')) {
+      this.disposeHlsSource();
+    }
+
+    if (url.includes('.m3u8')) {
+      this.loadHlsSource(url);
       return;
     }
     if (url.includes('vimeo.com')) {
@@ -484,6 +486,66 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
     };
   }
 
+  /**
+   * Loads an HLS manifest via hls.js (all browsers) or native HLS (Safari).
+   * hls.js retries the manifest request automatically, so the player shows the
+   * correct buffering state while FFmpeg is still producing the first segments.
+   */
+  private loadHlsSource(url: string) {
+    this.disposeHlsSource();
+
+    const videoEl = document.getElementById('VideoPlayer') as HTMLVideoElement;
+
+    if (Hls.isSupported()) {
+      this.hlsInstance = new Hls({
+        // Treat stream as live (infinite duration) while upload is in progress.
+        // hls.js switches to VOD mode automatically when EXT-X-ENDLIST appears.
+        liveDurationInfinity: true,
+        lowLatencyMode: false,
+        // Retry aggressively so the player waits for FFmpeg to emit the first segment
+        // rather than failing immediately with a 404.
+        manifestLoadingMaxRetry: 1000,
+        manifestLoadingRetryDelay: 1000,
+        manifestLoadingMaxRetryTimeout: 8000,
+        levelLoadingMaxRetry: 1000,
+        fragLoadingMaxRetry: 6,
+        fragLoadingRetryDelay: 1000,
+      });
+      this.hlsInstance.loadSource(url);
+      this.hlsInstance.attachMedia(videoEl);
+      this.hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+        videoEl.play().catch(() => {});
+      });
+      this.hlsInstance.on(Hls.Events.ERROR, (_evt, data) => {
+        if (data.fatal) {
+          switch (data.type) {
+            case Hls.ErrorTypes.NETWORK_ERROR:
+              // Recoverable: retry loading
+              this.hlsInstance?.startLoad();
+              break;
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              this.hlsInstance?.recoverMediaError();
+              break;
+            default:
+              this.disposeHlsSource();
+              break;
+          }
+        }
+      });
+    } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari has native HLS support
+      videoEl.src = url;
+      videoEl.play().catch(() => {});
+    }
+  }
+
+  private disposeHlsSource() {
+    if (this.hlsInstance) {
+      this.hlsInstance.destroy();
+      this.hlsInstance = null;
+    }
+  }
+
   youtube_parser(url) {
     var regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
     var match = url.match(regExp);
@@ -498,6 +560,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
       return;
     }
     if (!key || !key.url || key.url.length == 0) {
+      this.disposeHlsSource();
       if (this.CurrentPlayerType != PlayerType.WhiteBoard && this.CurrentPlayerType != PlayerType.Blackjack && this.CurrentPlayerType != PlayerType.Chess) {
         this.CurrentPlayerType = PlayerType.Nothing;
         setTimeout(() => {
@@ -507,14 +570,17 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
       }
       return;
     }
-    if (key.url.startsWith(baseUrl)) {
+    // Only append auth tokens to the fileByToken endpoint.
+    // HLS manifests and segments are addressed by fileKey and must remain unchanged.
+    if (key.url.startsWith(baseUrl) && key.url.includes('/api/video/fileByToken?')) {
       var Token = getCookie("login-token");
       if (Token) {
-        key.url += "&token=" + Token;
+        key.url += (key.url.includes('?') ? '&' : '?') + "token=" + Token;
       }
     }
     this.currentKey = key.url;
     if (key.url.includes('youtube') || key.url.includes('youtu.be')) {
+      this.disposeHlsSource();
       if (this.CurrentPlayerType != PlayerType.WhiteBoard) {
         this.CurrentPlayerType = PlayerType.YouTube;
       }
@@ -525,6 +591,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
       return;
     }
     if (key.url.includes('vimeo.com')) {
+      this.disposeHlsSource();
       if (this.CurrentPlayerType != PlayerType.WhiteBoard) {
         this.CurrentPlayerType = PlayerType.Vimeo;
       }
@@ -545,6 +612,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
       this.setVideo(key.url);
       return;
     }
+    this.disposeHlsSource();
     if (this.CurrentPlayerType != PlayerType.WhiteBoard) {
       this.CurrentPlayerType = PlayerType.Twitch;
     }
@@ -672,7 +740,9 @@ export enum PlayerType {
   WhiteBoard,
   Blackjack,
   Chess,
-  WebRtc
+  WebRtc,
+  /** A room member is streaming a local video file to the room via WebRTC/SFU. */
+  FileShare
 }
 
 export enum UserUpdate {

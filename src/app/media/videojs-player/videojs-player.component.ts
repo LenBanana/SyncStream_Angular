@@ -9,7 +9,7 @@ import { PlayerType } from '../../player/player.component';
 import { PlaylistService } from '../../playlist/playlist-service/playlist.service';
 import { baseUrl } from '../../services/signal-r.service';
 import { MediaService } from '../media-service/media.service';
-import { AlertType, Dialog } from '../../Interfaces/Dialog';
+import type Player from 'video.js/dist/types/player';
 import { DialogService } from '../../text-dialog/text-dialog-service/dialog-service.service';
 declare var $: any;
 
@@ -35,8 +35,8 @@ export class VideojsPlayerComponent implements AfterViewInit, OnDestroy, OnChang
   IsPlayingUpdate: Subscription;
   VideoUpdate: Subscription;
   ServerTimeUpdate: Subscription;
-  @ViewChild('videojsplayer', {static: true}) videojselement: ElementRef;
-  videojsplayer: videojs.Player;
+  @ViewChild('videojsplayer', { static: true }) videojselement: ElementRef;
+  videojsplayer: Player;
   volume = 1;
 
   ngAfterViewInit(): void {
@@ -47,15 +47,18 @@ export class VideojsPlayerComponent implements AfterViewInit, OnDestroy, OnChang
       enableWorker: true,
       liveDurationInfinity: false,
       liveui: true
-    }, onPlayerReady => {
+    });
+
+    this.videojsplayer.ready(() => {
       this.InitPlayer();
     });
   }
 
   SeekLive() {
     if (this.IsHost) {
-      this.videojsplayer.currentTime(this.videojsplayer.liveTracker.seekableEnd());
-    }
+    const seekableEnd = (this.videojsplayer as any).liveTracker.seekableEnd();
+    this.videojsplayer.currentTime(seekableEnd);
+  }
   }
 
   ngOnChanges() {
@@ -68,12 +71,12 @@ export class VideojsPlayerComponent implements AfterViewInit, OnDestroy, OnChang
     this.IsPlayingUpdate?.unsubscribe();
     this.VideoUpdate?.unsubscribe();
     this.ServerTimeUpdate?.unsubscribe();
-    this.videojsplayer.off("play", () => {});
-    this.videojsplayer.off("pause", () => {});
-    this.videojsplayer.off("timeupdate", () => {});
-    this.videojsplayer.off("ended", () => {});
-    this.videojsplayer.off("canplay", () => {});
-    this.videojsplayer?.off("volumechange", () => {});
+    this.videojsplayer.off("play", () => { });
+    this.videojsplayer.off("pause", () => { });
+    this.videojsplayer.off("timeupdate", () => { });
+    this.videojsplayer.off("ended", () => { });
+    this.videojsplayer.off("canplay", () => { });
+    this.videojsplayer?.off("volumechange", () => { });
     this.videojsplayer?.dispose();
   }
 

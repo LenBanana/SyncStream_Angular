@@ -1,0 +1,43 @@
+<div class="popout-wrapper"
+     *ngIf="visible"
+     [style.display]="pipActive ? 'none' : null"
+     [style.left.px]="posX"
+     [style.top.px]="posY"
+     [style.width.px]="minimized ? 220 : popoutWidth"
+     [style.height.px]="minimized ? null : popoutHeight"
+     [class.minimized]="minimized">
+
+  <!-- Title bar (drag handle) -->
+  <div class="popout-titlebar" (mousedown)="onDragStart($event)">
+    <span class="popout-name">
+      <i class="fa fa-circle text-danger live-indicator" aria-hidden="true"></i>
+      {{ streamerName }}
+    </span>
+    <span class="popout-controls">
+      <!-- Picture-in-Picture — only shown when browser supports it -->
+      <button *ngIf="pipSupported" class="btn-icon"
+              [title]="pipActive ? 'Exit Picture-in-Picture' : 'Picture-in-Picture'"
+              (click)="togglePip()">
+        <i class="fa" [class.fa-compress]="pipActive" [class.fa-external-link]="!pipActive" aria-hidden="true"></i>
+      </button>
+      <button class="btn-icon" (click)="toggleMinimize()" [title]="minimized ? 'Restore' : 'Minimize'">
+        <i class="fa" [class.fa-window-minimize]="!minimized" [class.fa-window-maximize]="minimized" aria-hidden="true"></i>
+      </button>
+      <button class="btn-icon ml-1" (click)="close()" title="Stop watching">
+        <i class="fa fa-times" aria-hidden="true"></i>
+      </button>
+    </span>
+  </div>
+
+  <!-- PiP button in title bar toggles Picture-in-Picture and hides this window -->
+
+  <!-- Video body — always kept in DOM even when minimized so the video element
+       reference stays alive for the PiP API. Hidden via CSS when minimized. -->
+  <div class="popout-body" [class.popout-body--hidden]="minimized">
+    <video #popoutVideo class="popout-video" autoplay playsinline></video>
+  </div>
+
+  <!-- Resize handle (bottom-right corner) — hidden when minimized -->
+  <div class="resize-handle" *ngIf="!minimized" (mousedown)="onResizeStart($event)"></div>
+
+</div>

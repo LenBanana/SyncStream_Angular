@@ -1,3 +1,10 @@
+<app-stream-start-dialog
+  *ngIf="showStreamDialog"
+  [browserSettings]="BrowserSettings"
+  (confirmed)="onStreamDialogConfirmed($event)"
+  (cancelled)="onStreamDialogCancelled()">
+</app-stream-start-dialog>
+
 <div id="side-nav-drag-menu" [class.mobile-menu]="isMobile" cdkDrag (cdkDragEnded)="onDragEnded($event)"
   *ngIf="!WhiteboardActive&&!BlackjackActive" class="status-box bg-gray-900 rounded"
   [ngStyle]="{'transform': isMobile ? 'scale(1.05)' : 'scale(1)'}" [class.fade-out]="nav||menuHidden"
@@ -87,27 +94,70 @@
     <!-- Memberlist -->
     <span class="dreck-tooltiptext Memberlist-preview" *ngIf="Members&&Members.length>0&&isMobile===false"
       [class.left-tooltip]="BrowserSettings.layoutSettings.bigSideNav||isMobile"
-      style="z-index: 200; padding: 5px; width: 150px; transition: opacity 0.5s ease; opacity: 1; margin-top: -45px; margin-left: 44px;"
+      style="z-index: 200; padding: 5px; width: 180px; transition: opacity 0.5s ease; opacity: 1; margin-top: -45px; margin-left: 44px;"
       [class.nopointer]="!showMemberlist" [class.fade-out]="!showMemberlist">
       <h6 class="text-center">{{Members.length}} Member</h6>
       <div class="divider-line m-1"></div>
-      <div class="row m-0" *ngFor="let member of Members">
+      <div class="row m-0 align-items-center py-1" *ngFor="let member of Members">
         <div class="col-2 p-0 text-center">
           <div *ngIf="member.ishost" class="menu-item"><i class="fa fa-user text-warning"></i></div>
           <div *ngIf="!member.ishost" (click)="ChangeHost(member.username)" class="menu-item"><i
-              class="fa fa-user text-info"></i></div>
+              class="fa fa-user text-info pointer"></i></div>
         </div>
-        <div class="col-8">
+        <div class="col-7 p-0">
           <p title="{{member.username}}"
-            style="position: relative; display: block; opacity: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            {{member.username}}</p>
+            style="position: relative; display: block; opacity: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0;">
+            <i *ngIf="member.isstreaming" class="fa fa-circle text-danger mr-1 live-pulse" style="font-size:0.5rem; vertical-align: middle;" title="{{member.username}} is streaming" aria-hidden="true"></i>{{member.username}}</p>
+        </div>
+        <div class="col-1 p-0 text-center">
+          <i *ngIf="member.isstreaming && member.username !== Username" class="fa fa-eye pointer text-info"
+             title="Watch {{member.username}}" (click)="watchStreamer(member)" aria-hidden="true"></i>
         </div>
         <div class="col-2 p-0 text-center" (click)="BanUser(member.username)"
           *ngIf="Privileges>=3&&member.username!==Username">
-          <div class="menu-item"><i class="fa fa-times-circle text-danger"></i></div>
+          <div class="menu-item"><i class="fa fa-times-circle text-danger pointer"></i></div>
         </div>
       </div>
     </span>
+  <!-- Go Live / Stop Live button -->
+  <span *ngIf="Privileges>=1&&isMobile===false" [ngStyle]="{'font-size.%': GetFontSize()}"
+    class="badge badge-dreck p-2 block pointer live-ctrl-btn"
+    [class.text-danger]="isStreaming" [class.text-light]="!isStreaming"
+    [title]="isStreaming ? 'Stop streaming' : 'Go Live — share your screen'"
+    (click)="isStreaming ? stopLive() : goLive()">
+    <i class="fa text-danger" [class.fa-circle]="!isStreaming" [class.fa-stop-circle]="isStreaming"
+       [class.live-pulse]="isStreaming" aria-hidden="true"></i>
+    <span class="menu-hide menu-msg unselectable">{{ isStreaming ? ' Stop' : ' Live' }}</span>
+  </span>
+  <!-- Share File / Stop Share button -->
+  <span *ngIf="Privileges>=1&&isMobile===false&&!isStreaming&&(isFileSharingActive||(!webrtcService.fileShareActive.value&&!webrtcService.isPreparingFileShareHost))" [ngStyle]="{'font-size.%': GetFontSize()}"
+    class="badge badge-dreck p-2 block pointer"
+    [class.text-danger]="isFileSharingActive" [class.text-light]="!isFileSharingActive"
+    [title]="isFileSharingActive ? 'Stop file share' : 'Share a local video or audio file with the room'"
+    (click)="isFileSharingActive ? stopFileShare() : openFileShare()">
+    <i class="fa fa-file-video-o" aria-hidden="true"></i>
+    <span class="menu-hide menu-msg unselectable">{{ isFileSharingActive ? ' Stop' : ' Share' }}</span>
+  </span>
+  <input #fileSharePickerInput type="file" accept="video/*,audio/*" style="display:none"
+    (change)="onFileSharePicked($event)">
+  <!-- Stream self-preview — floats out on hover while broadcasting -->
+  <div *ngIf="isStreaming"
+    class="live-preview-panel"
+    [class.left-tooltip]="BrowserSettings.layoutSettings.bigSideNav||isMobile">
+    <div class="live-preview-badge">
+      <i class="fa fa-circle live-pulse mr-1" aria-hidden="true"></i>LIVE
+    </div>
+    <video [srcObject]="localStream" autoplay muted playsinline class="live-preview-video"></video>
+    <div class="live-preview-hint">Hover to preview · click to stop</div>
+  </div>
+  <!-- Pop back in — only visible while a stream is in Picture-in-Picture -->
+  <span *ngIf="pipIsActive" [ngStyle]="{'font-size.%': GetFontSize()}"
+    class="badge badge-dreck p-2 block pointer pip-return-btn"
+    title="Return stream to popout window"
+    (click)="returnFromPip()">
+    <i class="fa fa-compress pip-return-icon" aria-hidden="true"></i>
+    <span class="menu-hide menu-msg unselectable"> Pop in</span>
+  </span>
     <!-- Chat -->
     <span *ngIf="Privileges>=1&&isMobile===false" [ngStyle]="{'font-size.%': GetFontSize()}"
       class="badge badge-dreck p-2 block pointer" title="Toggles the chat" (click)="toggleChat()"

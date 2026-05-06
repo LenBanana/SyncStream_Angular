@@ -22,6 +22,7 @@ import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
 import { PlayerType } from '../player/player.component';
 import {WebrtcVoipService} from "../media/webrtc-voip/webrtc-voip-service/webrtc-voip.service";
 import {LiveStreamService} from "../live-stream-view/live-stream-service/live-stream.service";
+import {WebrtcService} from "../media/webrtc/webrtc-service/webrtc.service";
 declare var $: any
 
 
@@ -78,7 +79,8 @@ export class RoomsComponent implements OnInit {
     public dialogService: DialogService,
     public liveStreamService: LiveStreamService,
     private cdRef: ChangeDetectorRef,
-    private loc: Location) {
+    private loc: Location,
+    private webrtcService: WebrtcService) {
     this.onResize();
   }
   resetGame() {
@@ -230,6 +232,8 @@ export class RoomsComponent implements OnInit {
 
   public LeaveRoom() {
     $('#join-animation-placeholder').removeClass('none').addClass('leave-room');
+    // Stop any active P2P stream or viewer session before leaving.
+    this.webrtcService.leaveRoom(this.currentRoom);
     this.userService.removeUser(this.currentRoom);
     this.loc.go('/');
     this.currentRoom = undefined;

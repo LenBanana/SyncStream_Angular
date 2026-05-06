@@ -8,6 +8,24 @@ import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.
 import { DialogService } from '../../text-dialog/text-dialog-service/dialog-service.service';
 import { User } from '../../Interfaces/User';
 
+interface RoomUploadSessionResult {
+  statusCode: number;
+  errorMessage?: string;
+  uploadId?: string;
+  state?: string;
+  chunkSize: number;
+  nextOffset: number;
+  totalSize: number;
+  fileKey?: string;
+  playbackUrl?: string;
+}
+
+export interface RoomUploadProgressState {
+  phase: 'uploading' | 'processing';
+  uploadedBytes: number;
+  totalBytes: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -69,6 +87,181 @@ export class DownloadManagerService {
         observe: 'events'
       });
     }
+  }
+
+  public async UploadRoomFileInChunks(
+    file: File,
+    uniqueId: string,
+    onProgress: (state: RoomUploadProgressState) => void,
+    onSessionCreated?: (uploadId: string) => void,
+    abortSignal?: AbortSignal
+  ): Promise<RoomUploadSessionResult> {
+    if (!token) {
+      return {
+        statusCode: 401,
+        errorMessage: 'You need to be logged in to upload a file to a room.',
+        chunkSize: 0,
+        nextOffset: 0,
+        totalSize: file?.size || 0
+      };
+    }
+
+    const fileExt = file.name.includes('.') ? file.name.split('.').pop() : '';
+    const startUrl = baseUrl
+      + `api/video/roomUpload/start?token=${encodeURIComponent(token)}`
+      + `&uniqueId=${encodeURIComponent(uniqueId)}`
+      + `&name=${encodeURIComponent(file.name)}`
+      + `&fileEnding=${encodeURIComponent(fileExt)}`
+      + `&totalSize=${encodeURIComponent(file.size.toString())}`;
+
+    const startResult = await this.fetchRoomUploadResult(startUrl, {
+      method: 'POST',
+      signal: abortSignal
+    });
+
+    if (!startResult || !startResult.uploadId || startResult.statusCode >= 400) {
+      return startResult;
+    }
+
+    const uploadId = startResult.uploadId;
+    if (onSessionCreated) {
+      onSessionCreated(uploadId);
+    }
+    let nextOffset = startResult.nextOffset || 0;
+    const chunkSize = startResult.chunkSize || 8 * 1024 * 1024;
+
+    while (nextOffset < file.size) {
+      const chunk = file.slice(nextOffset, nextOffset + chunkSize);
+      const chunkUrl = baseUrl
+        + `api/video/roomUpload/chunk?token=${encodeURIComponent(token)}`
+        + `&uploadId=${encodeURIComponent(uploadId)}`
+        + `&startByte=${encodeURIComponent(nextOffset.toString())}`;
+
+      const chunkResult = await this.sendChunkWithRetry(chunkUrl, uploadId, chunk, nextOffset, abortSignal);
+      if (!chunkResult || chunkResult.statusCode >= 400) {
+        return chunkResult;
+      }
+
+      nextOffset = chunkResult.nextOffset;
+      onProgress({ phase: 'uploading', uploadedBytes: nextOffset, totalBytes: file.size });
+    }
+
+    onProgress({ phase: 'processing', uploadedBytes: file.size, totalBytes: file.size });
+
+    const completeUrl = baseUrl
+      + `api/video/roomUpload/complete?token=${encodeURIComponent(token)}`
+      + `&uploadId=${encodeURIComponent(uploadId)}`;
+    let completeResult = await this.fetchRoomUploadResult(completeUrl, {
+      method: 'POST',
+      signal: abortSignal
+    });
+
+    while (completeResult && completeResult.state === 'processing') {
+      await this.delay(1500);
+      completeResult = await this.GetRoomUploadStatus(uploadId, abortSignal);
+    }
+
+    return completeResult;
+  }
+
+  public async CancelRoomUpload(uploadId: string) {
+    if (!token || !uploadId) {
+      return;
+    }
+
+    const url = baseUrl
+      + `api/video/roomUpload/cancel?token=${encodeURIComponent(token)}`
+      + `&uploadId=${encodeURIComponent(uploadId)}`;
+
+    try {
+      await this.fetchRoomUploadResult(url, { method: 'DELETE' });
+    } catch {
+      // Best effort cleanup on cancellation.
+    }
+  }
+
+  private async GetRoomUploadStatus(uploadId: string, abortSignal?: AbortSignal): Promise<RoomUploadSessionResult> {
+    const statusUrl = baseUrl
+      + `api/video/roomUpload/status?token=${encodeURIComponent(token)}`
+      + `&uploadId=${encodeURIComponent(uploadId)}`;
+
+    return await this.fetchRoomUploadResult(statusUrl, {
+      method: 'GET',
+      signal: abortSignal
+    });
+  }
+
+  private async sendChunkWithRetry(
+    url: string,
+    uploadId: string,
+    chunk: Blob,
+    startOffset: number,
+    abortSignal?: AbortSignal
+  ): Promise<RoomUploadSessionResult> {
+    let lastError: any = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const result = await this.fetchRoomUploadResult(url, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/octet-stream' },
+          body: chunk,
+          signal: abortSignal
+        });
+
+        if (result.statusCode === 409) {
+          const status = await this.GetRoomUploadStatus(uploadId, abortSignal);
+          if (status.nextOffset > startOffset) {
+            return status;
+          }
+        }
+
+        return result;
+      } catch (err) {
+        lastError = err;
+        if (abortSignal?.aborted) {
+          throw err;
+        }
+        await this.delay(500 * (attempt + 1));
+      }
+    }
+
+    if (lastError) {
+      throw lastError;
+    }
+
+    return await this.GetRoomUploadStatus(uploadId, abortSignal);
+  }
+
+  private async fetchRoomUploadResult(url: string, init: RequestInit): Promise<RoomUploadSessionResult> {
+    const response = await fetch(url, init);
+    let payload: RoomUploadSessionResult = null;
+
+    try {
+      payload = await response.json();
+    } catch {
+      payload = null;
+    }
+
+    if (!payload) {
+      payload = {
+        statusCode: response.status,
+        errorMessage: response.ok ? null : response.statusText,
+        chunkSize: 0,
+        nextOffset: 0,
+        totalSize: 0
+      };
+    }
+
+    payload.statusCode = response.status;
+    if (!response.ok && !payload.errorMessage) {
+      payload.errorMessage = response.statusText;
+    }
+
+    return payload;
+  }
+
+  private async delay(ms: number) {
+    await new Promise(resolve => setTimeout(resolve, ms));
   }
 
   public displayObject(obj: object) {

@@ -18,6 +18,7 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
 
   constructor(private downloadService: DownloadManagerService, private dialogService: DialogService) {}
   @ViewChild('fileSelect') fileSelectView: ElementRef;
+  @ViewChild('fileSelectStream') fileSelectStreamView: ElementRef;
   @Input() User: User;
   @Input() IsInRoom: boolean = false;
   @Input() UniqueId: string = "";
@@ -60,7 +61,12 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.folderUpdate = this.downloadService.updateFolder.subscribe(f => {
       if (this.files && f) {
-        this.files.push(f);
+        const existingIndex = this.files.findIndex(x => x.id === f.id);
+        if (existingIndex === -1) {
+          this.files.push(f);
+        } else {
+          this.files[existingIndex] = f;
+        }
         this.SetFiles(this.files, false);
       }
     });
@@ -155,7 +161,7 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
       this.filterFiles = [...uniques.filter(x => x.name.toLocaleLowerCase().includes(this.filterName))];
       return;
     }
-    this.filterFiles = [...this.files];
+    this.filterFiles = [...uniques];
   }
 
   UpdateFolder(folder: FileFolder) {
@@ -239,6 +245,86 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
     }
   }
 
+  SelectStreamFile() {
+    if (this.fileSelectStreamView) {
+      this.fileSelectStreamView.nativeElement.click();
+    }
+  }
+
+  StreamToRoomFromFile(file: File) {
+    if (!file || !this.IsInRoom || !this.UniqueId) return;
+
+    if ((this.fileSelectStreamView)) this.fileSelectStreamView.nativeElement.value = '';
+
+    const controller = new AbortController();
+    const uploadContext = { id: crypto.randomUUID(), uploadId: null, controller };
+
+    this.downloadService.progress.next({ id: uploadContext.id, progress: 0, type: 'Uploading to room...', name: file.name });
+    const start = new Date();
+
+    this.currentDownloads.push(uploadContext);
+
+    this.downloadService.UploadRoomFileInChunks(
+      file,
+      this.UniqueId,
+      state => {
+        if (state.phase === 'processing') {
+          this.downloadService.progress.next({
+            id: uploadContext.id,
+            progress: 100,
+            type: 'Preparing playback for the room...',
+            name: file.name
+          });
+          return;
+        }
+
+        const percentDone = state.totalBytes > 0 ? 100 * state.uploadedBytes / state.totalBytes : 0;
+        const elapsed = new Date().getTime() - start.getTime();
+        const timeLeft = percentDone > 0 ? elapsed / percentDone * (100 - percentDone) : 0;
+        const dateLeft = new Date(timeLeft);
+        const hours = ("0" + dateLeft.getUTCHours()).slice(-2);
+        const minute = ("0" + dateLeft.getMinutes()).slice(-2);
+        const second = ("0" + dateLeft.getSeconds()).slice(-2);
+
+        this.downloadService.progress.next({
+          id: uploadContext.id,
+          progress: Math.round(percentDone),
+          type: (Math.round(state.uploadedBytes / 1024 / 1024 * 100) / 100).toFixed(2)
+            + 'MB of ' + (Math.round(state.totalBytes / 1024 / 1024 * 100) / 100).toFixed(2)
+            + 'MB - remaining ' + hours + ':' + minute + ':' + second,
+          name: file.name
+        });
+      },
+      uploadId => {
+        uploadContext.uploadId = uploadId;
+      },
+      controller.signal
+    ).then(result => {
+      uploadContext.uploadId = result?.uploadId || uploadContext.uploadId;
+      this.downloadService.downloadFinished.next(uploadContext.id);
+      if (result && result.statusCode === 401) {
+        this.dialogService.PushDefaultDialog(result.errorMessage || 'You need to be logged in to stream a file to a room.', 'Unauthorized', AlertType.Warning);
+        return;
+      }
+      if (result && result.state === 'ready') {
+        this.downloadService.GetFolderFiles(this.currentFolder.id);
+        return;
+      }
+
+      if (!controller.signal.aborted) {
+        this.dialogService.PushDefaultDialog(result?.errorMessage || 'The file was uploaded but could not be prepared for room playback.', 'Room upload failed', AlertType.Danger);
+      }
+    }).catch(async _err => {
+      this.downloadService.downloadFinished.next(uploadContext.id);
+      if (uploadContext.uploadId) {
+        await this.downloadService.CancelRoomUpload(uploadContext.uploadId);
+      }
+      if (!controller.signal.aborted) {
+        this.dialogService.PushDefaultDialog('The room upload failed before the file became playable.', 'Room upload failed', AlertType.Danger);
+      }
+    });
+  }
+
   FileSelected(file) {
     if (!file || !file.target || !file.target.files) {
       return;
@@ -314,13 +400,23 @@ export class DownloadManagerComponent implements OnInit, OnDestroy {
 
   CancelDownload(id: string) {
     var idx = this.currentDownloads.findIndex(x => x.id == id);
+    var isRoomUpload = false;
     if (idx == -1) {
       var idx = this.progresses.findIndex(x => x.id == id);
     } else {
-      this.currentDownloads[idx].upload.unsubscribe();
+      if (this.currentDownloads[idx].controller) {
+        this.currentDownloads[idx].controller.abort();
+        isRoomUpload = true;
+      }
+      if (this.currentDownloads[idx].uploadId) {
+        this.downloadService.CancelRoomUpload(this.currentDownloads[idx].uploadId);
+        isRoomUpload = true;
+      }
     }
     if (idx > -1) {
-      this.downloadService.CancelM3U8Download(id.trim());
+      if (!isRoomUpload) {
+        this.downloadService.CancelM3U8Download(id.trim());
+      }
       this.downloadService.downloadFinished.next(id);
     }
   }

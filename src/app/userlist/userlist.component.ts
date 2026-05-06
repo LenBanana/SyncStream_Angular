@@ -7,6 +7,9 @@ import { Location } from '@angular/common';
 import { UserUpdate } from '../player/player.component';
 import { AlertType, Dialog } from '../Interfaces/Dialog';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
+import { WebrtcService } from '../media/webrtc/webrtc-service/webrtc.service';
+import { StreamStartConfig } from '../media/webrtc/stream-start-dialog/stream-start-dialog.component';
+import { BrowserSettings, browserSettingName } from '../Interfaces/BrowserSettings';
 import * as sha512 from 'js-sha512';
 declare var $:any
 
@@ -17,7 +20,8 @@ declare var $:any
 })
 export class UserlistComponent implements OnInit, OnDestroy {
 
-  constructor(public userService: UserlistService, private http: HttpClient, private loc: Location, private dialogService: DialogService) { }
+  constructor(public userService: UserlistService, private http: HttpClient, private loc: Location,
+              private dialogService: DialogService, public webrtcService: WebrtcService) { }
 
   @Input() nav: boolean;
   @Input() UniqueId: string;
@@ -31,6 +35,19 @@ export class UserlistComponent implements OnInit, OnDestroy {
   Initial = true;
   IsHost: boolean = false;
   Members: Member[] = [];
+  /** True while the current user is broadcasting a P2P stream. */
+  isStreaming: boolean = false;
+  showStreamDialog = false;
+  browserSettings: BrowserSettings = this._loadSettings();
+
+  private _loadSettings(): BrowserSettings {
+    try {
+      const raw = localStorage.getItem(browserSettingName);
+      return raw ? JSON.parse(raw) as BrowserSettings : new BrowserSettings();
+    } catch {
+      return new BrowserSettings();
+    }
+  }
   UserUpdate;
   FailedPassword = false;
   RoomPassword = "";
@@ -138,6 +155,46 @@ export class UserlistComponent implements OnInit, OnDestroy {
 
   public ChangeHost(username: string) {
     this.userService.changeHost(username, this.UniqueId);
+  }
+
+  // ---------------------------------------------------------------
+  // Discord-style streaming controls
+  // ---------------------------------------------------------------
+
+  /** Start sharing screen — opens the stream-start dialog. */
+  goLive(): void {
+    this.browserSettings = this._loadSettings();
+    this.showStreamDialog = true;
+  }
+
+  onStreamDialogCancelled(): void {
+    this.showStreamDialog = false;
+  }
+
+  async onStreamDialogConfirmed(config: StreamStartConfig): Promise<void> {
+    this.showStreamDialog = false;
+    try {
+      await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate);
+      this.isStreaming = true;
+      // Auto-stop when the browser's native screen-share dialog is closed.
+      config.stream.getVideoTracks()[0]?.addEventListener('ended', () => this.stopLive());
+    } catch (err) {
+      console.error('goLive: startStreaming failed', err);
+      config.stream.getTracks().forEach(t => t.stop());
+    }
+  }
+
+  /** Stop the current P2P broadcast. */
+  async stopLive(): Promise<void> {
+    await this.webrtcService.stopStreaming(this.UniqueId);
+    this.isStreaming = false;
+  }
+
+  /** Opt-in watch: open the popout viewer for a specific streaming member. */
+  watchStreamer(member: Member): void {
+    if (!member.connectionId) return;
+    this.webrtcService.startWatching(this.UniqueId, member.connectionId, member.username)
+      .catch(err => console.error('startWatching failed', err));
   }
 
 }

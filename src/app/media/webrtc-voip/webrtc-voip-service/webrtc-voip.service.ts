@@ -168,8 +168,30 @@ export class WebrtcVoipService implements OnDestroy {
       }
     };
 
-    pc.onconnectionstatechange = event => {
-      if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+    pc.onconnectionstatechange = async event => {
+      if (pc.connectionState === 'failed') {
+        // Attempt ICE restart before giving up — common when switching networks or NAT rebinds.
+        const iceState = pc.iceConnectionState;
+        if (iceState === 'failed' || iceState === 'disconnected') {
+          try {
+            console.warn(`ICE failed for ${participant.participantId}, attempting restart`);
+            const offer = await pc.createOffer({iceRestart: true});
+            await pc.setLocalDescription(offer);
+            const voipOffer: VoipOffer = {
+              participantName: participant.participantName,
+              type: pc.localDescription.type,
+              sdp: pc.localDescription.sdp
+            };
+            await hubConnection.invoke('SendOfferToParticipant', token, participant.participantId, voipOffer);
+            return;
+          } catch (restartError) {
+            console.error('ICE restart failed, disconnecting peer:', restartError);
+          }
+        }
+        this.handleParticipantLeave(participant.participantId);
+      } else if (pc.connectionState === 'disconnected') {
+        // 'disconnected' is transient — wait for it to recover or move to 'failed'/'closed'.
+      } else if (pc.connectionState === 'closed') {
         this.handleParticipantLeave(participant.participantId);
       }
     };

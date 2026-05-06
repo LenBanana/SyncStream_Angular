@@ -28,7 +28,7 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
               private mediaService: MediaService,
               private pingService: PingService,
               private signalrService: SignalRService,
-              private webRtcService: WebrtcService,
+              public webRtcService: WebrtcService,
               private voipService: WebrtcVoipService,
               private chatService: DreckchatService
   ) {
@@ -72,7 +72,10 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
       this.pingService.GetPing();
     }, 5000);
     this.Subscriptions.push(this.webRtcService.streamStart.subscribe(o => {
-        if (o) {
+        // Do not switch to WebRtc mode if we are the file-share host — the SFU
+        // send-transport for file sharing does not go through StartSfuStream and
+        // should not affect the player type.
+        if (o && !this.webRtcService.isFileShareHost) {
           this.LastPlayerType = this.CurrentPlayerType;
           this.CurrentPlayerType = PlayerType.WebRtc;
         }
@@ -80,6 +83,15 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
       this.webRtcService.streamStop.subscribe(o => {
         if (o && this.CurrentPlayerType === PlayerType.WebRtc) {
           this.CurrentPlayerType = this.LastPlayerType;
+        }
+      }),
+      // File share: side-nav emitted fileShareHostRequested — switch host to FileShare
+      // player so the self-contained FileSharePlayerComponent can render and let the
+      // user pick their file.  The component itself calls startFileShare after that.
+      this.webRtcService.fileShareHostRequested.subscribe(() => {
+        if (this.CurrentPlayerType !== PlayerType.FileShare) {
+          this.LastPlayerType = this.CurrentPlayerType;
+          this.CurrentPlayerType = PlayerType.FileShare;
         }
       }),
       this.signalrService.pingStream.subscribe(ping => {

@@ -1,0 +1,17 @@
+.webrtc-viewer {
+  background: #000;
+  min-height: 0;
+}
+
+.webrtc-video {
+  display: block;
+}
+
+.webrtc-controls {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.webrtc-viewer:hover .webrtc-controls {
+  opacity: 1;
+}

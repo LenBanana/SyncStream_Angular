@@ -1,0 +1,286 @@
+<!-- Stream Start Dialog — full-screen overlay -->
+<div class="ssd-backdrop" (click)="cancel()"></div>
+
+<div class="ssd-panel" role="dialog" aria-modal="true" aria-labelledby="ssd-title">
+
+  <!-- ── Header ── -->
+  <div class="ssd-header">
+    <div class="ssd-header-left">
+      <i class="fa fa-broadcast-tower text-main-color mr-2"></i>
+      <span id="ssd-title" class="ssd-title">Start Streaming</span>
+    </div>
+    <button class="ssd-close-btn" (click)="cancel()" title="Close">
+      <i class="fa fa-times"></i>
+    </button>
+  </div>
+
+  <!-- ── Stepper ── -->
+  <div class="ssd-stepper">
+    <div class="ssd-step" *ngFor="let s of steps; let i = index"
+         [class.active]="step === s"
+         [class.done]="stepIndex > i">
+      <div class="ssd-step-dot">
+        <i class="fa fa-check" *ngIf="stepIndex > i"></i>
+        <span *ngIf="stepIndex <= i">{{i + 1}}</span>
+      </div>
+      <span class="ssd-step-label">
+        <ng-container *ngIf="s === 'source'">Source</ng-container>
+        <ng-container *ngIf="s === 'quality'">Quality</ng-container>
+        <ng-container *ngIf="s === 'audio'">Audio</ng-container>
+      </span>
+    </div>
+  </div>
+
+  <!-- ── Body ── -->
+  <div class="ssd-body">
+
+    <!-- ==================== STEP: SOURCE ==================== -->
+    <div *ngIf="step === 'source'">
+      <h2 class="ssd-section-title">What do you want to share?</h2>
+
+      <div *ngIf="isLoading" class="ssd-loading">
+        <div class="spinner-border text-main-color" role="status">
+          <span class="sr-only">Loading…</span>
+        </div>
+        <span class="ml-3">Detecting devices…</span>
+      </div>
+
+      <div *ngIf="!isLoading" class="ssd-source-grid">
+        <button
+          *ngFor="let opt of sourceOptions"
+          class="ssd-source-card"
+          [class.selected]="selectedSourceId === opt.id"
+          (click)="selectSource(opt.id)">
+
+          <!-- Thumbnail for cameras; placeholder icon for display -->
+          <div class="ssd-thumb">
+            <video *ngIf="opt.thumbnailStream"
+                   [srcObject]="opt.thumbnailStream"
+                   autoplay muted playsinline
+                   class="ssd-thumb-video">
+            </video>
+            <div *ngIf="!opt.thumbnailStream" class="ssd-thumb-placeholder">
+              <i class="fa {{opt.icon}} fa-2x"></i>
+              <div *ngIf="opt.type === 'display'" class="ssd-thumb-note">Browser picker<br>will open</div>
+            </div>
+            <div class="ssd-thumb-check" *ngIf="selectedSourceId === opt.id">
+              <i class="fa fa-check-circle"></i>
+            </div>
+          </div>
+
+          <div class="ssd-source-label">{{opt.label}}</div>
+        </button>
+      </div>
+
+      <!-- Explain the browser picker limitation once the display source is selected -->
+      <div *ngIf="selectedSourceId === '__display__'" class="ssd-info-box mt-3">
+        <i class="fa fa-info-circle mr-2 text-main-color"></i>
+        After clicking <strong>Next</strong>, your browser will show its own screen/window picker.
+      </div>
+
+      <div *ngIf="errorMessage" class="ssd-error mt-3">
+        <i class="fa fa-exclamation-triangle mr-2"></i>{{errorMessage}}
+      </div>
+    </div>
+
+    <!-- ==================== STEP: QUALITY ==================== -->
+    <div *ngIf="step === 'quality'">
+      <h2 class="ssd-section-title">Stream Quality</h2>
+
+      <!-- Live preview -->
+      <div class="ssd-preview-row" *ngIf="previewStream">
+        <div class="ssd-preview-container">
+          <video [srcObject]="previewStream" autoplay muted playsinline class="ssd-preview-video"></video>
+          <div class="ssd-preview-badge"><i class="fa fa-eye mr-1"></i>Preview</div>
+        </div>
+      </div>
+
+      <!-- Preset cards -->
+      <div class="ssd-preset-grid">
+        <button
+          *ngFor="let preset of presets; let i = index"
+          class="ssd-preset-card"
+          [class.selected]="selectedPresetIndex === i"
+          (click)="selectPreset(i)">
+          <div class="ssd-preset-header">
+            <span class="ssd-preset-name">{{preset.label}}</span>
+            <span *ngIf="selectedPresetIndex === i" class="ssd-preset-check">
+              <i class="fa fa-check-circle text-main-color"></i>
+            </span>
+          </div>
+          <div class="ssd-preset-desc" *ngIf="i < presets.length - 1">{{preset.description}}</div>
+          <div class="ssd-preset-desc" *ngIf="i === presets.length - 1">Manually configure every parameter</div>
+          <div class="ssd-preset-tags" *ngIf="i < presets.length - 1">
+            <span class="ssd-tag">{{preset.resolution}}p</span>
+            <span class="ssd-tag">{{preset.frameRate}} fps</span>
+            <span class="ssd-tag">{{preset.maxBitrate / 1_000_000 | number:'1.0-1'}} Mbps</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Custom controls (only shown when Custom preset selected) -->
+      <div class="ssd-custom-controls" *ngIf="isCustomPreset">
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label class="ssd-label">Resolution</label>
+            <select class="form-control bg-dark text-light border-secondary ssd-select"
+                    [(ngModel)]="customResolution">
+              <option *ngFor="let r of resolutionOptions" [ngValue]="r.value">{{r.label}}</option>
+            </select>
+          </div>
+
+          <div class="col-md-4 mb-3">
+            <label class="ssd-label">Frame Rate</label>
+            <select class="form-control bg-dark text-light border-secondary ssd-select"
+                    [(ngModel)]="customFrameRate">
+              <option [ngValue]="15">15 fps</option>
+              <option [ngValue]="24">24 fps</option>
+              <option [ngValue]="30">30 fps</option>
+              <option [ngValue]="60">60 fps</option>
+            </select>
+          </div>
+
+          <div class="col-md-4 mb-3">
+            <label class="ssd-label">Max Bitrate — <strong class="text-main-color">{{bitrateLabel}}</strong></label>
+            <input type="range"
+                   class="form-control-range ssd-range"
+                   [(ngModel)]="customBitrateKbps"
+                   min="500" max="20000" step="250">
+            <div class="ssd-range-labels">
+              <span>0.5 Mbps</span>
+              <span>10 Mbps</span>
+              <span>20 Mbps</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary badge for non-custom -->
+      <div class="ssd-quality-summary" *ngIf="!isCustomPreset">
+        <span class="ssd-tag ssd-tag-lg">{{presets[selectedPresetIndex].resolution}}p</span>
+        <span class="ssd-tag ssd-tag-lg">{{presets[selectedPresetIndex].frameRate}} fps</span>
+        <span class="ssd-tag ssd-tag-lg">{{bitrateLabel}}</span>
+      </div>
+
+      <div *ngIf="errorMessage" class="ssd-error mt-3">
+        <i class="fa fa-exclamation-triangle mr-2"></i>{{errorMessage}}
+      </div>
+    </div>
+
+    <!-- ==================== STEP: AUDIO ==================== -->
+    <div *ngIf="step === 'audio'">
+      <h2 class="ssd-section-title">Audio Settings</h2>
+
+      <!-- System audio note -->
+      <div class="ssd-info-box mb-4">
+        <i class="fa fa-info-circle mr-2 text-main-color"></i>
+        System audio was <strong>{{ shareSystemAudio ? 'included' : 'not included' }}</strong>
+        when you selected your source. You can go back to change it.
+      </div>
+
+      <!-- Microphone toggle -->
+      <div class="ssd-audio-row">
+        <div class="ssd-audio-icon">
+          <i class="fa fa-microphone fa-lg" [class.text-main-color]="shareMicrophone" [class.text-muted]="!shareMicrophone"></i>
+        </div>
+        <div class="ssd-audio-content">
+          <div class="d-flex align-items-center justify-content-between">
+            <span class="ssd-audio-label">Microphone</span>
+            <div class="custom-control custom-switch">
+              <input type="checkbox" class="custom-control-input" id="micSwitch"
+                     [(ngModel)]="shareMicrophone">
+              <label class="custom-control-label" for="micSwitch"></label>
+            </div>
+          </div>
+
+          <div *ngIf="shareMicrophone" class="mt-2 animate-in">
+            <!-- Mic device selector -->
+            <div *ngIf="audioInputDevices.length > 0" class="mb-2">
+              <label class="ssd-label-sm">Device</label>
+              <select class="form-control form-control-sm bg-dark text-light border-secondary ssd-select"
+                      [ngModel]="microphoneId"
+                      (ngModelChange)="onMicChange($event)">
+                <option value="">Default microphone</option>
+                <option *ngFor="let d of audioInputDevices" [value]="d.deviceId">{{d.label || d.deviceId}}</option>
+              </select>
+            </div>
+
+            <!-- Volume slider -->
+            <label class="ssd-label-sm">Volume — <strong class="text-main-color">{{microphoneVolume}}%</strong></label>
+            <input type="range" class="form-control-range ssd-range"
+                   [(ngModel)]="microphoneVolume"
+                   min="0" max="200" step="5">
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary card -->
+      <div class="ssd-summary-card mt-4">
+        <div class="ssd-summary-title"><i class="fa fa-check-circle text-success mr-2"></i>Ready to go!</div>
+        <div class="ssd-summary-rows">
+          <div class="ssd-summary-row">
+            <span class="ssd-summary-key">Source</span>
+            <span class="ssd-summary-val">{{ sourceOptions | sourceLabel:selectedSourceId }}</span>
+          </div>
+          <div class="ssd-summary-row">
+            <span class="ssd-summary-key">Resolution</span>
+            <span class="ssd-summary-val">{{isCustomPreset ? customResolution : presets[selectedPresetIndex].resolution}}p</span>
+          </div>
+          <div class="ssd-summary-row">
+            <span class="ssd-summary-key">Frame Rate</span>
+            <span class="ssd-summary-val">{{isCustomPreset ? customFrameRate : presets[selectedPresetIndex].frameRate}} fps</span>
+          </div>
+          <div class="ssd-summary-row">
+            <span class="ssd-summary-key">Max Bitrate</span>
+            <span class="ssd-summary-val">{{bitrateLabel}}</span>
+          </div>
+          <div class="ssd-summary-row">
+            <span class="ssd-summary-key">Microphone</span>
+            <span class="ssd-summary-val">{{shareMicrophone ? selectedMicLabel : 'Off'}}</span>
+          </div>
+          <div class="ssd-summary-row">
+            <span class="ssd-summary-key">System Audio</span>
+            <span class="ssd-summary-val">{{shareSystemAudio ? 'Included' : 'Not included'}}</span>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="errorMessage" class="ssd-error mt-3">
+        <i class="fa fa-exclamation-triangle mr-2"></i>{{errorMessage}}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Footer ── -->
+  <div class="ssd-footer">
+    <button class="btn btn-secondary ssd-btn-secondary" (click)="cancel()">
+      <i class="fa fa-times mr-1"></i>Cancel
+    </button>
+
+    <div class="d-flex align-items-center">
+      <button class="btn btn-outline-secondary ssd-btn-back mr-2"
+              *ngIf="step !== 'source'"
+              (click)="back()"
+              [disabled]="isLoading">
+        <i class="fa fa-chevron-left mr-1"></i>Back
+      </button>
+
+      <button class="btn ssd-btn-primary"
+              (click)="next()"
+              [disabled]="!canProceed || isLoading">
+        <span *ngIf="isLoading" class="spinner-border spinner-border-sm mr-2" role="status"></span>
+        <ng-container *ngIf="step === 'source'">
+          <i class="fa fa-chevron-right mr-1"></i>Next
+        </ng-container>
+        <ng-container *ngIf="step === 'quality'">
+          <i class="fa fa-chevron-right mr-1"></i>Next
+        </ng-container>
+        <ng-container *ngIf="step === 'audio'">
+          <i class="fa fa-broadcast-tower mr-1"></i>Start Streaming
+        </ng-container>
+      </button>
+    </div>
+  </div>
+
+</div>

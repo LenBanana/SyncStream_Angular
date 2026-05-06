@@ -1,0 +1,92 @@
+<!-- Stream start dialog (rendered outside the player so it's not clipped) -->
+<app-stream-start-dialog
+  *ngIf="showStreamDialog"
+  [browserSettings]="browserSettings"
+  (confirmed)="onStreamDialogConfirmed($event)"
+  (cancelled)="onStreamDialogCancelled()">
+</app-stream-start-dialog>
+
+<div class="webrtc-viewer vh-big d-flex align-items-center justify-content-center bg-black position-relative">
+
+  <!-- Broadcast controls (host / moderator only, visible when NOT already streaming) -->
+  <div *ngIf="IsHost && !isBroadcasting" class="position-absolute top-0 right-0 m-2">
+    <button class="btn btn-sm btn-primary" (click)="startBroadcast()" title="Force-broadcast your screen to everyone in the room">
+      <i class="fa fa-broadcast-tower"></i> Broadcast
+    </button>
+  </div>
+
+  <!-- Broadcast active indicator + stop button (host only) -->
+  <div *ngIf="IsHost && isBroadcasting" class="position-absolute top-0 right-0 m-2 d-flex align-items-center">
+    <span class="badge badge-primary mr-2">
+      <i class="fa fa-circle blink"></i> Broadcasting…
+    </span>
+    <button class="btn btn-sm btn-outline-light" (click)="stopBroadcast()" title="Stop broadcast">
+      <i class="fa fa-stop"></i> Stop
+    </button>
+  </div>
+
+  <div *ngIf="isLoading && !connectionFailed" class="text-center text-light">
+    <div class="spinner-border text-main-color mb-3" role="status">
+      <span class="sr-only">Connecting…</span>
+    </div>
+    <p class="small">Connecting to stream…</p>
+  </div>
+
+  <!-- Connection failure prompt -->
+  <div *ngIf="connectionFailed" class="text-center text-light">
+    <i class="fa fa-exclamation-triangle fa-2x text-warning mb-2"></i>
+    <p>Connection lost.</p>
+    <button class="btn btn-sm btn-outline-light" (click)="requestReconnect()">
+      <i class="fa fa-refresh"></i> Retry
+    </button>
+  </div>
+
+  <!-- Remote video stream -->
+  <video
+    #remoteVideo
+    [class.d-none]="!hasStream"
+    class="webrtc-video w-100 h-100"
+    autoplay
+    playsinline
+    style="object-fit: contain; max-height: 100%;">
+  </video>
+
+  <!-- Recording indicator (visible to all when recording is active) -->
+  <div *ngIf="isRecording" class="position-absolute top-0 left-0 m-2 d-flex align-items-center">
+    <span class="badge badge-danger d-flex align-items-center">
+      <i class="fa fa-circle text-danger blink mr-1"></i> REC
+    </span>
+  </div>
+
+  <!-- Overlay controls (shown when stream is active) -->
+  <div *ngIf="hasStream" class="webrtc-controls position-absolute bottom-0 right-0 p-2 d-flex align-items-center">
+
+    <!-- Quality selector (viewer: adaptive bitrate) -->
+    <div class="btn-group btn-group-sm mr-2" role="group" aria-label="Stream quality">
+      <button class="btn btn-outline-secondary" (click)="setQualityLow()" title="Low quality (saves bandwidth)">
+        <i class="fa fa-signal" style="opacity:0.4"></i>
+      </button>
+      <button class="btn btn-outline-secondary" (click)="setQualityMedium()" title="Medium quality">
+        <i class="fa fa-signal" style="opacity:0.7"></i>
+      </button>
+      <button class="btn btn-outline-secondary" (click)="setQualityHigh()" title="High quality">
+        <i class="fa fa-signal"></i>
+      </button>
+    </div>
+
+    <!-- Recording controls (host only) -->
+    <ng-container *ngIf="IsHost">
+      <button *ngIf="!isRecording" class="btn btn-sm btn-outline-danger mr-2" (click)="startRecording()" title="Start recording">
+        <i class="fa fa-circle"></i> Record
+      </button>
+      <button *ngIf="isRecording" class="btn btn-sm btn-danger mr-2" (click)="stopRecording()" title="Stop recording">
+        <i class="fa fa-stop"></i> Stop recording
+      </button>
+    </ng-container>
+
+    <button class="btn btn-sm btn-outline-secondary" (click)="toggleFullscreen()" title="Fullscreen">
+      <i class="fa fa-expand"></i>
+    </button>
+  </div>
+
+</div>
