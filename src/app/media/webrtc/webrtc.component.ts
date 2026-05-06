@@ -127,7 +127,7 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
       config.stream.getVideoTracks()[0]?.addEventListener('ended', () => {
         if (this.isBroadcasting) this.stopBroadcast();
       });
-      await this.webrtcService.broadcastToRoom(this.UniqueId, config.stream, config.maxBitrate);
+      await this.webrtcService.broadcastToRoom(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
       this.isBroadcasting = true;
     } catch (err) {
       console.error('Failed to start broadcast:', err);

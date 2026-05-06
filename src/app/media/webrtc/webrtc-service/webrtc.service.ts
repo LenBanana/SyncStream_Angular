@@ -430,6 +430,25 @@ export class WebrtcService implements OnDestroy {
     return produceOptions;
   }
 
+  /**
+   * Builds mediasoup-client ProducerOptions for an audio track.
+   * Enables Opus stereo, in-band Forward Error Correction (FEC), and raises the
+   * max average bitrate to the Opus ceiling (510 kbps) so the encoder is not
+   * artificially capped below what the connection can carry.  DTX is disabled
+   * because it creates audible cut-in artifacts for mixed music/speech content.
+   */
+  private buildAudioProducerOptions(track: MediaStreamTrack): mediasoupClient.types.ProducerOptions {
+    return {
+      track,
+      codecOptions: {
+        opusStereo: true,
+        opusFec: true,
+        opusDtx: false,
+        opusMaxAverageBitrate: 510_000
+      }
+    };
+  }
+
   // ================================================================
   // SFU â€” Streamer API
   // ================================================================
@@ -483,7 +502,7 @@ export class WebrtcService implements OnDestroy {
     for (const track of stream.getTracks()) {
       const produceOptions: mediasoupClient.types.ProducerOptions = track.kind === 'video'
         ? this.buildVideoProducerOptions(track, maxBitrate, preferredResolution)
-        : {track};
+        : this.buildAudioProducerOptions(track);
       const producer = await this.sfuSendTransport.produce(produceOptions);
       this.sfuProducers.set(producer.id, producer);
     }
@@ -659,6 +678,11 @@ export class WebrtcService implements OnDestroy {
         rtpParameters: consumerInfo.rtpParameters as any
       });
       this.sfuConsumers.set(consumer.id, consumer);
+      // For simulcast video producers, immediately request the highest quality layer.
+      // mediasoup will ramp down automatically via BWE if the viewer's link cannot sustain it.
+      if (consumer.kind === 'video' && consumer.rtpParameters.encodings.length > 1) {
+        this.setPreferredLayers(roomId, consumer.id, 2, 2).catch(() => { /* best-effort */ });
+      }
       this.ensureRtcDebugStatsPolling();
 
       // Merge the new track into the shared remoteStream.
@@ -700,6 +724,9 @@ export class WebrtcService implements OnDestroy {
         rtpParameters: consumerInfo.rtpParameters as any
       });
       this.watchSfuConsumers.set(consumer.id, consumer);
+      if (consumer.kind === 'video' && consumer.rtpParameters.encodings.length > 1) {
+        this.setPreferredLayers(roomId, consumer.id, 2, 2).catch(() => { /* best-effort */ });
+      }
       this.ensureRtcDebugStatsPolling();
 
       const stream = this.popoutStream.value ?? new MediaStream();
@@ -1418,7 +1445,7 @@ export class WebrtcService implements OnDestroy {
     for (const track of stream.getTracks()) {
       const produceOptions: mediasoupClient.types.ProducerOptions = track.kind === 'video'
         ? this.buildVideoProducerOptions(track, maxBitrate, preferredResolution, profile)
-        : {track};
+        : this.buildAudioProducerOptions(track);
       const producer = await this.sfuSendTransport.produce(produceOptions);
       this.sfuProducers.set(producer.id, producer);
     }
@@ -1519,14 +1546,34 @@ export class WebrtcService implements OnDestroy {
   // ================================================================
 
   /**
-   * Starts a forced P2P broadcast to the room — all existing room members will
-   * automatically receive and display the stream. Requires Moderator privilege
-   * (enforced server-side via `ForceBroadcast` hub method).
+   * Starts a moderator broadcast to the room.
+   *
+   * When the SFU is available (the normal production path) this uses the SFU opt-in
+   * stream path so all media is forwarded by the mediasoup server rather than sent
+   * peer-to-peer from the broadcaster.  The room is notified via `ForceSfuBroadcast`
+   * which causes every client's `broadcastStream` listener to call `startWatching()`;
+   * that method detects the active SFU opt-in stream and routes to `startWatchingSfu()`.
+   *
+   * A P2P fallback is retained for the rare case where the SFU is unreachable.
    */
-  public async broadcastToRoom(roomId: string, stream: MediaStream, maxBitrate?: number): Promise<void> {
+  public async broadcastToRoom(roomId: string, stream: MediaStream, maxBitrate?: number, preferredResolution?: number): Promise<void> {
+    this.localStreamMaxBitrate = maxBitrate ?? 0;
+    const canUseSfu = await this.checkSfuAvailable();
+    if (canUseSfu) {
+      // Set currentRoomId so any teardown path that reads it stays consistent.
+      this.currentRoomId = roomId;
+      // Set up SFU producers in the opt-in live room (does NOT flip the room player).
+      await this.startOptInStreamingSfu(roomId, stream, maxBitrate, preferredResolution);
+      // Once producers are ready, push the notification so viewers auto-join via SFU.
+      if (token) {
+        await hubConnection.invoke('ForceSfuBroadcast', token, roomId)
+          .catch(err => console.error('ForceSfuBroadcast failed:', err));
+      }
+      return;
+    }
+    // P2P fallback — only reached when the SFU is unreachable.
     this.currentRoomId = roomId;
     this.localStream = stream;
-    this.localStreamMaxBitrate = maxBitrate ?? 0;
     this.invalidateCredentials();
     if (token) {
       await hubConnection.invoke('ForceBroadcast', token, roomId)

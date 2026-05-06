@@ -174,7 +174,7 @@ export class UserlistComponent implements OnInit, OnDestroy {
   async onStreamDialogConfirmed(config: StreamStartConfig): Promise<void> {
     this.showStreamDialog = false;
     try {
-      await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate);
+      await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
       this.isStreaming = true;
       // Auto-stop when the browser's native screen-share dialog is closed.
       config.stream.getVideoTracks()[0]?.addEventListener('ended', () => this.stopLive());
