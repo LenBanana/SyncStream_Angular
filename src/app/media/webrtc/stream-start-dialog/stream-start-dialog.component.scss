@@ -162,6 +162,66 @@ $text-muted-custom: #8891aa;
   margin-bottom: 20px;
 }
 
+.ssd-audience-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.ssd-audience-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  background: $bg-card;
+  border: 2px solid $border-color;
+  border-radius: 12px;
+  color: #e9ecef;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s, box-shadow 0.15s;
+
+  &:hover {
+    border-color: $accent;
+    transform: translateY(-2px);
+  }
+
+  &.selected {
+    border-color: $accent;
+    background: $bg-card-selected;
+    box-shadow: 0 0 0 1px $accent;
+  }
+}
+
+.ssd-audience-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(51, 105, 231, 0.14);
+  color: $accent;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.ssd-audience-copy {
+  min-width: 0;
+}
+
+.ssd-audience-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.ssd-audience-description {
+  color: $text-muted-custom;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
 /* ── Loading state ── */
 .ssd-loading {
   display: flex;

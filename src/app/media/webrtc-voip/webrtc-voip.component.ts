@@ -40,7 +40,9 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
     playerWidth: window.screen.width,
     microphoneId: null,
     cameraId: null,
-    microphoneVolume: 100
+    microphoneVolume: 100,
+    shareSystemAudio: true,
+    systemAudioVolume: 100
   };
   previousVideoSettings: WebRtcSettings;
   resolutions = Object.keys(Resolution).filter(key => isNaN(Number(key)));

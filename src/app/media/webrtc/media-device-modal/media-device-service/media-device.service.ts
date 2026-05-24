@@ -36,7 +36,7 @@ export class MediaDeviceService {
 
   async requestScreenCapturePermission(): Promise<MediaStream> {
     try {
-      return await navigator.mediaDevices.getDisplayMedia({video: true});
+      return await navigator.mediaDevices.getDisplayMedia({video: true, audio: true});
     } catch (error) {
       console.error('Permission denied or error accessing screen capture.', error);
       throw error;

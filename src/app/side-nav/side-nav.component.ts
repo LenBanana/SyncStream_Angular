@@ -27,7 +27,7 @@ import { UserPrivileges } from "../user-admin-modal/user-admin-modal.component";
 import { AppService } from "../app.service";
 import { BlackjackService } from '../blackjack-game/blackjack-service/blackjack-service.service';
 import { WebrtcService } from '../media/webrtc/webrtc-service/webrtc.service';
-import { StreamStartConfig } from '../media/webrtc/stream-start-dialog/stream-start-dialog.component';
+import { StreamAudience, StreamStartConfig } from '../media/webrtc/stream-start-dialog/stream-start-dialog.component';
 
 declare var $: any;
 
@@ -37,6 +37,9 @@ declare var $: any;
   styleUrls: ['./side-nav.component.scss']
 })
 export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
+  private static readonly WEBRTC_FILE_SHARE_CANDIDATE_EXTENSIONS = new Set([
+    'mp4', 'm4v', 'mov', 'webm', 'ogv', 'ogg'
+  ]);
 
   @ViewChild('fileSharePickerInput') fileSharePickerInputRef!: ElementRef<HTMLInputElement>;
 
@@ -84,8 +87,11 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   Voip = false;
   /** True while this user is broadcasting a P2P stream. */
   isStreaming = false;
+  liveAudience: StreamAudience = 'personal';
   /** True while this user is sharing a local file via SFU. */
   isFileSharingActive = false;
+  showFileShareModeDialog = false;
+  pendingFileShareSelection: File | null = null;
   showStreamDialog = false;
   /** Live reference to the captured stream so the preview can render it. */
   localStream: MediaStream | null = null;
@@ -293,9 +299,14 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
       this.webrtcService.pipActive.subscribe(active => {
         this.pipIsActive = active;
       }),
-      // Track file-share state so the Share/Stop button reflects reality.
+      // Track both file-share paths so the Share/Stop button reflects reality.
       this.webrtcService.fileShareActive.subscribe(info => {
         this.isFileSharingActive = info !== null && this.webrtcService.isFileShareHost;
+      }),
+      this.webrtcService.rtmpFileShareActive.subscribe(info => {
+        if (info !== null && this.webrtcService.isRtmpFileShareHost) {
+          this.isFileSharingActive = true;
+        }
       }));
   }
 
@@ -518,8 +529,13 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   async onStreamDialogConfirmed(config: StreamStartConfig): Promise<void> {
     this.showStreamDialog = false;
     try {
-      await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
+      if (config.audience === 'room') {
+        await this.webrtcService.startStreamingToRoom(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
+      } else {
+        await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
+      }
       this.isStreaming = true;
+      this.liveAudience = config.audience;
       this.localStream = config.stream;
       config.stream.getVideoTracks()[0]?.addEventListener('ended', () => this.stopLive());
     } catch (err) {
@@ -529,8 +545,13 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async stopLive(): Promise<void> {
-    await this.webrtcService.stopStreaming(this.UniqueId);
+    if (this.liveAudience === 'room') {
+      await this.webrtcService.stopStreamingToRoom(this.UniqueId);
+    } else {
+      await this.webrtcService.stopStreaming(this.UniqueId);
+    }
     this.isStreaming = false;
+    this.liveAudience = 'personal';
     this.localStream = null;
   }
 
@@ -551,10 +572,9 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   // File sharing
   // ---------------------------------------------------------------
 
-  /** Open the file-share player in the media area.  The FileSharePlayerComponent
-   *  will start the selected file once it renders. */
+  /** Open the RTMP file-share player in the media area. */
   openFileShare(): void {
-    if (this.webrtcService.fileShareActive.value || this.webrtcService.isPreparingFileShareHost) return;
+    if (!this.canStartFileShare) return;
     this.fileSharePickerInputRef?.nativeElement.click();
   }
 
@@ -566,13 +586,68 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
 
+    if (this.shouldOfferFileShareModeChoice(file)) {
+      this.pendingFileShareSelection = file;
+      this.showFileShareModeDialog = true;
+      return;
+    }
+
+    this.startRtmpFileShare(file);
+  }
+
+  chooseWebRtcFileShare(): void {
+    const file = this.pendingFileShareSelection;
+    this.closeFileShareModeDialog();
+    if (!file) return;
     this.webrtcService.requestFileShareHostUi(file);
   }
 
-  /** Stop the active file share. */
+  chooseRtmpFileShare(): void {
+    const file = this.pendingFileShareSelection;
+    this.closeFileShareModeDialog();
+    if (!file) return;
+    this.startRtmpFileShare(file);
+  }
+
+  closeFileShareModeDialog(): void {
+    this.showFileShareModeDialog = false;
+    this.pendingFileShareSelection = null;
+  }
+
+  /** Stop the active file share, regardless of transport. */
   async stopFileShare(): Promise<void> {
-    await this.webrtcService.stopFileShare(this.UniqueId);
+    if (this.webrtcService.isPreparingFileShareHost || this.webrtcService.isFileShareHost) {
+      await this.webrtcService.stopFileShare(this.UniqueId);
+    }
+    if (this.webrtcService.isPreparingRtmpFileShareHost || this.webrtcService.isRtmpFileShareHost) {
+      if (this.webrtcService.rtmpFileShareActive.value) {
+        await this.webrtcService.stopRtmpFileShare(this.UniqueId);
+      } else {
+        this.webrtcService.cancelPreparingRtmpFileShare();
+      }
+    }
     this.isFileSharingActive = false;
+    this.closeFileShareModeDialog();
+  }
+
+  get canStartFileShare(): boolean {
+    return !this.webrtcService.fileShareActive.value &&
+      !this.webrtcService.rtmpFileShareActive.value &&
+      !this.webrtcService.isPreparingFileShareHost &&
+      !this.webrtcService.isPreparingRtmpFileShareHost;
+  }
+
+  get isPreparingAnyFileShare(): boolean {
+    return this.webrtcService.isPreparingFileShareHost || this.webrtcService.isPreparingRtmpFileShareHost;
+  }
+
+  private startRtmpFileShare(file: File): void {
+    this.webrtcService.requestRtmpFileShareHostUi(file);
+  }
+
+  private shouldOfferFileShareModeChoice(file: File): boolean {
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    return SideNavComponent.WEBRTC_FILE_SHARE_CANDIDATE_EXTENSIONS.has(ext);
   }
 
   protected readonly UserPrivileges = UserPrivileges;

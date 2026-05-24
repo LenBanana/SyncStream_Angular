@@ -5,6 +5,14 @@ import {token} from '../../../global.settings';
 import {HttpClient} from "@angular/common/http";
 import * as mediasoupClient from 'mediasoup-client';
 
+export type RtmpSubtitleMode = 'auto' | 'always' | 'never';
+export type RtmpAudioLanguagePreference = 'japanese' | 'english' | 'german' | 'other';
+
+export interface RtmpPlaybackPreferences {
+  subtitleMode: RtmpSubtitleMode;
+  audioLanguagePriority: RtmpAudioLanguagePreference[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -33,6 +41,8 @@ export class WebrtcService implements OnDestroy {
   private localStreamMaxBitrate = 0;
   /** True when the current live screen-share session is using the SFU path rather than P2P. */
   private liveStreamUsesSfu = false;
+  /** Whether the current local stream is opt-in live or room-stage live. */
+  private localStreamAudience: 'none' | 'personal' | 'room' = 'none';
 
   // ---------- Viewer state (P2P) ----------
   private streamerPc: RTCPeerConnection | null = null;
@@ -45,6 +55,7 @@ export class WebrtcService implements OnDestroy {
 
   // ---------- SFU state ----------
   private sfuDevice: mediasoupClient.types.Device | null = null;
+  private sfuDeviceLoading: Promise<void> | null = null;
   private sfuSendTransport: mediasoupClient.types.Transport | null = null;
   private sfuRecvTransport: mediasoupClient.types.Transport | null = null;
   private sfuProducers: Map<string, mediasoupClient.types.Producer> = new Map();
@@ -65,22 +76,74 @@ export class WebrtcService implements OnDestroy {
   public fileShareIsPaused: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   /** True when this client is the one sharing the file (local flag only). */
   public isFileShareHost: boolean = false;
+  /** True when the active share is server-side (ffmpeg→mediasoup); host is also a consumer. */
+  public isServerFileShare: boolean = false;
   /** True while this client has opened the host file-share UI but has not finished starting the share yet. */
   public isPreparingFileShareHost: boolean = false;
   /** File selected in the side-nav and waiting for the host player to start streaming it. */
   public pendingFileShareFile: BehaviorSubject<File | null> = new BehaviorSubject<File | null>(null);
+  /** Upload progress (0-100) while uploading a file for server-side streaming; 0 when idle. */
+  public fileShareUploadProgress = new BehaviorSubject<number>(0);
+  /** True while the background chunk upload is still running after the stream has gone live. */
+  public backgroundUploadInProgress = new BehaviorSubject<boolean>(false);
+  /** Emits an error message if the background upload fails unrecoverably. */
+  public serverShareUploadError = new Subject<string>();
   /** True while the local host is stopping a file share through the explicit stop path. */
   private fileShareStopInProgress = false;
+  /** uploadId of the in-progress server-share upload; null when idle. */
+  private _serverShareUploadId: string | null = null;
+  /** Duration (seconds) of the file currently being shared via the server path; null when unknown. */
+  private _serverShareFileDuration: number | null = null;
   /**
    * Fires when the local user (who is the room host / an Approved member) clicks
    * "Share File" in the side-nav. Media component listens and switches the player
    * to FileShare mode so the self-contained FileSharePlayerComponent can render.
    */
   public fileShareHostRequested: Subject<void> = new Subject<void>();
+
+  // ---------- RTMP file-share state ----------
+  /** Emits info about who is streaming via RTMP file-share; null when inactive. */
+  public rtmpFileShareActive: BehaviorSubject<{streamerId: string; username: string; streamUrl: string; durationSec?: number | null} | null> =
+    new BehaviorSubject<{streamerId: string; username: string; streamUrl: string; durationSec?: number | null} | null>(null);
+  /** True when playback is paused on the host side. */
+  public rtmpFileShareIsPaused: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  /** Host's current position in seconds; updated by periodic server broadcast. */
+  public rtmpFileSharePosition: BehaviorSubject<number> = new BehaviorSubject<number>(0);
+  /** True once the RTMP share may be seeked cleanly. */
+  public rtmpFileShareCanSeek: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  /** Fires when the host seeks — viewers should reconnect their mpegts player. */
+  public rtmpFileShareSeekSignal: Subject<number> = new Subject<number>();
+  /** Fires when the RTMP publisher is live again after a restart and clients may reconnect. */
+  public rtmpFileShareStreamReady: Subject<number> = new Subject<number>();
+  /** Emits the VOD playback URL once a completed RTMP upload has been finalized for normal playback. */
+  public rtmpFileShareVodPlayback: BehaviorSubject<{playbackUrl: string; durationSec?: number | null; contentType?: string | null} | null> =
+    new BehaviorSubject<{playbackUrl: string; durationSec?: number | null; contentType?: string | null} | null>(null);
+  /** True when this client is the host of an RTMP file-share. */
+  public isRtmpFileShareHost: boolean = false;
+  /** True while this client has opened the RTMP host UI but has not finished starting. */
+  public isPreparingRtmpFileShareHost: boolean = false;
+  /** File selected for RTMP share, waiting for the component to start the upload. */
+  public pendingRtmpFileShareFile: BehaviorSubject<File | null> = new BehaviorSubject<File | null>(null);
+  /** Upload progress (0-100) for the RTMP background upload. */
+  public rtmpFileShareUploadProgress = new BehaviorSubject<number>(0);
+  /** True while the background chunk upload is still running after the RTMP stream is live. */
+  public rtmpFileShareBackgroundUploadInProgress = new BehaviorSubject<boolean>(false);
+  /** Emits an error message if the RTMP background upload fails. */
+  public rtmpFileShareUploadError = new Subject<string>();
+  /** Fires when "Share File (RTMP)" is clicked — media component switches to RtmpFileShare player. */
+  public rtmpFileShareHostRequested: Subject<void> = new Subject<void>();
+  private _rtmpShareUploadId: string | null = null;
+  private _rtmpShareFileDuration: number | null = null;
+  private _rtmpShareStopInProgress = false;
+
   /** Whether the SFU is available (checked once per session). */
   public sfuAvailable: boolean = false;
   /** Emits recording info when a recording starts, null when it stops. */
   public sfuRecording: BehaviorSubject<SfuRecordingInfo | null> = new BehaviorSubject<SfuRecordingInfo | null>(null);
+  /** True while this client is actively streaming directly to the room player. */
+  public roomStageBroadcastActive: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  /** Local preview stream for the broadcaster in room-stage mode. */
+  public roomStagePreviewStream: BehaviorSubject<MediaStream | null> = new BehaviorSubject<MediaStream | null>(null);
 
   public requestFileShareHostUi(file?: File): void {
     if (this.fileShareActive.value) return;
@@ -98,6 +161,40 @@ export class WebrtcService implements OnDestroy {
   // ---------- Credential cache ----------
   private cachedCredentials: WebRtcCredentials | null = null;
   private credentialExpiry = 0;
+
+  private logPopoutDebug(message: string, details?: unknown): void {
+    if (details === undefined) {
+      console.debug(`[WebRTC popout] ${message}`);
+      return;
+    }
+
+    console.debug(`[WebRTC popout] ${message}`, details);
+  }
+
+  private describeTrack(track: MediaStreamTrack): Record<string, unknown> {
+    return {
+      id: track.id,
+      kind: track.kind,
+      label: track.label,
+      enabled: track.enabled,
+      muted: track.muted,
+      readyState: track.readyState,
+      settings: typeof track.getSettings === 'function' ? track.getSettings() : null
+    };
+  }
+
+  private describeStream(stream: MediaStream | null): Record<string, unknown> {
+    if (!stream) {
+      return {present: false};
+    }
+
+    return {
+      present: true,
+      id: stream.id,
+      active: stream.active,
+      tracks: stream.getTracks().map(track => this.describeTrack(track))
+    };
+  }
 
   constructor(private http: HttpClient, private signalRService: SignalRService) {
     signalRService.connectionClosed.subscribe(isClosed => {
@@ -140,7 +237,7 @@ export class WebrtcService implements OnDestroy {
     }
     const fresh = await this.GetWebRtcCredentials().toPromise();
     this.cachedCredentials = fresh;
-    this.credentialExpiry = parseInt(fresh.username, 10);
+    this.credentialExpiry = fresh.expiresAtUnixSec;
     return fresh;
   }
 
@@ -351,12 +448,17 @@ export class WebrtcService implements OnDestroy {
     return track.kind === 'video' && typeof settings.displaySurface === 'string' && settings.displaySurface.length > 0;
   }
 
+  /**
+   * Builds 3-layer VP8 simulcast encodings for a display (screen-share) track.
+   * Uses the source and target resolution to calculate scale factors, giving
+   * viewers on constrained links a usable mid-resolution fallback layer.
+   */
   private buildDisplayEncodings(
     track: MediaStreamTrack,
     topBitrate: number,
     preferredResolution?: number
   ): {
-    encodings: mediasoupClient.types.ProducerCodecOptions[] | mediasoupClient.types.ProducerOptions['encodings'];
+    encodings: mediasoupClient.types.ProducerOptions['encodings'];
     sourceHeight: number;
     targetHeight: number;
   } {
@@ -367,20 +469,16 @@ export class WebrtcService implements OnDestroy {
     const targetHeight = preferredResolution && preferredResolution > 0
       ? Math.min(preferredResolution, sourceHeight)
       : sourceHeight;
-    const highScale = Math.max(1, sourceHeight / targetHeight);
-    const lowScale = Math.max(highScale, highScale * 2);
+    const highScale  = Math.max(1, sourceHeight / targetHeight);
+    const midScale   = Math.max(highScale, highScale * 2);
+    const lowScale   = Math.max(midScale,  highScale * 4);
 
     return {
       encodings: [
-        {
-          maxBitrate: Math.max(600_000, Math.round(topBitrate / 3)),
-          scaleResolutionDownBy: Number(lowScale.toFixed(2))
-        },
-        {
-          maxBitrate: topBitrate,
-          scaleResolutionDownBy: Number(highScale.toFixed(2))
-        }
-      ],
+        {rid: 'q', maxBitrate: Math.max(400_000,  Math.round(topBitrate / 8)), scaleResolutionDownBy: Number(lowScale.toFixed(2)),  scalabilityMode: 'L1T2'},
+        {rid: 'h', maxBitrate: Math.max(1_000_000, Math.round(topBitrate / 3)), scaleResolutionDownBy: Number(midScale.toFixed(2)),   scalabilityMode: 'L1T2'},
+        {rid: 'f', maxBitrate: topBitrate,                                       scaleResolutionDownBy: Number(highScale.toFixed(2)),  scalabilityMode: 'L1T2'},
+      ] as any,
       sourceHeight,
       targetHeight
     };
@@ -389,13 +487,15 @@ export class WebrtcService implements OnDestroy {
   private buildVideoProducerOptions(
     track: MediaStreamTrack,
     maxBitrate?: number,
-    preferredResolution?: number,
-    profile: 'default' | 'file-share' = 'default'
+    preferredResolution?: number
   ): mediasoupClient.types.ProducerOptions {
     const topBitrate = maxBitrate && maxBitrate > 0 ? maxBitrate : 6_000_000;
     const isDisplay = this.isDisplayTrack(track);
 
     try {
+      // contentHint guides the encoder: 'detail' keeps resolution stable under
+      // congestion (good for screen text), 'motion' keeps framerate stable (good
+      // for camera).  This replaces the need for RTCRtpSender.degradationPreference.
       track.contentHint = isDisplay ? 'detail' : 'motion';
     } catch {
       // Best-effort only.
@@ -406,25 +506,35 @@ export class WebrtcService implements OnDestroy {
       codecOptions: {videoGoogleStartBitrate: Math.max(1000, Math.round(topBitrate / 1000))}
     };
 
-    if (profile === 'file-share') {
-      produceOptions.encodings = [
-        {maxBitrate: topBitrate}
-      ];
-    } else if (isDisplay) {
+    // Prefer VP9 K-SVC (L3T3_KEY): a single encoding covers 3 spatial × 3 temporal
+    // layers.  Each viewer independently receives the layer that fits their link.
+    // The whole stream is encoded once on the sender side.  Falls back to VP8
+    // simulcast when the browser or SFU doesn't negotiate VP9.
+    const vp9Codec = this.sfuDevice?.rtpCapabilities.codecs?.find(
+      (c: any) => c.mimeType?.toLowerCase() === 'video/vp9'
+    );
+    if (vp9Codec) {
+      produceOptions.codec = vp9Codec as any;
+      produceOptions.encodings = [{scalabilityMode: 'L3T3_KEY', maxBitrate: topBitrate}] as any;
+      return produceOptions;
+    }
+
+    // VP8 fallback: 3-layer simulcast with L1T2 temporal scalability on each layer.
+    // Low (q) = 1/8 bitrate @ ¼ resolution, mid (h) = 1/3 bitrate @ ½ resolution,
+    // full (f) = top bitrate @ native resolution.
+    if (isDisplay) {
       if (preferredResolution && preferredResolution > 0) {
-        const displayEncodingProfile = this.buildDisplayEncodings(track, topBitrate, preferredResolution);
-        produceOptions.encodings = displayEncodingProfile.encodings as any;
+        const displayProfile = this.buildDisplayEncodings(track, topBitrate, preferredResolution);
+        produceOptions.encodings = displayProfile.encodings as any;
       } else {
-        produceOptions.encodings = [
-          {maxBitrate: topBitrate}
-        ];
+        produceOptions.encodings = [{maxBitrate: topBitrate}];
       }
     } else {
       produceOptions.encodings = [
-        {maxBitrate: Math.round(topBitrate / 20), scaleResolutionDownBy: 4},
-        {maxBitrate: Math.round(topBitrate / 4),  scaleResolutionDownBy: 2},
-        {maxBitrate: topBitrate},
-      ];
+        {rid: 'q', maxBitrate: Math.round(topBitrate / 8), scaleResolutionDownBy: 4, scalabilityMode: 'L1T2'},
+        {rid: 'h', maxBitrate: Math.round(topBitrate / 3), scaleResolutionDownBy: 2, scalabilityMode: 'L1T2'},
+        {rid: 'f', maxBitrate: topBitrate,                                            scalabilityMode: 'L1T2'},
+      ] as any;
     }
 
     return produceOptions;
@@ -450,7 +560,7 @@ export class WebrtcService implements OnDestroy {
   }
 
   // ================================================================
-  // SFU â€” Streamer API
+  // SFU Streamer API
   // ================================================================
 
   /**
@@ -460,6 +570,7 @@ export class WebrtcService implements OnDestroy {
     if (!token) return;
 
     await this.ensureSfuDevice();
+    this.liveStreamUsesSfu = true;
     this.sfuRoomId = roomId;
     this.localStream = stream;
 
@@ -531,6 +642,7 @@ export class WebrtcService implements OnDestroy {
     await hubConnection.invoke('LeaveSfuRoom', token, roomId).catch(() => {});
     this.sfuRoomId = null;
     this.maybeStopRtcDebugStatsPolling();
+    this.cleanUpStreamerSide();
   }
 
   /**
@@ -597,7 +709,7 @@ export class WebrtcService implements OnDestroy {
   }
 
   // ================================================================
-  // SFU â€” Viewer API
+  // SFU Viewer API
   // ================================================================
 
   /** Joins an SFU room as a viewer and begins consuming all active producers. */
@@ -678,10 +790,11 @@ export class WebrtcService implements OnDestroy {
         rtpParameters: consumerInfo.rtpParameters as any
       });
       this.sfuConsumers.set(consumer.id, consumer);
-      // For simulcast video producers, immediately request the highest quality layer.
-      // mediasoup will ramp down automatically via BWE if the viewer's link cannot sustain it.
+      // Only request preferred layers when multiple encodings are exposed.
+      // Single-encoding consumers should start on their default/base layer.
       if (consumer.kind === 'video' && consumer.rtpParameters.encodings.length > 1) {
-        this.setPreferredLayers(roomId, consumer.id, 2, 2).catch(() => { /* best-effort */ });
+        const {spatial, temporal} = this.getMaxPreferredLayers(consumer);
+        this.setPreferredLayers(roomId, consumer.id, spatial, temporal).catch(() => { /* best-effort */ });
       }
       this.ensureRtcDebugStatsPolling();
 
@@ -714,6 +827,7 @@ export class WebrtcService implements OnDestroy {
   ): Promise<void> {
     if (!token || !this.sfuDevice) return;
     try {
+      this.logPopoutDebug('Consuming popout producer', {roomId, transportId: transport.id, producerId});
       const consumerInfo: SfuConsumerInfo = await hubConnection.invoke<SfuConsumerInfo>(
         'Consume', token, roomId, transport.id, producerId, this.sfuDevice.rtpCapabilities
       );
@@ -723,20 +837,50 @@ export class WebrtcService implements OnDestroy {
         kind: consumerInfo.kind as 'audio' | 'video',
         rtpParameters: consumerInfo.rtpParameters as any
       });
+      this.logPopoutDebug('Popout consumer created', {
+        roomId,
+        producerId,
+        consumerId: consumer.id,
+        kind: consumer.kind,
+        track: this.describeTrack(consumer.track),
+        encodingCount: consumer.rtpParameters.encodings?.length ?? 0
+      });
       this.watchSfuConsumers.set(consumer.id, consumer);
       if (consumer.kind === 'video' && consumer.rtpParameters.encodings.length > 1) {
-        this.setPreferredLayers(roomId, consumer.id, 2, 2).catch(() => { /* best-effort */ });
+        const {spatial, temporal} = this.getMaxPreferredLayers(consumer);
+        this.setPreferredLayers(roomId, consumer.id, spatial, temporal).catch(() => { /* best-effort */ });
+        this.logPopoutDebug('Requested preferred layers for popout consumer', {
+          roomId,
+          consumerId: consumer.id,
+          spatial,
+          temporal
+        });
       }
       this.ensureRtcDebugStatsPolling();
 
       const stream = this.popoutStream.value ?? new MediaStream();
       stream.addTrack(consumer.track);
+      this.logPopoutDebug('Added consumer track to popout stream', this.describeStream(stream));
       this.popoutStream.next(stream);
+
+      consumer.track.addEventListener('mute', () => {
+        this.logPopoutDebug('Popout consumer track muted', {consumerId: consumer.id, track: this.describeTrack(consumer.track)});
+      });
+      consumer.track.addEventListener('unmute', () => {
+        this.logPopoutDebug('Popout consumer track unmuted', {consumerId: consumer.id, track: this.describeTrack(consumer.track)});
+      });
+      consumer.track.addEventListener('ended', () => {
+        this.logPopoutDebug('Popout consumer track ended', {consumerId: consumer.id, track: this.describeTrack(consumer.track)});
+      });
 
       const removeTrack = () => {
         consumer.track.stop();
         stream.removeTrack(consumer.track);
         this.watchSfuConsumers.delete(consumer.id);
+        this.logPopoutDebug('Removed consumer track from popout stream', {
+          consumerId: consumer.id,
+          remainingStream: this.describeStream(stream)
+        });
         this.popoutStream.next(stream.getTracks().length > 0 ? stream : null);
         this.maybeStopRtcDebugStatsPolling();
       };
@@ -750,10 +894,18 @@ export class WebrtcService implements OnDestroy {
   /** Loads the mediasoup-client Device with the router's RTP capabilities. */
   private async ensureSfuDevice(): Promise<void> {
     if (this.sfuDevice?.loaded) return;
+    if (this.sfuDeviceLoading) return this.sfuDeviceLoading;
     if (!token) return;
-    const rtpCapabilities = await hubConnection.invoke<object>('GetRouterRtpCapabilities', token);
-    this.sfuDevice = new mediasoupClient.Device();
-    await this.sfuDevice.load({routerRtpCapabilities: rtpCapabilities as any});
+    this.sfuDeviceLoading = (async () => {
+      const rtpCapabilities = await hubConnection.invoke<object>('GetRouterRtpCapabilities', token);
+      this.sfuDevice = new mediasoupClient.Device();
+      await this.sfuDevice.load({routerRtpCapabilities: rtpCapabilities as any});
+    })();
+    try {
+      await this.sfuDeviceLoading;
+    } finally {
+      this.sfuDeviceLoading = null;
+    }
   }
 
   // ================================================================
@@ -765,6 +917,7 @@ export class WebrtcService implements OnDestroy {
     this.currentRoomId = roomId;
     this.localStream = stream;
     this.localStreamMaxBitrate = maxBitrate ?? 0;
+    this.localStreamAudience = 'personal';
     const canUseSfu = await this.checkSfuAvailable();
     if (canUseSfu) {
       await this.startOptInStreamingSfu(roomId, stream, maxBitrate, preferredResolution);
@@ -779,10 +932,54 @@ export class WebrtcService implements OnDestroy {
     }
   }
 
+  /** Begin streaming directly to the room player instead of the opt-in live list. */
+  public async startStreamingToRoom(roomId: string, stream: MediaStream, maxBitrate?: number, preferredResolution?: number): Promise<void> {
+    this.currentRoomId = roomId;
+    this.localStream = stream;
+    this.localStreamMaxBitrate = maxBitrate ?? 0;
+    this.localStreamAudience = 'room';
+    this.roomStagePreviewStream.next(stream);
+    this.roomStageBroadcastActive.next(true);
+
+    try {
+      const canUseSfu = await this.checkSfuAvailable();
+      if (canUseSfu) {
+        await this.startStreamingSfu(roomId, stream, maxBitrate, preferredResolution);
+        return;
+      }
+
+      this.liveStreamUsesSfu = false;
+      this.invalidateCredentials();
+      if (token) {
+        await hubConnection.invoke('StartWebRtcStream', token, roomId)
+          .catch(err => console.error('StartWebRtcStream failed:', err));
+      }
+    } catch (err) {
+      this.localStreamAudience = 'none';
+      this.roomStagePreviewStream.next(null);
+      this.roomStageBroadcastActive.next(false);
+      throw err;
+    }
+  }
+
   /** Stop P2P broadcasting and close all viewer connections. */
   public async stopStreaming(roomId: string): Promise<void> {
     if (this.liveStreamUsesSfu) {
       await this.stopOptInStreamingSfu(roomId);
+      return;
+    }
+
+    if (token) {
+      await hubConnection.invoke('StopWebRtcStream', token, roomId)
+        .catch(err => console.error('StopWebRtcStream failed:', err));
+    }
+    this.cleanUpStreamerSide();
+  }
+
+  /** Stop a room-wide live stream and restore the normal room player state. */
+  public async stopStreamingToRoom(roomId: string): Promise<void> {
+    if (this.liveStreamUsesSfu) {
+      await this.stopStreamingSfu(roomId);
       return;
     }
 
@@ -819,9 +1016,13 @@ export class WebrtcService implements OnDestroy {
     this.viewerConnections.forEach(pc => pc.close());
     this.viewerConnections.clear();
     this.viewerCandidateBuffer.clear();
+    this.localStream?.getTracks().forEach(track => track.stop());
     this.localStream = null;
     this.localStreamMaxBitrate = 0;
     this.liveStreamUsesSfu = false;
+    this.localStreamAudience = 'none';
+    this.roomStagePreviewStream.next(null);
+    this.roomStageBroadcastActive.next(false);
   }
 
   private async createViewerPeerConnection(viewerId: string): Promise<RTCPeerConnection> {
@@ -1024,9 +1225,11 @@ export class WebrtcService implements OnDestroy {
     this.currentViewingStreamerId = streamerId;
     this.incomingOfferInProgress = false;
     this.watchRequest.next({streamerId, username, roomId});
+    this.logPopoutDebug('startWatching requested', {roomId, streamerId, username});
     if (token) {
       const isSfuOptInStream = await hubConnection.invoke<boolean>('IsSfuOptInStreamActive', token, roomId, streamerId)
         .catch(() => false);
+      this.logPopoutDebug('IsSfuOptInStreamActive result', {roomId, streamerId, isSfuOptInStream});
       if (isSfuOptInStream) {
         await this.startWatchingSfu(roomId, streamerId);
         return;
@@ -1066,6 +1269,13 @@ export class WebrtcService implements OnDestroy {
   }
 
   private cleanUpViewerSide(): void {
+    this.logPopoutDebug('cleanUpViewerSide', {
+      currentRoomId: this.currentRoomId,
+      currentViewingStreamerId: this.currentViewingStreamerId,
+      watchSfuRoomId: this.watchSfuRoomId,
+      watchSfuConsumers: this.watchSfuConsumers.size,
+      stream: this.describeStream(this.popoutStream.value)
+    });
     this.streamerPc?.close();
     this.streamerPc = null;
     this.streamerCandidateBuffer = [];
@@ -1091,14 +1301,25 @@ export class WebrtcService implements OnDestroy {
     await this.ensureSfuDevice();
     const liveRoomId = this.buildOptInLiveSfuRoomId(roomId, streamerId);
     this.watchSfuRoomId = liveRoomId;
+    this.logPopoutDebug('Joining SFU watch room', {roomId, streamerId, liveRoomId});
 
     const existingProducers: SfuProducerEntry[] = await hubConnection.invoke<SfuProducerEntry[]>(
       'JoinSfuRoom', token, liveRoomId
     );
+    this.logPopoutDebug('Joined SFU watch room', {
+      liveRoomId,
+      existingProducerCount: existingProducers.length,
+      existingProducers
+    });
 
     const transportInfo: SfuTransportInfo = await hubConnection.invoke<SfuTransportInfo>(
       'CreateWebRtcTransport', token, liveRoomId, 1 /* Recv = 1 */
     );
+    this.logPopoutDebug('Created SFU watch recv transport', {
+      liveRoomId,
+      transportId: transportInfo.id,
+      iceCandidateCount: transportInfo.iceCandidates?.length ?? 0
+    });
     this.watchSfuRecvTransport = this.sfuDevice!.createRecvTransport({
       id: transportInfo.id,
       iceParameters: transportInfo.iceParameters as any,
@@ -1212,13 +1433,14 @@ export class WebrtcService implements OnDestroy {
     hubConnection.on('broadcastStream', (streamerId: string, roomId: string) => {
       // For force-broadcast, treat it like an explicit watch request.
       if (roomId && token) {
+        this.logPopoutDebug('broadcastStream received', {roomId, streamerId});
         this.startWatching(roomId, streamerId, '').catch(err =>
           console.error('JoinWebRtcStream (broadcast) failed:', err)
         );
       }
     });
 
-    // Streamer side (P2P): a viewer wants to connect â€” create an offer for them
+    // Streamer side (P2P): a viewer wants to connect create an offer for them
     hubConnection.on('joinWebRtcStream', (viewerId: string) => {
       this.handleViewerJoined(viewerId);
     });
@@ -1245,6 +1467,9 @@ export class WebrtcService implements OnDestroy {
 
     // SFU: a new producer became available in the room
     hubConnection.on('sfuNewProducer', async (notification: SfuNewProducerNotification) => {
+      if (this.watchSfuRoomId === notification.roomId) {
+        this.logPopoutDebug('sfuNewProducer for active popout watch room', notification);
+      }
       if (this.watchSfuRecvTransport && this.watchSfuRoomId === notification.roomId) {
         const transport = this.watchSfuRecvTransport;
         await this.consumeProducerToPopout(
@@ -1333,8 +1558,9 @@ export class WebrtcService implements OnDestroy {
       this.pendingFileShareFile.next(null);
       this.fileShareActive.next({streamerId, username});
       this.fileShareIsPaused.next(false);
-      // Only viewers need to join the SFU — the host already has a send-transport.
-      if (!this.isFileShareHost && roomId) {
+      // Only viewers need to join the SFU as consumers — UNLESS this is a server-side share,
+      // in which case the host also becomes a consumer (there is no local send-transport).
+      if ((!this.isFileShareHost || this.isServerFileShare) && roomId) {
         try {
           this.cleanUpViewerSide();
           await this.leaveStreamSfu();
@@ -1347,20 +1573,28 @@ export class WebrtcService implements OnDestroy {
 
     // File Share: the active share ended — tear down viewer SFU state.
     hubConnection.on('fileShareStopped', async () => {
-      const wasHost = this.isFileShareHost;
+      const wasHost        = this.isFileShareHost;
+      const wasServerShare = this.isServerFileShare;
       const skipTransportCleanup = this.fileShareStopInProgress;
       this.fileShareStopInProgress = false;
-      this.isFileShareHost = false;
+      this.isFileShareHost    = false;
+      this.isServerFileShare  = false;
       this.isPreparingFileShareHost = false;
       this.pendingFileShareFile.next(null);
+      this.fileShareUploadProgress.next(0);
+      this.backgroundUploadInProgress.next(false);
+      this._serverShareFileDuration = null;
       this.fileShareActive.next(null);
       this.fileShareIsPaused.next(false);
       if (skipTransportCleanup) {
+        // stopFileShare() already handled teardown synchronously.
         return;
       }
-      if (wasHost) {
+      if (wasHost && !wasServerShare) {
+        // Normal host disconnect: close the local send-transport and producers.
         await this.teardownFileShareSender();
       } else {
+        // Viewer, OR server-share host (who joined as consumer): leave the SFU receive room.
         await this.leaveStreamSfu();
       }
     });
@@ -1368,6 +1602,82 @@ export class WebrtcService implements OnDestroy {
     // File Share: host paused/resumed — update the pause indicator for viewers.
     hubConnection.on('fileSharePlayPause', (isPlaying: boolean) => {
       this.fileShareIsPaused.next(!isPlaying);
+    });
+
+    // RTMP File Share: stream started — all room members receive this.
+    hubConnection.on('rtmpFileShareStarted', (streamerId: string, username: string, roomId: string, streamUrl: string, durationSec: number | null) => {
+      this.isPreparingRtmpFileShareHost = false;
+      this.pendingRtmpFileShareFile.next(null);
+      this.rtmpFileShareActive.next({streamerId, username, streamUrl, durationSec});
+      this.rtmpFileShareIsPaused.next(false);
+      this.rtmpFileSharePosition.next(0);
+      this.rtmpFileShareCanSeek.next(false);
+      this.rtmpFileShareVodPlayback.next(null);
+    });
+
+    // RTMP File Share: stream stopped — clear all state.
+    hubConnection.on('rtmpFileShareStopped', () => {
+      const skipCleanup = this._rtmpShareStopInProgress;
+      this._rtmpShareStopInProgress = false;
+      this.isRtmpFileShareHost = false;
+      this.isPreparingRtmpFileShareHost = false;
+      this.pendingRtmpFileShareFile.next(null);
+      this.rtmpFileShareUploadProgress.next(0);
+      this.rtmpFileShareBackgroundUploadInProgress.next(false);
+      this._rtmpShareFileDuration = null;
+      this._rtmpShareUploadId = null;
+      this.rtmpFileShareActive.next(null);
+      this.rtmpFileShareIsPaused.next(false);
+      this.rtmpFileSharePosition.next(0);
+      this.rtmpFileShareCanSeek.next(false);
+      this.rtmpFileShareVodPlayback.next(null);
+    });
+
+    // RTMP File Share: host paused/resumed.
+    hubConnection.on('rtmpFileSharePlayPause', (isPlaying: boolean, positionSec: number) => {
+      this.rtmpFileShareIsPaused.next(!isPlaying);
+      this.rtmpFileSharePosition.next(positionSec);
+    });
+
+    // RTMP File Share: host seeked — fire signal so viewers reconnect their player.
+    hubConnection.on('rtmpFileShareSeek', (positionSec: number) => {
+      this.rtmpFileSharePosition.next(positionSec);
+      this.rtmpFileShareSeekSignal.next(positionSec);
+    });
+
+    // RTMP File Share: periodic position tick from the server.
+    hubConnection.on('rtmpFileSharePosition', (positionSec: number) => {
+      if (!this.rtmpFileShareIsPaused.value) {
+        this.rtmpFileSharePosition.next(positionSec);
+      }
+    });
+
+    hubConnection.on('rtmpFileShareMetadata', (durationSec: number | null, canSeek: boolean) => {
+      const active = this.rtmpFileShareActive.value;
+      if (active) {
+        this.rtmpFileShareActive.next({
+          ...active,
+          durationSec: durationSec ?? active.durationSec ?? null
+        });
+      }
+      this.rtmpFileShareCanSeek.next(canSeek);
+    });
+
+    hubConnection.on('rtmpFileShareStreamReady', (positionSec: number) => {
+      this.rtmpFileSharePosition.next(positionSec);
+      this.rtmpFileShareStreamReady.next(positionSec);
+    });
+
+    hubConnection.on('rtmpFileShareVodReady', (playbackUrl: string, durationSec: number | null, contentType: string | null) => {
+      const active = this.rtmpFileShareActive.value;
+      if (active) {
+        this.rtmpFileShareActive.next({
+          ...active,
+          durationSec: durationSec ?? active.durationSec ?? null
+        });
+      }
+      this.rtmpFileShareCanSeek.next(true);
+      this.rtmpFileShareVodPlayback.next({playbackUrl, durationSec, contentType});
     });
   }
 
@@ -1388,6 +1698,14 @@ export class WebrtcService implements OnDestroy {
     hubConnection.off('fileShareStarted');
     hubConnection.off('fileShareStopped');
     hubConnection.off('fileSharePlayPause');
+    hubConnection.off('rtmpFileShareStarted');
+    hubConnection.off('rtmpFileShareStopped');
+    hubConnection.off('rtmpFileSharePlayPause');
+    hubConnection.off('rtmpFileShareSeek');
+    hubConnection.off('rtmpFileSharePosition');
+    hubConnection.off('rtmpFileShareMetadata');
+    hubConnection.off('rtmpFileShareStreamReady');
+    hubConnection.off('rtmpFileShareVodReady');
   }
 
   // ================================================================
@@ -1406,8 +1724,7 @@ export class WebrtcService implements OnDestroy {
     roomId: string,
     stream: MediaStream,
     maxBitrate?: number,
-    preferredResolution?: number,
-    profile: 'default' | 'file-share' = 'default'
+    preferredResolution?: number
   ): Promise<void> {
     if (!token) return;
     await this.ensureSfuDevice();
@@ -1444,7 +1761,7 @@ export class WebrtcService implements OnDestroy {
 
     for (const track of stream.getTracks()) {
       const produceOptions: mediasoupClient.types.ProducerOptions = track.kind === 'video'
-        ? this.buildVideoProducerOptions(track, maxBitrate, preferredResolution, profile)
+        ? this.buildVideoProducerOptions(track, maxBitrate, preferredResolution)
         : this.buildAudioProducerOptions(track);
       const producer = await this.sfuSendTransport.produce(produceOptions);
       this.sfuProducers.set(producer.id, producer);
@@ -1470,7 +1787,7 @@ export class WebrtcService implements OnDestroy {
     const bitrate = maxBitrate ?? 8_000_000;
     this.isFileShareHost = true;
     try {
-      await this.startSfuSendTransportOnly(roomId, stream, bitrate, undefined, 'file-share');
+      await this.startSfuSendTransportOnly(roomId, stream, bitrate);
       await hubConnection.invoke('StartFileShare', token, roomId);
       this.isPreparingFileShareHost = false;
       this.pendingFileShareFile.next(null);
@@ -1500,14 +1817,43 @@ export class WebrtcService implements OnDestroy {
    */
   public async stopFileShare(roomId: string): Promise<void> {
     if (!token) return;
-    this.isFileShareHost = false;
+    const wasServerShare = this.isServerFileShare;
+    const wasPreparing   = this.isPreparingFileShareHost;
+
+    // Immediately flip all flags — the background upload loop checks isFileShareHost and exits.
+    this.isFileShareHost          = false;
+    this.isServerFileShare        = false;
     this.isPreparingFileShareHost = false;
     this.pendingFileShareFile.next(null);
+    this.fileShareUploadProgress.next(0);
+    this.backgroundUploadInProgress.next(false);
+    this._serverShareFileDuration = null;
+
+    if (wasPreparing && !wasServerShare) {
+      // Stream never started — user cancelled during upload.
+      // Cancel the upload session on the server if one was created.
+      const uploadId = this._serverShareUploadId;
+      this._serverShareUploadId = null;
+      if (uploadId) {
+        const cancelUrl =
+          `${baseUrl}api/video/roomUpload/cancel` +
+          `?token=${encodeURIComponent(token)}` +
+          `&uploadId=${encodeURIComponent(uploadId)}`;
+        this.http.delete(cancelUrl).toPromise().catch(() => {});
+      }
+      this.fileShareActive.next(null);
+      this.fileShareIsPaused.next(false);
+      return;
+    }
+
+    this._serverShareUploadId = null;
     this.fileShareStopInProgress = true;
-    // Server-side cleanup + notifications.
     await hubConnection.invoke('StopFileShare', token, roomId)
       .catch(err => console.error('StopFileShare failed:', err));
     await this.teardownFileShareSender(roomId);
+    if (wasServerShare) {
+      await this.leaveStreamSfu();
+    }
     this.fileShareStopInProgress = false;
     this.fileShareActive.next(null);
     this.fileShareIsPaused.next(false);
@@ -1539,6 +1885,399 @@ export class WebrtcService implements OnDestroy {
     if (!token) return;
     await hubConnection.invoke('FileSharePlayPause', token, roomId, isPlaying)
       .catch(err => console.error('FileSharePlayPause failed:', err));
+  }
+
+  /**
+   * Seeks the server-side file share to the given position.
+   * No-op for browser-captureStream shares.
+   */
+  public async broadcastFileShareSeek(roomId: string, positionSec: number): Promise<void> {
+    if (!token) return;
+    await hubConnection.invoke('FileShareSeek', token, roomId, positionSec)
+      .catch(err => console.error('FileShareSeek failed:', err));
+  }
+
+  /**
+   * Duration (seconds) of the file currently being shared via the server path.
+   * Null when unknown (probe failed or no server share active).
+   */
+  get serverShareFileDuration(): number | null {
+    return this._serverShareFileDuration;
+  }
+
+  /**
+   * Starts a server-side file share for an already-uploaded file.
+   * Sets `isFileShareHost` and `isServerFileShare` so the `fileShareStarted`
+   * notification causes the host to join the SFU as a consumer (not a sender).
+   */
+  public async startServerFileShare(roomId: string, fileKey: string): Promise<void> {
+    if (!token) return;
+    this.isFileShareHost  = true;
+    this.isServerFileShare = true;
+    try {
+      await hubConnection.invoke('StartServerFileShare', token, roomId, fileKey);
+      this.isPreparingFileShareHost = false;
+      this.pendingFileShareFile.next(null);
+    } catch (err) {
+      this.isFileShareHost   = false;
+      this.isServerFileShare = false;
+      this.isPreparingFileShareHost = false;
+      this.pendingFileShareFile.next(null);
+      throw err;
+    }
+  }
+
+  /**
+   * Early-stream server share: uploads the first chunk, starts ffmpeg on the partial file,
+   * then continues uploading the remainder in the background while viewers already watch.
+   * Resolves once the stream is live; background upload runs concurrently until complete.
+   */
+  /** Resolves the media duration of a File using a temporary video element. Returns null if undetectable. */
+  private probeFileDuration(file: File): Promise<number | null> {
+    return new Promise(resolve => {
+      const url = URL.createObjectURL(file);
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      // Null handlers BEFORE touching src so the error triggered by src='' in cleanup doesn't re-enter.
+      const cleanup = () => {
+        video.onloadedmetadata = null;
+        video.onerror = null;
+        URL.revokeObjectURL(url);
+        video.src = '';
+      };
+      // Safety timeout: some containers (e.g. MKV on Chrome) fire neither loadedmetadata nor error.
+      const fallback = setTimeout(() => { cleanup(); resolve(null); }, 4000);
+      video.onloadedmetadata = () => {
+        clearTimeout(fallback);
+        const dur = isFinite(video.duration) && video.duration > 0 ? video.duration : null;
+        cleanup();
+        resolve(dur);
+      };
+      video.onerror = () => { clearTimeout(fallback); cleanup(); resolve(null); };
+      video.src = url;
+    });
+  }
+
+  public async beginServerFileShare(file: File, roomId: string): Promise<void> {
+    if (!token) throw new Error('Not authenticated');
+    this.fileShareUploadProgress.next(0);
+    // Probe duration in the background — does NOT block the upload.
+    this.probeFileDuration(file).then(d => { this._serverShareFileDuration = d; }).catch(() => {});
+
+    const dotIdx = file.name.lastIndexOf('.');
+    const ext  = dotIdx >= 0 ? file.name.slice(dotIdx) : '';
+    const name = dotIdx >= 0 ? file.name.slice(0, dotIdx) : file.name;
+
+    const startUrl =
+      `${baseUrl}api/video/roomUpload/start` +
+      `?token=${encodeURIComponent(token)}` +
+      `&uniqueId=${encodeURIComponent(roomId)}` +
+      `&name=${encodeURIComponent(name)}` +
+      `&fileEnding=${encodeURIComponent(ext)}` +
+      `&totalSize=${file.size}` +
+      `&skipPlaylist=true`;
+
+    const startResult: any = await this.http.post(startUrl, null).toPromise();
+    if (!startResult?.uploadId) throw new Error('Upload start failed');
+
+    const uploadId: string  = startResult.uploadId;
+    const chunkSize: number = startResult.chunkSize || 8 * 1024 * 1024;
+    this._serverShareUploadId = uploadId;
+
+    // Upload the first chunk so ffmpeg has data to start reading immediately.
+    const firstChunk = file.slice(0, chunkSize);
+    await this.http
+      .put(this.chunkUrl(uploadId, 0), firstChunk,
+           {headers: {'Content-Type': 'application/octet-stream'}})
+      .toPromise();
+    this.fileShareUploadProgress.next(Math.min(5, Math.round(firstChunk.size / file.size * 100)));
+
+    if (!this.isPreparingFileShareHost) {
+      // User cancelled during the first-chunk upload.
+      await this.http.delete(
+        `${baseUrl}api/video/roomUpload/cancel?token=${encodeURIComponent(token)}&uploadId=${encodeURIComponent(uploadId)}`
+      ).toPromise().catch(() => {});
+      this._serverShareUploadId = null;
+      throw new Error('Share was cancelled');
+    }
+
+    // Start ffmpeg on the partial file — stream goes live for all viewers.
+    this.isFileShareHost   = true;
+    this.isServerFileShare = true;
+    try {
+      await hubConnection.invoke('StartServerFileShareFromUpload', token, roomId, uploadId);
+
+      // Guard against the user pressing Stop while the hub call was in flight.
+      if (!this.isFileShareHost) {
+        await hubConnection.invoke('StopFileShare', token, roomId).catch(() => {});
+        this._serverShareUploadId = null;
+        throw new Error('Share was cancelled');
+      }
+
+      this.isPreparingFileShareHost = false;
+      this.pendingFileShareFile.next(null);
+    } catch (err) {
+      if ((err as any)?.message !== 'Share was cancelled') {
+        this.isFileShareHost   = false;
+        this.isServerFileShare = false;
+      }
+      this.isPreparingFileShareHost = false;
+      this.pendingFileShareFile.next(null);
+      this._serverShareUploadId = null;
+      throw err;
+    }
+
+    // Upload remaining chunks in the background; isFileShareHost acts as the abort signal.
+    this.backgroundUploadInProgress.next(true);
+    this.continueServerShareUpload(file, roomId, uploadId, chunkSize, firstChunk.size)
+      .catch(() => {}); // errors are already handled inside continueServerShareUpload
+  }
+
+  private chunkUrl(uploadId: string, offset: number): string {
+    return `${baseUrl}api/video/roomUpload/chunk` +
+      `?token=${encodeURIComponent(token!)}` +
+      `&uploadId=${encodeURIComponent(uploadId)}` +
+      `&startByte=${offset}`;
+  }
+
+  private async continueServerShareUpload(
+    file: File, _roomId: string, uploadId: string, chunkSize: number, startOffset: number
+  ): Promise<void> {
+    let offset = startOffset;
+    try {
+      while (offset < file.size) {
+        if (!this.isFileShareHost) return; // share was stopped
+        const chunk = file.slice(offset, offset + chunkSize);
+
+        // Retry each chunk up to 3 times with linear back-off to handle transient network blips.
+        let success = false;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            await this.http
+              .put(this.chunkUrl(uploadId, offset), chunk,
+                   {headers: {'Content-Type': 'application/octet-stream'}})
+              .toPromise();
+            success = true;
+            break;
+          } catch {
+            if (attempt < 2) await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+          }
+        }
+        if (!success) throw new Error('Failed to upload chunk after 3 attempts');
+
+        if (!this.isFileShareHost) return;
+        offset += chunk.size;
+        this.fileShareUploadProgress.next(Math.min(99, Math.round(offset / file.size * 100)));
+      }
+
+      if (!this.isFileShareHost) return;
+
+      // All bytes written — tell the server the file is complete.
+      const completeUrl =
+        `${baseUrl}api/video/roomUpload/complete` +
+        `?token=${encodeURIComponent(token!)}` +
+        `&uploadId=${encodeURIComponent(uploadId)}`;
+      await this.http.post(completeUrl, null).toPromise();
+      // Notify the hub that the upload is complete so the seek guard is cleared.
+      await hubConnection.invoke('MarkFileShareUploadComplete', token, _roomId, uploadId).catch(() => {});
+      this.fileShareUploadProgress.next(100);
+      this.backgroundUploadInProgress.next(false);
+    } catch (err: any) {
+      if (!this.isFileShareHost) return; // share was already stopped; ignore
+      console.error('[FileShare] Background upload failed:', err);
+      this.backgroundUploadInProgress.next(false);
+      this.serverShareUploadError.next(
+        'The background upload failed. Seeking to the end of the file may not work correctly.'
+      );
+    }
+  }
+
+  // ================================================================
+  // RTMP File Share — host uploads file; ffmpeg pushes RTMP; viewers use mpegts.js
+  // ================================================================
+
+  get rtmpShareFileDuration(): number | null {
+    return this._rtmpShareFileDuration;
+  }
+
+  public cancelPreparingRtmpFileShare(): void {
+    this.isRtmpFileShareHost = false;
+    this.isPreparingRtmpFileShareHost = false;
+    this.pendingRtmpFileShareFile.next(null);
+    this.rtmpFileShareUploadProgress.next(0);
+    this.rtmpFileShareBackgroundUploadInProgress.next(false);
+    this._rtmpShareFileDuration = null;
+    this._rtmpShareUploadId = null;
+    this.rtmpFileShareCanSeek.next(false);
+    this.rtmpFileShareVodPlayback.next(null);
+    if (!this.rtmpFileShareActive.value) {
+      this.rtmpFileShareIsPaused.next(false);
+      this.rtmpFileSharePosition.next(0);
+      this.rtmpFileShareActive.next(null);
+    }
+  }
+
+  public requestRtmpFileShareHostUi(file?: File): void {
+    if (this.rtmpFileShareActive.value) return;
+    this.isPreparingRtmpFileShareHost = true;
+    if (file) {
+      this.pendingRtmpFileShareFile.next(file);
+    }
+    this.rtmpFileShareHostRequested.next();
+  }
+
+  public clearPendingRtmpFileShareFile(): void {
+    this.pendingRtmpFileShareFile.next(null);
+  }
+
+  /**
+   * Uploads the first chunk, tells the server to start ffmpeg (RTMP push),
+   * then continues uploading in the background while the stream is live.
+   * The manager retries ffmpeg automatically if it exits quickly (e.g. MP4
+   * with moov-at-end not yet uploaded), so the stream comes up once enough
+   * of the file is on disk.
+   */
+  public async beginRtmpFileShare(
+    file: File,
+    roomId: string,
+    playbackPreferences: RtmpPlaybackPreferences
+  ): Promise<void> {
+    if (!token) throw new Error('Not authenticated');
+    this.rtmpFileShareUploadProgress.next(0);
+    this.probeFileDuration(file).then(d => { this._rtmpShareFileDuration = d; }).catch(() => {});
+    this.rtmpFileShareCanSeek.next(false);
+    this.rtmpFileShareVodPlayback.next(null);
+
+    const dotIdx = file.name.lastIndexOf('.');
+    const ext  = dotIdx >= 0 ? file.name.slice(dotIdx) : '';
+    const name = dotIdx >= 0 ? file.name.slice(0, dotIdx) : file.name;
+
+    const startUrl =
+      `${baseUrl}api/video/roomUpload/start` +
+      `?token=${encodeURIComponent(token)}` +
+      `&uniqueId=${encodeURIComponent(roomId)}` +
+      `&name=${encodeURIComponent(name)}` +
+      `&fileEnding=${encodeURIComponent(ext)}` +
+      `&totalSize=${file.size}` +
+      `&skipPlaylist=true`;
+
+    const startResult: any = await this.http.post(startUrl, null).toPromise();
+    if (!startResult?.uploadId) throw new Error('Upload start failed');
+
+    const uploadId: string  = startResult.uploadId;
+    const chunkSize: number = startResult.chunkSize || 8 * 1024 * 1024;
+    this._rtmpShareUploadId = uploadId;
+
+    // Upload the first chunk so the server has data to start ffmpeg.
+    const firstChunk = file.slice(0, chunkSize);
+    await this.http
+      .put(this.chunkUrl(uploadId, 0), firstChunk,
+           {headers: {'Content-Type': 'application/octet-stream'}})
+      .toPromise();
+    this.rtmpFileShareUploadProgress.next(Math.min(5, Math.round(firstChunk.size / file.size * 100)));
+
+    if (!this.isPreparingRtmpFileShareHost) {
+      await this.http.delete(
+        `${baseUrl}api/video/roomUpload/cancel?token=${encodeURIComponent(token)}&uploadId=${encodeURIComponent(uploadId)}`
+      ).toPromise().catch(() => {});
+      this._rtmpShareUploadId = null;
+      throw new Error('Share was cancelled');
+    }
+
+    this.isRtmpFileShareHost = true;
+    try {
+      await hubConnection.invoke('StartRtmpFileShareFromUpload', token, roomId, uploadId, playbackPreferences);
+
+      if (!this.isRtmpFileShareHost) {
+        await hubConnection.invoke('StopRtmpFileShare', token, roomId).catch(() => {});
+        this._rtmpShareUploadId = null;
+        throw new Error('Share was cancelled');
+      }
+
+      this.isPreparingRtmpFileShareHost = false;
+      this.pendingRtmpFileShareFile.next(null);
+    } catch (err) {
+      if ((err as any)?.message !== 'Share was cancelled') {
+        this.isRtmpFileShareHost = false;
+      }
+      this.isPreparingRtmpFileShareHost = false;
+      this.pendingRtmpFileShareFile.next(null);
+      this._rtmpShareUploadId = null;
+      throw err;
+    }
+
+    // Upload remaining chunks in background; manager retries ffmpeg as needed.
+    this.rtmpFileShareBackgroundUploadInProgress.next(true);
+    this.continueRtmpShareUpload(file, roomId, uploadId, chunkSize, firstChunk.size)
+      .catch(() => {});
+  }
+
+  private async continueRtmpShareUpload(
+    file: File, roomId: string, uploadId: string, chunkSize: number, startOffset: number
+  ): Promise<void> {
+    let offset = startOffset;
+    try {
+      while (offset < file.size) {
+        if (!this.isRtmpFileShareHost) return;
+        const chunk = file.slice(offset, offset + chunkSize);
+        let success = false;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            await this.http
+              .put(this.chunkUrl(uploadId, offset), chunk,
+                   {headers: {'Content-Type': 'application/octet-stream'}})
+              .toPromise();
+            success = true;
+            break;
+          } catch {
+            if (attempt < 2) await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
+          }
+        }
+        if (!success) throw new Error('Failed to upload chunk after 3 attempts');
+        if (!this.isRtmpFileShareHost) return;
+        offset += chunk.size;
+        this.rtmpFileShareUploadProgress.next(Math.min(99, Math.round(offset / file.size * 100)));
+      }
+      if (!this.isRtmpFileShareHost) return;
+      const completeUrl =
+        `${baseUrl}api/video/roomUpload/complete` +
+        `?token=${encodeURIComponent(token!)}` +
+        `&uploadId=${encodeURIComponent(uploadId)}`;
+      await this.http.post(completeUrl, null).toPromise();
+      await hubConnection.invoke('MarkRtmpFileShareUploadComplete', token, roomId, uploadId).catch(() => {});
+      this.rtmpFileShareUploadProgress.next(100);
+      this.rtmpFileShareBackgroundUploadInProgress.next(false);
+    } catch (err: any) {
+      if (!this.isRtmpFileShareHost) return;
+      console.error('[RtmpFileShare] Background upload failed:', err);
+      this.rtmpFileShareBackgroundUploadInProgress.next(false);
+      this.rtmpFileShareUploadError.next(
+        'The background upload failed. Seeking to the end of the file may not work correctly.'
+      );
+    }
+  }
+
+  public async stopRtmpFileShare(roomId: string): Promise<void> {
+    if (!token) return;
+    this._rtmpShareStopInProgress = true;
+    this.cancelPreparingRtmpFileShare();
+    try {
+      await hubConnection.invoke('StopRtmpFileShare', token, roomId);
+    } catch (err) {
+      console.error('StopRtmpFileShare failed:', err);
+    }
+  }
+
+  public async broadcastRtmpFileSharePlayPause(roomId: string, isPlaying: boolean): Promise<void> {
+    if (!token) return;
+    await hubConnection.invoke('RtmpFileSharePlayPause', token, roomId, isPlaying)
+      .catch(err => console.error('RtmpFileSharePlayPause failed:', err));
+  }
+
+  public async broadcastRtmpFileShareSeek(roomId: string, positionSec: number): Promise<void> {
+    if (!token) return;
+    await hubConnection.invoke('RtmpFileShareSeek', token, roomId, positionSec)
+      .catch(err => console.error('RtmpFileShareSeek failed:', err));
   }
 
   // ================================================================
@@ -1589,6 +2328,23 @@ export class WebrtcService implements OnDestroy {
   // ================================================================
   // SFU — Adaptive Bitrate: preferred layers
   // ================================================================
+
+  /**
+   * Computes the maximum available spatial and temporal layer indices from a consumer's
+   * RTP parameters.  Handles both VP9 K-SVC (single encoding with scalabilityMode like
+   * 'L3T3_KEY') and VP8 simulcast (multiple encodings, each one spatial layer).
+   */
+  private getMaxPreferredLayers(consumer: mediasoupClient.types.Consumer): {spatial: number; temporal: number} {
+    const encodings = consumer.rtpParameters.encodings ?? [];
+    if (encodings.length === 0) return {spatial: 0, temporal: 0};
+    const firstMode = (encodings[0] as any).scalabilityMode as string | undefined;
+    if (firstMode) {
+      const match = firstMode.match(/^L(\d+)T(\d+)/);
+      if (match) return {spatial: parseInt(match[1], 10) - 1, temporal: parseInt(match[2], 10) - 1};
+    }
+    // VP8 simulcast: each encoding is one spatial layer; no temporal scalability by default.
+    return {spatial: encodings.length - 1, temporal: 0};
+  }
 
   /**
    * Sets the preferred simulcast layer for a consumer.
@@ -1660,6 +2416,7 @@ export interface WebRtcCredentials {
   password: string;
   stunServer: string;
   turnServer: string;
+  expiresAtUnixSec: number;
 }
 
 export interface WebRtcClientOffer {

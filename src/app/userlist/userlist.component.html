@@ -1,6 +1,7 @@
 <app-stream-start-dialog
   *ngIf="showStreamDialog"
   [browserSettings]="browserSettings"
+    [audienceMode]="'mixed'"
   (confirmed)="onStreamDialogConfirmed($event)"
   (cancelled)="onStreamDialogCancelled()">
 </app-stream-start-dialog>
@@ -12,11 +13,11 @@
         Members <span class="badge badge-secondary ml-1">{{Members.length}}</span>
     </span>
     <button *ngIf="!isStreaming" class="btn btn-sm btn-outline-danger go-live-btn"
-            title="Share your screen with the room" (click)="goLive()">
+            title="Start a live stream" (click)="goLive()">
         <i class="fa fa-circle live-pulse mr-1" aria-hidden="true"></i>Go Live
     </button>
     <button *ngIf="isStreaming" class="btn btn-sm btn-danger go-live-btn"
-            title="Stop sharing" (click)="stopLive()">
+            [title]="liveAudience === 'room' ? 'Stop room stream' : 'Stop live stream'" (click)="stopLive()">
         <i class="fa fa-stop-circle mr-1" aria-hidden="true"></i>Stop
     </button>
 </div>

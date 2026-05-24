@@ -67,6 +67,138 @@
   transform: translateX(-4px);
 }
 
+.fsd-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.76);
+  z-index: 1040;
+}
+
+.fsd-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(720px, 94vw);
+  background: #1e2030;
+  border: 1px solid rgba(105, 116, 160, 0.5);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  z-index: 1050;
+  color: #e9ecef;
+  overflow: hidden;
+}
+
+.fsd-header,
+.fsd-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(105, 116, 160, 0.25);
+}
+
+.fsd-footer {
+  justify-content: flex-end;
+  border-bottom: 0;
+  border-top: 1px solid rgba(105, 116, 160, 0.25);
+}
+
+.fsd-title-wrap {
+  display: flex;
+  align-items: center;
+}
+
+.fsd-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.fsd-close-btn {
+  background: transparent;
+  border: 0;
+  color: #98a3c6;
+  font-size: 1rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+}
+
+.fsd-body {
+  padding: 20px;
+}
+
+.fsd-copy {
+  color: #c9cfe8;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.fsd-option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fsd-option-card {
+  text-align: left;
+  padding: 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(105, 116, 160, 0.35);
+  background: rgba(33, 38, 58, 0.95);
+  color: inherit;
+  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: #3369e7;
+    background: rgba(28, 40, 74, 0.95);
+  }
+}
+
+.fsd-option-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.fsd-option-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.fsd-chip {
+  font-size: 0.7rem;
+  color: #9eb6ff;
+  background: rgba(51, 105, 231, 0.18);
+  border: 1px solid rgba(51, 105, 231, 0.35);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.fsd-option-text {
+  margin-bottom: 10px;
+  color: #d4daef;
+  line-height: 1.45;
+}
+
+.fsd-option-meta {
+  color: #98a3c6;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 767px) {
+  .fsd-option-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .live-ctrl-btn:hover ~ .live-preview-panel {
   opacity: 1 !important;
   pointer-events: auto !important;

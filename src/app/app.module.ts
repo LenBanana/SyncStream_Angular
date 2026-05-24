@@ -63,6 +63,7 @@ import { StreamViewerPopoutComponent } from './stream-viewer-popout/stream-viewe
 import { StreamStartDialogComponent } from './media/webrtc/stream-start-dialog/stream-start-dialog.component';
 import { SourceLabelPipe } from './media/webrtc/stream-start-dialog/source-label.pipe';
 import { FileSharePlayerComponent } from './media/file-share-player/file-share-player.component';
+import { RtmpFileSharePlayerComponent } from './media/rtmp-file-share-player/rtmp-file-share-player.component';
 const DragConfig = {
   dragStartThreshold: 0,
   pointerDirectionChangeThreshold: 5,
@@ -121,7 +122,8 @@ const DragConfig = {
     StreamViewerPopoutComponent,
     StreamStartDialogComponent,
     SourceLabelPipe,
-    FileSharePlayerComponent
+    FileSharePlayerComponent,
+    RtmpFileSharePlayerComponent
   ],
   imports: [
     MatMenuModule,

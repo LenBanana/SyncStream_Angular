@@ -9,6 +9,8 @@ import {
 import {Resolution} from '../webrtc-service/webrtc.service';
 import {BrowserSettings, changeSettings} from '../../../Interfaces/BrowserSettings';
 
+export type StreamAudience = 'personal' | 'room';
+
 /** What the dialog returns when the user confirms. */
 export interface StreamStartConfig {
   stream: MediaStream;
@@ -16,6 +18,7 @@ export interface StreamStartConfig {
   maxBitrate: number;
   resolution: Resolution;
   frameRate: number;
+  audience: StreamAudience;
 }
 
 /** Quality preset definition. */
@@ -81,6 +84,7 @@ export type DialogStep = 'source' | 'quality' | 'audio';
 export class StreamStartDialogComponent implements OnInit, OnDestroy {
 
   @Input() browserSettings: BrowserSettings;
+  @Input() audienceMode: 'mixed' | 'personal' | 'room' = 'mixed';
   /** Emitted when the user confirms — caller should start streaming with the result. */
   @Output() confirmed = new EventEmitter<StreamStartConfig>();
   /** Emitted when the user cancels. */
@@ -90,6 +94,7 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
   step: DialogStep = 'source';
   isLoading = false;
   errorMessage = '';
+  selectedAudience: StreamAudience = 'personal';
 
   // ---- Source step ----
   /** Choices filled from getDisplayMedia enumeration where supported, plus camera */
@@ -120,10 +125,15 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
   shareMicrophone = false;
   microphoneId: string | null = null;
   microphoneVolume = 100;
+  systemAudioVolume = 100;
   audioInputDevices: MediaDeviceInfo[] = [];
+  /** True when the user asked for system audio but the browser/source didn't deliver it. */
+  systemAudioMissing = false;
 
   // ---- Final assembled stream ----
   private capturedStream: MediaStream | null = null;
+  /** Kept alive for the duration of the stream so the audio mix stays active. */
+  private audioCtx: AudioContext | null = null;
 
   constructor() {}
 
@@ -134,11 +144,12 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this._releaseAllPreviews();
-    // If cancelled mid-flow, release any captured stream
     if (this.capturedStream) {
       this.capturedStream.getTracks().forEach(t => t.stop());
       this.capturedStream = null;
     }
+    this.audioCtx?.close().catch(() => {});
+    this.audioCtx = null;
   }
 
   // ===========================================================================
@@ -146,11 +157,14 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
   // ===========================================================================
 
   private _initFromSettings(): void {
+    this.selectedAudience = this.resolvedAudience;
     if (!this.browserSettings) return;
     const s = this.browserSettings.webRtcSettings;
     this.shareMicrophone = s.shareMicrophone ?? false;
+    this.shareSystemAudio = s.shareSystemAudio ?? false;
     this.microphoneId = s.microphoneId ?? null;
     this.microphoneVolume = s.microphoneVolume ?? 100;
+    this.systemAudioVolume = s.systemAudioVolume ?? 100;
     this.customResolution = s.idealResolution ?? Resolution.FHD;
     this.customFrameRate = s.idealFrameRate ?? 60;
     this.customBitrateKbps = Math.round((s.maxVideoBitrate ?? 3_000_000) / 1000);
@@ -242,6 +256,26 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
     return true;
   }
 
+  get showAudienceChoice(): boolean {
+    return this.audienceMode === 'mixed';
+  }
+
+  get resolvedAudience(): StreamAudience {
+    if (this.audienceMode === 'room') return 'room';
+    if (this.audienceMode === 'personal') return 'personal';
+    return this.selectedAudience;
+  }
+
+  get resolvedAudienceLabel(): string {
+    return this.resolvedAudience === 'room' ? 'Room stage' : 'Member list';
+  }
+
+  get audienceSummaryText(): string {
+    return this.resolvedAudience === 'room'
+      ? 'Switches the room player for everyone immediately.'
+      : 'Shows you as live in the member list so people can join manually.';
+  }
+
   async next(): Promise<void> {
     if (this.step === 'source') {
       await this._captureSource();
@@ -280,6 +314,10 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
     this.selectedSourceId = id;
   }
 
+  selectAudience(audience: StreamAudience): void {
+    this.selectedAudience = audience;
+  }
+
   private async _captureSource(): Promise<void> {
     const option = this.sourceOptions.find(o => o.id === this.selectedSourceId);
     if (!option) return;
@@ -293,12 +331,24 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
         // quality preset yet (that is step 2). Resolution is controlled by the WebRTC
         // encoder via bitrate (injected into the SDP offer); over-constraining the
         // capture here only causes the browser to reject or ignore the constraints.
-        this.capturedStream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            frameRate: {ideal: 60}        // permissive upper bound; tightened on confirm
-          } as MediaTrackConstraints,
+        //
+        // systemAudio / surfaceSwitching / selfBrowserSurface are Chromium hints that
+        // make the native picker default the "Share tab audio" checkbox to checked and
+        // show all surface types.  Non-Chromium browsers silently ignore them.
+        this.capturedStream = await (navigator.mediaDevices.getDisplayMedia as Function)({
+          video: {frameRate: {ideal: 60}} as MediaTrackConstraints,
           audio: this.shareSystemAudio
+            ? {echoCancellation: false, noiseSuppression: false, autoGainControl: false, sampleRate: 48000}
+            : false,
+          systemAudio:        this.shareSystemAudio ? 'include' : 'exclude',
+          surfaceSwitching:   'include',
+          selfBrowserSurface: 'exclude',
+          monitorTypeSurfaces: 'include',
         });
+
+        // Detect if audio was requested but not delivered (Linux, Firefox, Window/Screen mode).
+        this.systemAudioMissing =
+          this.shareSystemAudio && this.capturedStream.getAudioTracks().length === 0;
       } else {
         // Camera — capture at native resolution; frameRate is tightened on confirm.
         this.capturedStream = await navigator.mediaDevices.getUserMedia({
@@ -393,20 +443,54 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
     try {
       let finalStream = this.capturedStream;
 
-      // Add microphone track if requested
+      // Collect audio sources to mix.
+      const systemAudioTracks = finalStream.getAudioTracks();
+      let micTrack: MediaStreamTrack | null = null;
+
       if (this.shareMicrophone) {
-        const micConstraints: MediaStreamConstraints = {
-          audio: this.microphoneId
-            ? {deviceId: {exact: this.microphoneId}}
-            : true,
-          video: false
-        };
         try {
-          const micStream = await navigator.mediaDevices.getUserMedia(micConstraints);
-          micStream.getAudioTracks().forEach(t => finalStream.addTrack(t));
+          const micStream = await navigator.mediaDevices.getUserMedia({
+            audio: this.microphoneId ? {deviceId: {exact: this.microphoneId}} : true,
+            video: false
+          });
+          micTrack = micStream.getAudioTracks()[0] ?? null;
         } catch (err) {
           console.warn('Could not capture microphone:', err);
         }
+      }
+
+      const hasSystemAudio = systemAudioTracks.length > 0;
+      const hasMic = !!micTrack;
+
+      if (hasSystemAudio || hasMic) {
+        // Remove raw audio tracks from the stream — we'll replace them with the mix.
+        systemAudioTracks.forEach(t => finalStream.removeTrack(t));
+
+        // Mix via Web Audio so both sources are combined into one track and
+        // individual volumes are respected.  The AudioContext must stay alive
+        // for the duration of the stream; we store it in this.audioCtx.
+        this.audioCtx?.close().catch(() => {});
+        this.audioCtx = new AudioContext({sampleRate: 48000});
+        const dest = this.audioCtx.createMediaStreamDestination();
+
+        if (hasSystemAudio) {
+          const src = this.audioCtx.createMediaStreamSource(new MediaStream(systemAudioTracks));
+          const gain = this.audioCtx.createGain();
+          gain.gain.value = Math.max(0, Math.min(2, this.systemAudioVolume / 100));
+          src.connect(gain);
+          gain.connect(dest);
+        }
+
+        if (hasMic && micTrack) {
+          const src = this.audioCtx.createMediaStreamSource(new MediaStream([micTrack]));
+          const gain = this.audioCtx.createGain();
+          gain.gain.value = Math.max(0, Math.min(2, this.microphoneVolume / 100));
+          src.connect(gain);
+          gain.connect(dest);
+        }
+
+        const mixedTrack = dest.stream.getAudioTracks()[0];
+        if (mixedTrack) finalStream.addTrack(mixedTrack);
       }
 
       // Persist settings to BrowserSettings
@@ -417,8 +501,10 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
         s.idealFrameRate = preset.frameRate;
         s.maxVideoBitrate = preset.maxBitrate;
         s.shareMicrophone = this.shareMicrophone;
+        s.shareSystemAudio = this.shareSystemAudio;
         s.microphoneId = this.microphoneId;
         s.microphoneVolume = this.microphoneVolume;
+        s.systemAudioVolume = this.systemAudioVolume;
         changeSettings(this.browserSettings);
       }
 
@@ -451,7 +537,8 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
         stream: finalStream,
         maxBitrate: preset.maxBitrate,
         resolution: preset.resolution,
-        frameRate: preset.frameRate
+        frameRate: preset.frameRate,
+        audience: this.resolvedAudience
       });
     } catch (err: any) {
       this.errorMessage = `Failed to start stream: ${err?.message ?? 'Unknown error'}`;

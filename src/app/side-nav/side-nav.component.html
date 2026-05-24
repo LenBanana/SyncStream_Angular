@@ -1,9 +1,58 @@
 <app-stream-start-dialog
   *ngIf="showStreamDialog"
   [browserSettings]="BrowserSettings"
+  [audienceMode]="'mixed'"
   (confirmed)="onStreamDialogConfirmed($event)"
   (cancelled)="onStreamDialogCancelled()">
 </app-stream-start-dialog>
+
+<div *ngIf="showFileShareModeDialog" class="fsd-backdrop" (click)="closeFileShareModeDialog()"></div>
+<div *ngIf="showFileShareModeDialog" class="fsd-panel" role="dialog" aria-modal="true" aria-labelledby="fsd-title">
+  <div class="fsd-header">
+    <div class="fsd-title-wrap">
+      <i class="fa fa-file-video-o text-main-color mr-2"></i>
+      <span id="fsd-title" class="fsd-title">Choose File Share Mode</span>
+    </div>
+    <button class="fsd-close-btn" (click)="closeFileShareModeDialog()" title="Close">
+      <i class="fa fa-times"></i>
+    </button>
+  </div>
+
+  <div class="fsd-body">
+    <p class="fsd-copy">
+      <strong>{{ pendingFileShareSelection?.name }}</strong> looks like a browser-friendly file.
+      Choose the direct browser path for best native playback when supported, or the server RTMP path for broader codec handling and track selection.
+    </p>
+
+    <div class="fsd-option-grid">
+      <button class="fsd-option-card" (click)="chooseWebRtcFileShare()">
+        <div class="fsd-option-header">
+          <span class="fsd-option-title">WebRTC</span>
+          <span class="fsd-chip">Direct</span>
+        </div>
+        <p class="fsd-option-text">
+          Uses the browser's native decoder and capture stream. Best when the file already plays cleanly in the browser.
+        </p>
+        <div class="fsd-option-meta">Lower latency · keeps the existing SFU path</div>
+      </button>
+
+      <button class="fsd-option-card" (click)="chooseRtmpFileShare()">
+        <div class="fsd-option-header">
+          <span class="fsd-option-title">RTMP</span>
+          <span class="fsd-chip">Server Transcode</span>
+        </div>
+        <p class="fsd-option-text">
+          Uses the server ffmpeg pipeline. Better when you want audio/subtitle selection or when browser playback is unreliable.
+        </p>
+        <div class="fsd-option-meta">More compatible · supports RTMP track policy</div>
+      </button>
+    </div>
+  </div>
+
+  <div class="fsd-footer">
+    <button class="btn btn-secondary" (click)="closeFileShareModeDialog()">Cancel</button>
+  </div>
+</div>
 
 <div id="side-nav-drag-menu" [class.mobile-menu]="isMobile" cdkDrag (cdkDragEnded)="onDragEnded($event)"
   *ngIf="!WhiteboardActive&&!BlackjackActive" class="status-box bg-gray-900 rounded"
@@ -123,20 +172,21 @@
   <span *ngIf="Privileges>=1&&isMobile===false" [ngStyle]="{'font-size.%': GetFontSize()}"
     class="badge badge-dreck p-2 block pointer live-ctrl-btn"
     [class.text-danger]="isStreaming" [class.text-light]="!isStreaming"
-    [title]="isStreaming ? 'Stop streaming' : 'Go Live — share your screen'"
+    [title]="isStreaming ? (liveAudience === 'room' ? 'Stop room stream' : 'Stop live stream') : 'Go Live — choose member list or room stage'"
     (click)="isStreaming ? stopLive() : goLive()">
     <i class="fa text-danger" [class.fa-circle]="!isStreaming" [class.fa-stop-circle]="isStreaming"
        [class.live-pulse]="isStreaming" aria-hidden="true"></i>
     <span class="menu-hide menu-msg unselectable">{{ isStreaming ? ' Stop' : ' Live' }}</span>
   </span>
-  <!-- Share File / Stop Share button -->
-  <span *ngIf="Privileges>=1&&isMobile===false&&!isStreaming&&(isFileSharingActive||(!webrtcService.fileShareActive.value&&!webrtcService.isPreparingFileShareHost))" [ngStyle]="{'font-size.%': GetFontSize()}"
+  <!-- Share File / Stop Share / Cancel button (RTMP path) -->
+  <span *ngIf="Privileges>=1&&isMobile===false&&!isStreaming&&(isFileSharingActive||isPreparingAnyFileShare||canStartFileShare)" [ngStyle]="{'font-size.%': GetFontSize()}"
     class="badge badge-dreck p-2 block pointer"
-    [class.text-danger]="isFileSharingActive" [class.text-light]="!isFileSharingActive"
-    [title]="isFileSharingActive ? 'Stop file share' : 'Share a local video or audio file with the room'"
-    (click)="isFileSharingActive ? stopFileShare() : openFileShare()">
+    [class.text-danger]="isFileSharingActive || isPreparingAnyFileShare"
+    [class.text-light]="!isFileSharingActive && !isPreparingAnyFileShare"
+    [title]="isFileSharingActive ? 'Stop file share' : (isPreparingAnyFileShare ? 'Cancel upload' : 'Share a local video or audio file with the room')"
+    (click)="(isFileSharingActive || isPreparingAnyFileShare) ? stopFileShare() : openFileShare()">
     <i class="fa fa-file-video-o" aria-hidden="true"></i>
-    <span class="menu-hide menu-msg unselectable">{{ isFileSharingActive ? ' Stop' : ' Share' }}</span>
+    <span class="menu-hide menu-msg unselectable">{{ isFileSharingActive ? ' Stop' : (isPreparingAnyFileShare ? ' Cancel' : ' Share') }}</span>
   </span>
   <input #fileSharePickerInput type="file" accept="video/*,audio/*" style="display:none"
     (change)="onFileSharePicked($event)">

@@ -1,0 +1,230 @@
+<div class="file-share-container position-relative vh-big bg-black">
+
+  <div *ngIf="IsHost && showPreferenceDialog && pendingHostFile && !isLoading"
+       class="position-absolute text-light rtmp-setup-overlay">
+    <div class="rtmp-setup-panel">
+      <div class="rtmp-setup-header">
+        <div>
+          <div class="rtmp-setup-title">RTMP Stream Preferences</div>
+          <div class="rtmp-setup-subtitle">{{ pendingHostFile.name }}</div>
+        </div>
+        <button class="rtmp-setup-close" (click)="cancelPendingHostShare()" title="Cancel">
+          <i class="fa fa-times" aria-hidden="true"></i>
+        </button>
+      </div>
+
+      <div class="rtmp-setup-body">
+        <div class="rtmp-setup-section">
+          <div class="rtmp-setup-section-title">Subtitles</div>
+          <div class="rtmp-choice-grid">
+            <button *ngFor="let option of subtitleModeOptions"
+                    class="rtmp-choice-card"
+                    [class.selected]="selectedSubtitleMode === option.key"
+                    (click)="selectedSubtitleMode = option.key">
+              <div class="rtmp-choice-title">{{ option.label }}</div>
+              <div class="rtmp-choice-copy">{{ option.description }}</div>
+            </button>
+          </div>
+        </div>
+
+        <div class="rtmp-setup-section">
+          <div class="rtmp-setup-section-title">Audio Priority</div>
+          <div class="rtmp-audio-order-list">
+            <div *ngFor="let language of audioLanguagePriority; let i = index" class="rtmp-audio-order-item">
+              <div class="rtmp-audio-order-rank">{{ i + 1 }}</div>
+              <div class="rtmp-audio-order-label">{{ getAudioLanguageLabel(language) }}</div>
+              <div class="rtmp-audio-order-actions">
+                <button class="ctrl-btn" (click)="moveAudioLanguage(i, -1)" [disabled]="i === 0" title="Move up">
+                  <i class="fa fa-chevron-up" aria-hidden="true"></i>
+                </button>
+                <button class="ctrl-btn" (click)="moveAudioLanguage(i, 1)" [disabled]="i === audioLanguagePriority.length - 1" title="Move down">
+                  <i class="fa fa-chevron-down" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="rtmp-setup-help">
+            Auto subtitles only apply when the winning audio track is Japanese. If no usable subtitle track exists, Japanese is pushed behind your explicit non-Japanese choices.
+          </div>
+        </div>
+      </div>
+
+      <div class="rtmp-setup-footer">
+        <button class="btn btn-secondary" (click)="cancelPendingHostShare()">Cancel</button>
+        <button class="btn btn-primary" (click)="confirmHostShareSettings()">Start RTMP Stream</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── HOST: upload/loading spinner ───────────────────────────────────── -->
+  <div *ngIf="IsHost && isLoading" class="file-share-status text-center text-light">
+    <div class="spinner-border text-main-color mb-3" role="status">
+      <span class="sr-only">Uploading…</span>
+    </div>
+    <p class="small">Uploading… {{ uploadProgress }}%</p>
+    <div class="progress mt-2" style="width: 220px; margin: 0 auto;">
+      <div class="progress-bar bg-main-color"
+           role="progressbar"
+           [style.width.%]="uploadProgress"
+           [attr.aria-valuenow]="uploadProgress"
+           aria-valuemin="0" aria-valuemax="100">
+      </div>
+    </div>
+  </div>
+
+  <!-- ── HOST: load error ───────────────────────────────────────────────── -->
+  <div *ngIf="IsHost && loadError && !isStreamActive" class="file-share-status text-center">
+    <i class="fa fa-exclamation-triangle fa-2x mb-2 text-danger" aria-hidden="true"></i>
+    <p class="small text-danger mt-1">{{ loadError }}</p>
+  </div>
+
+  <!-- ── VIEWER: waiting for stream ─────────────────────────────────────── -->
+  <div *ngIf="!IsHost && !isStreamActive" class="file-share-status text-center text-light">
+    <div class="spinner-border text-main-color mb-3" role="status">
+      <span class="sr-only">Connecting...</span>
+    </div>
+    <p class="small">Connecting to stream…</p>
+  </div>
+
+  <div *ngIf="isStreamActive && isAwaitingStreamData"
+       class="file-share-status text-center text-light">
+    <div class="spinner-border text-main-color mb-3" role="status">
+      <span class="sr-only">Waiting for stream...</span>
+    </div>
+    <p class="small">
+      {{ getAwaitingCopy() }}
+    </p>
+    <p *ngIf="IsHost && isBackgroundUploading" class="small text-light-50 mb-0">
+      Seeking unlocks after the upload completes and the duration is known.
+    </p>
+  </div>
+
+  <!-- ── VIDEO ELEMENT (always in DOM so ViewChild is always valid) ─────── -->
+  <video
+    #playerVideo
+    [class.d-none]="!isStreamActive || isAwaitingStreamData || playbackMode !== 'rtmp'"
+    class="file-share-video w-100 h-100"
+    [attr.controls]="IsHost ? null : true"
+    autoplay
+    playsinline
+    style="object-fit: contain; max-height: 100%; background: #000;">
+  </video>
+
+  <video
+    #vodVideo
+    [class.d-none]="!isStreamActive || playbackMode !== 'vod'"
+    class="file-share-video video-js vjs-default-skin w-100 h-100"
+    controls
+    playsinline
+    style="object-fit: contain; max-height: 100%; background: #000;">
+  </video>
+
+  <!-- ── VIEWER: paused overlay ────────────────────────────────────────── -->
+  <div *ngIf="!IsHost && isStreamActive && playbackMode === 'rtmp' && isPaused"
+       class="position-absolute d-flex flex-column align-items-center justify-content-center text-light pause-overlay">
+    <i class="fa fa-pause-circle fa-3x mb-2 text-main-color" aria-hidden="true"></i>
+    <span class="small">Paused by {{ sharerName }}</span>
+  </div>
+
+  <!-- ── HOST CONTROLS ─────────────────────────────────────────────────── -->
+  <ng-container *ngIf="IsHost && isStreamActive && playbackMode === 'rtmp'">
+
+    <!-- Paused overlay (large centred play button) -->
+    <div *ngIf="hostPaused && !isAwaitingStreamData"
+         class="position-absolute d-flex flex-column align-items-center justify-content-center text-light pause-overlay"
+         style="cursor: pointer; pointer-events: all;"
+         (click)="togglePlayPause()">
+      <i class="fa fa-play-circle fa-4x mb-2 text-main-color" aria-hidden="true"></i>
+      <span class="small">Paused — click to resume</span>
+    </div>
+
+    <!-- Media control bar -->
+    <div class="server-controls">
+
+      <!-- Seek row -->
+      <div class="seek-row">
+        <span class="time-label">{{ formatTime(hostPosition) }}</span>
+        <div class="seek-track">
+          <div class="seek-fill" [style.width.%]="seekFillPercent"></div>
+          <input type="range"
+                 class="seek-input"
+                 min="0"
+                 [max]="hostDuration ?? 100"
+                 step="0.5"
+                 [value]="hostPosition"
+               [disabled]="!hostDuration || !canSeek || isAwaitingStreamData"
+                 (input)="onSeekInput($event)"
+                 (change)="onSeekChange($event)"
+               [title]="isAwaitingStreamData ? 'Waiting for stream data before seeking becomes available' : (!canSeek ? 'Seeking becomes available after the upload finishes and the stream is seekable' : (!hostDuration ? 'Waiting for the file duration to become available' : 'Seek'))">
+        </div>
+        <span class="time-label">{{ formatTime(hostDuration) }}</span>
+      </div>
+
+      <!-- Buttons row -->
+      <div class="controls-row">
+
+        <!-- Play / Pause -->
+        <button class="ctrl-btn" (click)="togglePlayPause()" [disabled]="isAwaitingStreamData" [title]="isAwaitingStreamData ? 'Waiting for stream data' : (hostPaused ? 'Resume' : 'Pause')">
+          <i class="fa fa-fw fa-lg"
+             [class.fa-play]="hostPaused"
+             [class.fa-pause]="!hostPaused"
+             aria-hidden="true"></i>
+        </button>
+
+        <!-- Mute -->
+        <button class="ctrl-btn" (click)="toggleMute()" [title]="hostMuted ? 'Unmute' : 'Mute'">
+          <i class="fa fa-fw"
+             [class.fa-volume-up]="!hostMuted && hostVolume > 0.5"
+             [class.fa-volume-down]="!hostMuted && hostVolume > 0 && hostVolume <= 0.5"
+             [class.fa-volume-off]="hostMuted || hostVolume === 0"
+             aria-hidden="true"></i>
+        </button>
+
+        <!-- Volume slider -->
+        <input type="range"
+               class="vol-slider"
+               min="0" max="1" step="0.02"
+               [value]="hostMuted ? 0 : hostVolume"
+               (input)="onVolumeInput($event)"
+               title="Volume">
+
+        <!-- Background upload badge -->
+        <span *ngIf="isBackgroundUploading" class="upload-badge" title="Seeking unavailable while uploading">
+          <i class="fa fa-cloud-upload" aria-hidden="true"></i>
+          {{ uploadProgress }}%
+        </span>
+
+        <span style="flex: 1;"></span>
+
+        <!-- Fullscreen -->
+        <button class="ctrl-btn" (click)="toggleFullscreen()" title="Fullscreen">
+          <i class="fa fa-expand" aria-hidden="true"></i>
+        </button>
+
+        <!-- Stop -->
+        <button class="ctrl-btn stop-btn" (click)="stopSharing()" [disabled]="isStopping" title="Stop sharing">
+          <i class="fa fa-stop" aria-hidden="true"></i>
+          <span class="d-none d-sm-inline ms-1"> Stop</span>
+        </button>
+
+      </div>
+    </div>
+
+    <!-- Upload error snackbar -->
+    <div *ngIf="loadError"
+         class="position-absolute d-flex align-items-center px-2 py-1"
+         style="bottom: 76px; right: 0; background: rgba(160,0,0,0.9); border-radius: 0.25rem 0 0 0.25rem; max-width: 320px; gap: 0.5rem;">
+      <i class="fa fa-exclamation-triangle text-light" aria-hidden="true"></i>
+      <span class="text-light" style="font-size: 0.75rem; flex: 1;">{{ loadError }}</span>
+      <button class="btn btn-sm btn-close btn-close-white" (click)="loadError = null" aria-label="Dismiss"></button>
+    </div>
+
+  </ng-container>
+
+  <div *ngIf="isStreamActive && statusBannerText"
+       class="position-absolute px-2 py-1 text-light"
+       style="top: 0; right: 0; background: rgba(0,0,0,0.55); border-radius: 0 0 0 0.35rem; font-size: 0.75rem;">
+    {{ statusBannerText }}
+  </div>
+
+</div>

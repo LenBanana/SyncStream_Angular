@@ -2,11 +2,12 @@
 <app-stream-start-dialog
   *ngIf="showStreamDialog"
   [browserSettings]="browserSettings"
+  [audienceMode]="'room'"
   (confirmed)="onStreamDialogConfirmed($event)"
   (cancelled)="onStreamDialogCancelled()">
 </app-stream-start-dialog>
 
-<div class="webrtc-viewer vh-big d-flex align-items-center justify-content-center bg-black position-relative">
+<div class="webrtc-viewer vh-big d-flex align-items-center justify-content-center bg-black position-relative h-100">
 
   <!-- Broadcast controls (host / moderator only, visible when NOT already streaming) -->
   <div *ngIf="IsHost && !isBroadcasting" class="position-absolute top-0 right-0 m-2">
@@ -20,16 +21,31 @@
     <span class="badge badge-primary mr-2">
       <i class="fa fa-circle blink"></i> Broadcasting…
     </span>
+    <button class="btn btn-sm btn-outline-light mr-2" (click)="toggleLocalPreview()"
+            [title]="showLocalPreview ? 'Hide local preview' : 'Show local preview'">
+      <i class="fa" [class.fa-eye-slash]="showLocalPreview" [class.fa-eye]="!showLocalPreview"></i>
+      {{ showLocalPreview ? 'Hide preview' : 'Show preview' }}
+    </button>
     <button class="btn btn-sm btn-outline-light" (click)="stopBroadcast()" title="Stop broadcast">
       <i class="fa fa-stop"></i> Stop
     </button>
   </div>
 
-  <div *ngIf="isLoading && !connectionFailed" class="text-center text-light">
+  <div *ngIf="isLoading && !connectionFailed && !isShowingLocalPreview && !isPreviewHiddenState" class="text-center text-light">
     <div class="spinner-border text-main-color mb-3" role="status">
       <span class="sr-only">Connecting…</span>
     </div>
     <p class="small">Connecting to stream…</p>
+  </div>
+
+  <div *ngIf="isPreviewHiddenState" class="webrtc-preview-hidden text-center text-light px-4">
+    <div class="webrtc-preview-hidden__badge mb-3">
+      <i class="fa fa-circle blink mr-2"></i>You are live to the room
+    </div>
+    <p class="small mb-3">Your stream is still going out to everyone. The local preview is hidden on purpose.</p>
+    <button class="btn btn-sm btn-outline-light" (click)="toggleLocalPreview()">
+      <i class="fa fa-eye mr-1"></i>Show preview
+    </button>
   </div>
 
   <!-- Connection failure prompt -->
@@ -45,11 +61,23 @@
   <video
     #remoteVideo
     [class.d-none]="!hasStream"
+    controls
     class="webrtc-video w-100 h-100"
     autoplay
     playsinline
     style="object-fit: contain; max-height: 100%;">
   </video>
+
+  <div *ngIf="isShowingLocalPreview" class="webrtc-local-preview-shell w-100 h-100 position-relative">
+    <video
+      #localPreviewVideo
+      class="webrtc-video w-100 h-100"
+      autoplay
+      muted
+      playsinline
+      style="object-fit: contain; max-height: 100%;">
+    </video>
+  </div>
 
   <!-- Recording indicator (visible to all when recording is active) -->
   <div *ngIf="isRecording" class="position-absolute top-0 left-0 m-2 d-flex align-items-center">
@@ -59,9 +87,9 @@
   </div>
 
   <!-- Overlay controls (shown when stream is active) -->
-  <div *ngIf="hasStream" class="webrtc-controls position-absolute bottom-0 right-0 p-2 d-flex align-items-center">
+  <div *ngIf="hasStream" class="webrtc-controls position-absolute bottom-0 right-0 p-2 d-flex align-items-center d-none">
 
-    <!-- Quality selector (viewer: adaptive bitrate) -->
+    <!-- Quality selector (viewer: adaptive bitrate)
     <div class="btn-group btn-group-sm mr-2" role="group" aria-label="Stream quality">
       <button class="btn btn-outline-secondary" (click)="setQualityLow()" title="Low quality (saves bandwidth)">
         <i class="fa fa-signal" style="opacity:0.4"></i>
@@ -72,7 +100,7 @@
       <button class="btn btn-outline-secondary" (click)="setQualityHigh()" title="High quality">
         <i class="fa fa-signal"></i>
       </button>
-    </div>
+    </div> -->
 
     <!-- Recording controls (host only) -->
     <ng-container *ngIf="IsHost">

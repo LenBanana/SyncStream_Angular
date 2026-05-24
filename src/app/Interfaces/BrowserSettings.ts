@@ -30,16 +30,19 @@ export class WebRtcSettings {
   playerWidth: number;
   shareScreen: boolean;
   shareMicrophone: boolean;
+  shareSystemAudio: boolean;
   maxVideoBitrate: number;
   idealResolution: Resolution;
   idealFrameRate: number;
   microphoneId: string;
   cameraId: string;
   microphoneVolume: number;
+  systemAudioVolume: number;
 
   constructor() {
     this.shareScreen = true;
     this.shareMicrophone = false;
+    this.shareSystemAudio = false;
     this.maxVideoBitrate = 300000;
     this.idealResolution = Resolution.FHD;
     this.idealFrameRate = 60;
@@ -47,6 +50,7 @@ export class WebRtcSettings {
     this.microphoneId = null;
     this.cameraId = null;
     this.microphoneVolume = 100;
+    this.systemAudioVolume = 100;
   }
 }
 

@@ -8,7 +8,7 @@ import { UserUpdate } from '../player/player.component';
 import { AlertType, Dialog } from '../Interfaces/Dialog';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
 import { WebrtcService } from '../media/webrtc/webrtc-service/webrtc.service';
-import { StreamStartConfig } from '../media/webrtc/stream-start-dialog/stream-start-dialog.component';
+import { StreamAudience, StreamStartConfig } from '../media/webrtc/stream-start-dialog/stream-start-dialog.component';
 import { BrowserSettings, browserSettingName } from '../Interfaces/BrowserSettings';
 import * as sha512 from 'js-sha512';
 declare var $:any
@@ -37,6 +37,7 @@ export class UserlistComponent implements OnInit, OnDestroy {
   Members: Member[] = [];
   /** True while the current user is broadcasting a P2P stream. */
   isStreaming: boolean = false;
+  liveAudience: StreamAudience = 'personal';
   showStreamDialog = false;
   browserSettings: BrowserSettings = this._loadSettings();
 
@@ -174,8 +175,13 @@ export class UserlistComponent implements OnInit, OnDestroy {
   async onStreamDialogConfirmed(config: StreamStartConfig): Promise<void> {
     this.showStreamDialog = false;
     try {
-      await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
+      if (config.audience === 'room') {
+        await this.webrtcService.startStreamingToRoom(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
+      } else {
+        await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
+      }
       this.isStreaming = true;
+      this.liveAudience = config.audience;
       // Auto-stop when the browser's native screen-share dialog is closed.
       config.stream.getVideoTracks()[0]?.addEventListener('ended', () => this.stopLive());
     } catch (err) {
@@ -186,8 +192,13 @@ export class UserlistComponent implements OnInit, OnDestroy {
 
   /** Stop the current P2P broadcast. */
   async stopLive(): Promise<void> {
-    await this.webrtcService.stopStreaming(this.UniqueId);
+    if (this.liveAudience === 'room') {
+      await this.webrtcService.stopStreamingToRoom(this.UniqueId);
+    } else {
+      await this.webrtcService.stopStreaming(this.UniqueId);
+    }
     this.isStreaming = false;
+    this.liveAudience = 'personal';
   }
 
   /** Opt-in watch: open the popout viewer for a specific streaming member. */

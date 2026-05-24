@@ -24,6 +24,11 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() IsHost: boolean = false;
 
   @ViewChild('remoteVideo') remoteVideoRef!: ElementRef<HTMLVideoElement>;
+  @ViewChild('localPreviewVideo')
+  set localPreviewVideoElement(value: ElementRef<HTMLVideoElement> | undefined) {
+    this.localPreviewVideoRef = value;
+    this.syncLocalPreview();
+  }
 
   hasStream: boolean = false;
   isLoading: boolean = true;
@@ -31,6 +36,7 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
   recordingInfo: SfuRecordingInfo | null = null;
   isRecording: boolean = false;
   isBroadcasting: boolean = false;
+  showLocalPreview: boolean = true;
 
   /** Controls visibility of the stream-start dialog. */
   showStreamDialog: boolean = false;
@@ -38,6 +44,10 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private sub: Subscription | null = null;
   private recordingSub: Subscription | null = null;
+  private broadcastStateSub: Subscription | null = null;
+  private roomStagePreviewSub: Subscription | null = null;
+  private localPreviewVideoRef: ElementRef<HTMLVideoElement> | undefined;
+  private localPreviewStream: MediaStream | null = null;
 
   constructor(public webrtcService: WebrtcService) {}
 
@@ -70,6 +80,21 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
       this.recordingInfo = info;
       this.isRecording = info !== null;
     });
+
+    this.broadcastStateSub = this.webrtcService.roomStageBroadcastActive.subscribe(active => {
+      this.isBroadcasting = active;
+      if (active) {
+        this.isLoading = false;
+      }
+    });
+
+    this.roomStagePreviewSub = this.webrtcService.roomStagePreviewStream.subscribe(stream => {
+      this.localPreviewStream = stream;
+      if (stream) {
+        this.isLoading = false;
+      }
+      this.syncLocalPreview();
+    });
   }
 
   ngAfterViewInit(): void {
@@ -85,7 +110,18 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
     this.recordingSub?.unsubscribe();
+    this.broadcastStateSub?.unsubscribe();
+    this.roomStagePreviewSub?.unsubscribe();
     this.detachStream();
+    this.clearLocalPreview();
+  }
+
+  get isShowingLocalPreview(): boolean {
+    return this.isBroadcasting && !this.hasStream && this.showLocalPreview && !!this.localPreviewStream;
+  }
+
+  get isPreviewHiddenState(): boolean {
+    return this.isBroadcasting && !this.hasStream && !this.showLocalPreview && !!this.localPreviewStream;
   }
 
   private attachStream(stream: MediaStream): void {
@@ -123,13 +159,15 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     try {
+      this.showLocalPreview = true;
+      this.isLoading = false;
       // Stop broadcasting if the user ends the capture via the browser's built-in stop button.
       config.stream.getVideoTracks()[0]?.addEventListener('ended', () => {
         if (this.isBroadcasting) this.stopBroadcast();
       });
-      await this.webrtcService.broadcastToRoom(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
-      this.isBroadcasting = true;
+      await this.webrtcService.startStreamingToRoom(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
     } catch (err) {
+      this.isLoading = true;
       console.error('Failed to start broadcast:', err);
     }
   }
@@ -142,8 +180,14 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
   /** Stop the active broadcast. */
   async stopBroadcast(): Promise<void> {
     if (!this.UniqueId) return;
-    await this.webrtcService.stopBroadcast(this.UniqueId);
-    this.isBroadcasting = false;
+    await this.webrtcService.stopStreamingToRoom(this.UniqueId);
+    this.showLocalPreview = true;
+    this.isLoading = true;
+  }
+
+  toggleLocalPreview(): void {
+    this.showLocalPreview = !this.showLocalPreview;
+    this.syncLocalPreview();
   }
 
   /** Request ICE restart when the P2P connection degrades. */
@@ -194,5 +238,31 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
   setQualityLow(): void {
     const consumers = this.webrtcService.getSfuConsumerIds();
     consumers.forEach(id => this.webrtcService.setPreferredLayers(this.UniqueId, id, 0, 2));
+  }
+
+  private syncLocalPreview(): void {
+    const video = this.localPreviewVideoRef?.nativeElement;
+    if (!video) return;
+
+    if (!this.showLocalPreview || !this.localPreviewStream) {
+      video.pause();
+      video.srcObject = null;
+      return;
+    }
+
+    if (video.srcObject !== this.localPreviewStream) {
+      video.srcObject = this.localPreviewStream;
+    }
+    video.muted = true;
+    video.play().catch(() => {
+      // Muted local preview should normally autoplay, but this remains best-effort.
+    });
+  }
+
+  private clearLocalPreview(): void {
+    const video = this.localPreviewVideoRef?.nativeElement;
+    if (!video) return;
+    video.pause();
+    video.srcObject = null;
   }
 }

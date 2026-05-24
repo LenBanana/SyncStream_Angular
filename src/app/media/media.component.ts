@@ -94,6 +94,25 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
           this.CurrentPlayerType = PlayerType.FileShare;
         }
       }),
+      // RTMP file share: side-nav emitted rtmpFileShareHostRequested — switch to RtmpFileShare player.
+      this.webRtcService.rtmpFileShareHostRequested.subscribe(() => {
+        if (this.CurrentPlayerType !== PlayerType.RtmpFileShare) {
+          this.LastPlayerType = this.CurrentPlayerType;
+          this.CurrentPlayerType = PlayerType.RtmpFileShare;
+        }
+      }),
+      // RTMP file share: started by someone else in the room — switch to viewer.
+      this.webRtcService.rtmpFileShareActive.subscribe(info => {
+        if (info && !this.webRtcService.isRtmpFileShareHost && !this.webRtcService.isPreparingRtmpFileShareHost) {
+          if (this.CurrentPlayerType !== PlayerType.RtmpFileShare) {
+            this.LastPlayerType = this.CurrentPlayerType;
+            this.CurrentPlayerType = PlayerType.RtmpFileShare;
+          }
+        }
+        if (!info && this.CurrentPlayerType === PlayerType.RtmpFileShare) {
+          this.CurrentPlayerType = this.LastPlayerType;
+        }
+      }),
       this.signalrService.pingStream.subscribe(ping => {
         if (!ping) {
           return;

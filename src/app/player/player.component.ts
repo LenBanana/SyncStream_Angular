@@ -742,7 +742,9 @@ export enum PlayerType {
   Chess,
   WebRtc,
   /** A room member is streaming a local video file to the room via WebRTC/SFU. */
-  FileShare
+  FileShare,
+  /** A room member is streaming a local video file to the room via RTMP/HLS. */
+  RtmpFileShare
 }
 
 export enum UserUpdate {

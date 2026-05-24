@@ -97,6 +97,39 @@
   background: #000;
 }
 
+.popout-play-overlay {
+  position: absolute;
+  inset: auto 50% 18px auto;
+  transform: translateX(50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.88);
+  color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+.popout-play-overlay:hover {
+  background: rgba(35, 35, 35, 0.94);
+}
+
+.popout-audio-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.68);
+  color: #f2f2f2;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
 // ---- Resize handle (bottom-right corner) ----
 
 .resize-handle {

@@ -35,6 +35,19 @@
        reference stays alive for the PiP API. Hidden via CSS when minimized. -->
   <div class="popout-body" [class.popout-body--hidden]="minimized">
     <video #popoutVideo class="popout-video" autoplay playsinline></video>
+
+    <button
+      *ngIf="playbackActivationRequired"
+      type="button"
+      class="popout-play-overlay"
+      (click)="resumePlaybackWithAudio()">
+      <i class="fa" [class.fa-volume-up]="playbackStartedMuted" [class.fa-play]="!playbackStartedMuted" aria-hidden="true"></i>
+      <span>{{ playbackStartedMuted ? 'Enable audio' : 'Start playback' }}</span>
+    </button>
+
+    <div *ngIf="!hasVideoTrack && hasAudioTrack" class="popout-audio-badge">
+      Audio-only stream
+    </div>
   </div>
 
   <!-- Resize handle (bottom-right corner) — hidden when minimized -->

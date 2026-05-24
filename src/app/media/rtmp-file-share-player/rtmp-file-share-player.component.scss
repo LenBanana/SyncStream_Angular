@@ -1,0 +1,328 @@
+.file-share-container {
+  width: 100%;
+  height: 100%;
+  min-height: 60vh;
+  overflow: hidden;
+}
+
+.file-share-video {
+  display: block;
+  background: #000;
+  width: 100%;
+  height: 100%;
+}
+
+.file-share-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.pause-overlay {
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.rtmp-setup-overlay {
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  z-index: 5;
+  pointer-events: all;
+}
+
+.rtmp-setup-panel {
+  width: min(760px, 94vw);
+  max-height: 88vh;
+  overflow: auto;
+  background: rgba(17, 24, 39, 0.96);
+  border: 1px solid rgba(120, 139, 204, 0.35);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.rtmp-setup-header,
+.rtmp-setup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(120, 139, 204, 0.2);
+}
+
+.rtmp-setup-footer {
+  border-bottom: 0;
+  border-top: 1px solid rgba(120, 139, 204, 0.2);
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.rtmp-setup-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.rtmp-setup-subtitle {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.82rem;
+  margin-top: 4px;
+  word-break: break-word;
+}
+
+.rtmp-setup-close {
+  background: transparent;
+  border: 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 1rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+}
+
+.rtmp-setup-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.rtmp-setup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rtmp-setup-section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.rtmp-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.rtmp-choice-card {
+  text-align: left;
+  border-radius: 10px;
+  border: 1px solid rgba(120, 139, 204, 0.28);
+  background: rgba(30, 37, 57, 0.95);
+  padding: 12px;
+  color: inherit;
+  transition: border-color 0.12s ease, transform 0.12s ease, background 0.12s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    border-color: #4d8cff;
+  }
+
+  &.selected {
+    border-color: #4d8cff;
+    background: rgba(24, 40, 78, 0.95);
+  }
+}
+
+.rtmp-choice-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.rtmp-choice-copy,
+.rtmp-setup-help {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.rtmp-audio-order-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rtmp-audio-order-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 10px;
+  background: rgba(30, 37, 57, 0.95);
+  border: 1px solid rgba(120, 139, 204, 0.2);
+  padding: 10px 12px;
+}
+
+.rtmp-audio-order-rank {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(77, 140, 255, 0.18);
+  color: #9ec2ff;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.rtmp-audio-order-label {
+  flex: 1;
+}
+
+.rtmp-audio-order-actions {
+  display: flex;
+  gap: 4px;
+}
+
+@media (max-width: 767px) {
+  .rtmp-choice-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ── Control bar ──────────────────────────────────────────────────────────────
+
+.server-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.88) 35%);
+  padding: 28px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: all;
+}
+
+.seek-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 2px;
+
+  .time-label {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    min-width: 36px;
+    text-align: center;
+    user-select: none;
+  }
+}
+
+.seek-track {
+  position: relative;
+  flex: 1;
+  height: 18px;
+  display: flex;
+  align-items: center;
+
+  .seek-fill {
+    position: absolute;
+    left: 0;
+    height: 4px;
+    background: #00b4d8;
+    border-radius: 2px;
+    pointer-events: none;
+    transition: width 0.1s linear;
+  }
+
+  .seek-input {
+    position: absolute;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 4px;
+    margin: 0;
+    cursor: pointer;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 2px;
+    accent-color: #00b4d8;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &::-webkit-slider-thumb {
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+    }
+
+    &::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      border: none;
+      box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+      cursor: pointer;
+    }
+  }
+}
+
+.controls-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 36px;
+}
+
+.ctrl-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.9);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  display: flex;
+  align-items: center;
+  font-size: 0.9rem;
+  line-height: 1;
+  flex-shrink: 0;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+  }
+
+  &.stop-btn {
+    color: #ff6b6b;
+    &:hover { background: rgba(220, 50, 50, 0.35); color: #ff8888; }
+  }
+}
+
+.vol-slider {
+  width: 80px;
+  cursor: pointer;
+  accent-color: #00b4d8;
+  margin-left: 2px;
+}
+
+.upload-badge {
+  color: rgba(255, 220, 80, 0.9);
+  font-size: 0.7rem;
+  white-space: nowrap;
+  padding: 0 6px;
+  user-select: none;
+}

@@ -1,13 +1,27 @@
 <div class="file-share-container position-relative vh-big bg-black">
 
-  <!-- ── HOST VIEW ─────────────────────────────────────────────────── -->
-  <ng-container *ngIf="IsHost">
+  <!-- ── HOST VIEW (browser-captureStream path) ─────────────────────── -->
+  <ng-container *ngIf="IsHost && !isServerShareMode">
 
     <div *ngIf="isLoading" class="file-share-status text-center text-light">
       <div class="spinner-border text-main-color mb-3" role="status">
         <span class="sr-only">Starting stream...</span>
       </div>
-      <p class="small">Preparing stream...</p>
+      <p *ngIf="!isUploading" class="small">Preparing stream...</p>
+      <p *ngIf="isUploading" class="small">Uploading for server-side streaming… {{ uploadProgress }}%</p>
+      <div *ngIf="isUploading" class="progress mt-2" style="width: 220px; margin: 0 auto;">
+        <div class="progress-bar bg-main-color"
+             role="progressbar"
+             [style.width.%]="uploadProgress"
+             [attr.aria-valuenow]="uploadProgress"
+             aria-valuemin="0" aria-valuemax="100">
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="loadError" class="file-share-status text-center">
+      <i class="fa fa-exclamation-triangle fa-2x mb-2 text-danger" aria-hidden="true"></i>
+      <p class="small text-danger mt-1">{{ loadError }}</p>
     </div>
 
     <video
@@ -21,34 +35,142 @@
 
   </ng-container>
 
-  <!-- ── VIEWER VIEW ───────────────────────────────────────────────── -->
-  <ng-container *ngIf="!IsHost">
+  <!-- ── HOST VIEW (server-side ffmpeg path) + VIEWER VIEW ────────────── -->
+  <!-- [class.d-none] keeps #remoteVideo in the DOM at all times so srcObject
+       can be set before isServerShareMode is true (avoids ViewChild timing race). -->
+  <div [class.d-none]="IsHost && !isServerShareMode" class="h-100 w-100">
 
-    <!-- Connecting -->
+    <!-- Connecting / buffering -->
     <div *ngIf="!hasRemoteStream" class="file-share-status text-center text-light">
       <div class="spinner-border text-main-color mb-3" role="status">
         <span class="sr-only">Connecting...</span>
       </div>
-      <p class="small">Connecting to stream...</p>
+      <p class="small">{{ isServerShareMode ? 'Starting server stream…' : 'Connecting to stream…' }}</p>
     </div>
 
-    <!-- Remote video -->
+    <!--
+      Remote video.
+      - Viewers get native controls (volume, fullscreen, local pause for "step away" use).
+      - Server-mode host has native controls suppressed: pausing locally would NOT pause
+        the SFU stream, so we replace them with custom overlay buttons that drive the
+        server pipeline correctly.
+    -->
     <video
       #remoteVideo
       [class.d-none]="!hasRemoteStream"
       class="file-share-video w-100 h-100"
       autoplay
       playsinline
+      [attr.controls]="isServerShareMode ? (IsHost ? null : true) : true"
       style="object-fit: contain; max-height: 100%; background: #000;">
     </video>
 
-    <!-- Paused overlay -->
-    <div *ngIf="hasRemoteStream && isPaused"
+    <!-- Paused overlay (viewers see this when host pauses) -->
+    <div *ngIf="hasRemoteStream && isPaused && !isServerShareMode"
          class="position-absolute d-flex flex-column align-items-center justify-content-center text-light pause-overlay">
       <i class="fa fa-pause-circle fa-3x mb-2 text-main-color" aria-hidden="true"></i>
       <span class="small">Paused</span>
     </div>
 
-  </ng-container>
+    <!-- Server-mode host controls -->
+    <ng-container *ngIf="isServerShareMode && hasRemoteStream">
+
+      <!-- Large centred play button when paused -->
+      <div *ngIf="serverHostPaused"
+           class="position-absolute d-flex flex-column align-items-center justify-content-center text-light pause-overlay"
+           style="cursor: pointer; pointer-events: all;"
+           (click)="toggleServerHostPlayPause()">
+        <i class="fa fa-play-circle fa-4x mb-2 text-main-color" aria-hidden="true"></i>
+        <span class="small">Paused — click to resume</span>
+      </div>
+
+      <!-- Full media control bar -->
+      <div class="server-controls">
+
+        <!-- Seek row -->
+        <div class="seek-row">
+          <span class="time-label">{{ formatTime(serverHostPosition) }}</span>
+          <div class="seek-track">
+            <div class="seek-fill" [style.width.%]="seekFillPercent"></div>
+            <input type="range"
+                   class="seek-input"
+                   min="0"
+                   [max]="serverHostDuration ?? 100"
+                   step="0.5"
+                   [value]="serverHostPosition"
+                   [disabled]="!serverHostDuration || isBackgroundUploading"
+                   (input)="onServerHostSeekInput($event)"
+                   (change)="onServerHostSeekChange($event)"
+                   [title]="isBackgroundUploading ? 'Seeking unavailable while uploading' : 'Seek'">
+          </div>
+          <span class="time-label">{{ formatTime(serverHostDuration) }}</span>
+        </div>
+
+        <!-- Buttons row -->
+        <div class="controls-row">
+
+          <!-- Play / Pause -->
+          <button class="ctrl-btn"
+                  (click)="toggleServerHostPlayPause()"
+                  [title]="serverHostPaused ? 'Resume' : 'Pause'">
+            <i class="fa fa-fw fa-lg"
+               [class.fa-play]="serverHostPaused"
+               [class.fa-pause]="!serverHostPaused"
+               aria-hidden="true"></i>
+          </button>
+
+          <!-- Mute -->
+          <button class="ctrl-btn"
+                  (click)="toggleServerHostMute()"
+                  [title]="serverHostMuted ? 'Unmute' : 'Mute'">
+            <i class="fa fa-fw"
+               [class.fa-volume-up]="!serverHostMuted && serverHostVolume > 0.5"
+               [class.fa-volume-down]="!serverHostMuted && serverHostVolume > 0 && serverHostVolume <= 0.5"
+               [class.fa-volume-off]="serverHostMuted || serverHostVolume === 0"
+               aria-hidden="true"></i>
+          </button>
+
+          <!-- Volume slider -->
+          <input type="range"
+                 class="vol-slider"
+                 min="0" max="1" step="0.02"
+                 [value]="serverHostMuted ? 0 : serverHostVolume"
+                 (input)="onServerHostVolumeInput($event)"
+                 title="Volume">
+
+          <!-- Upload badge (seek locked) -->
+          <span *ngIf="isBackgroundUploading" class="upload-badge">
+            <i class="fa fa-cloud-upload" aria-hidden="true"></i>
+            {{ uploadProgress }}% — seek locked
+          </span>
+
+          <span style="flex: 1;"></span>
+
+          <!-- Fullscreen -->
+          <button class="ctrl-btn" (click)="toggleServerHostFullscreen()" title="Fullscreen">
+            <i class="fa fa-expand" aria-hidden="true"></i>
+          </button>
+
+          <!-- Stop -->
+          <button class="ctrl-btn stop-btn" (click)="stopSharing()" title="Stop sharing">
+            <i class="fa fa-stop" aria-hidden="true"></i>
+            <span class="d-none d-sm-inline ms-1">Stop</span>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Upload error snackbar (above control bar) -->
+      <div *ngIf="loadError"
+           class="position-absolute d-flex align-items-center px-2 py-1"
+           style="bottom: 76px; right: 0; background: rgba(160,0,0,0.9); border-radius: 0.25rem 0 0 0.25rem; max-width: 320px; gap: 0.5rem;">
+        <i class="fa fa-exclamation-triangle text-light" aria-hidden="true"></i>
+        <span class="text-light" style="font-size: 0.75rem; flex: 1;">{{ loadError }}</span>
+        <button class="btn btn-sm btn-close btn-close-white" (click)="loadError = null" aria-label="Dismiss"></button>
+      </div>
+
+    </ng-container>
+
+  </div>
 
 </div>

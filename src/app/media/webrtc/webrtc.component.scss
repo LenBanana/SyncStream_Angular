@@ -7,11 +7,43 @@
   display: block;
 }
 
+.webrtc-local-preview-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.webrtc-local-preview-badge .badge {
+  background: rgba(12, 16, 24, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-weight: 600;
+}
+
+.webrtc-local-preview-note {
+  max-width: min(420px, calc(100% - 24px));
+  border-radius: 10px;
+  background: rgba(12, 16, 24, 0.76);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  font-size: 0.82rem;
+}
+
+.webrtc-preview-hidden {
+  max-width: 420px;
+}
+
+.webrtc-preview-hidden__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(12, 16, 24, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-weight: 600;
+}
+
 .webrtc-controls {
   opacity: 0;
   transition: opacity 0.2s ease;
-}
-
-.webrtc-viewer:hover .webrtc-controls {
-  opacity: 1;
 }

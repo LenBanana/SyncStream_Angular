@@ -36,6 +36,41 @@
 
     <!-- ==================== STEP: SOURCE ==================== -->
     <div *ngIf="step === 'source'">
+      <div class="ssd-audience-section">
+        <h2 class="ssd-section-title mb-2">Where should this stream appear?</h2>
+
+        <div *ngIf="showAudienceChoice" class="ssd-audience-grid mb-4">
+          <button
+            type="button"
+            class="ssd-audience-card"
+            [class.selected]="resolvedAudience === 'personal'"
+            (click)="selectAudience('personal')">
+            <div class="ssd-audience-icon"><i class="fa fa-users" aria-hidden="true"></i></div>
+            <div class="ssd-audience-copy">
+              <div class="ssd-audience-title">Member list</div>
+              <div class="ssd-audience-description">People see your live badge and can join when they want.</div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            class="ssd-audience-card"
+            [class.selected]="resolvedAudience === 'room'"
+            (click)="selectAudience('room')">
+            <div class="ssd-audience-icon"><i class="fa fa-television" aria-hidden="true"></i></div>
+            <div class="ssd-audience-copy">
+              <div class="ssd-audience-title">Room stage</div>
+              <div class="ssd-audience-description">Takes over the room player so everyone sees your stream immediately.</div>
+            </div>
+          </button>
+        </div>
+
+        <div *ngIf="!showAudienceChoice" class="ssd-info-box mb-4">
+          <i class="fa" [class.fa-television]="resolvedAudience === 'room'" [class.fa-users]="resolvedAudience === 'personal'" class="mr-2 text-main-color"></i>
+          <strong>{{ resolvedAudienceLabel }}</strong> — {{ audienceSummaryText }}
+        </div>
+      </div>
+
       <h2 class="ssd-section-title">What do you want to share?</h2>
 
       <div *ngIf="isLoading" class="ssd-loading">
@@ -72,10 +107,36 @@
         </button>
       </div>
 
-      <!-- Explain the browser picker limitation once the display source is selected -->
-      <div *ngIf="selectedSourceId === '__display__'" class="ssd-info-box mt-3">
-        <i class="fa fa-info-circle mr-2 text-main-color"></i>
-        After clicking <strong>Next</strong>, your browser will show its own screen/window picker.
+      <!-- Display source controls -->
+      <div *ngIf="selectedSourceId === '__display__'" class="mt-3">
+        <div class="ssd-info-box">
+          <i class="fa fa-info-circle mr-2 text-main-color"></i>
+          After clicking <strong>Next</strong>, your browser will show its own screen/window picker.
+        </div>
+
+        <!-- System audio toggle -->
+        <div class="ssd-audio-row mt-3">
+          <div class="ssd-audio-icon">
+            <i class="fa fa-volume-up fa-lg"
+               [class.text-main-color]="shareSystemAudio"
+               [class.text-muted]="!shareSystemAudio"></i>
+          </div>
+          <div class="ssd-audio-content">
+            <div class="d-flex align-items-center justify-content-between">
+              <span class="ssd-audio-label">Capture System Audio</span>
+              <div class="custom-control custom-switch">
+                <input type="checkbox" class="custom-control-input" id="sysAudioSwitch"
+                       [(ngModel)]="shareSystemAudio">
+                <label class="custom-control-label" for="sysAudioSwitch"></label>
+              </div>
+            </div>
+            <div *ngIf="shareSystemAudio" class="ssd-info-box mt-2 animate-in" style="font-size:0.82rem">
+              <i class="fa fa-lightbulb-o mr-1 text-warning"></i>
+              <strong>For guaranteed audio</strong>, choose <em>Share a Tab</em> in the next dialog and tick
+              <em>Share tab audio</em>. Window and screen mode do not capture audio on most systems.
+            </div>
+          </div>
+        </div>
       </div>
 
       <div *ngIf="errorMessage" class="ssd-error mt-3">
@@ -171,11 +232,31 @@
     <div *ngIf="step === 'audio'">
       <h2 class="ssd-section-title">Audio Settings</h2>
 
-      <!-- System audio note -->
-      <div class="ssd-info-box mb-4">
-        <i class="fa fa-info-circle mr-2 text-main-color"></i>
-        System audio was <strong>{{ shareSystemAudio ? 'included' : 'not included' }}</strong>
-        when you selected your source. You can go back to change it.
+      <!-- System audio section — only for display sources -->
+      <div *ngIf="shareSystemAudio || systemAudioMissing">
+        <!-- Captured OK → show volume slider -->
+        <div *ngIf="shareSystemAudio && !systemAudioMissing" class="ssd-audio-row mb-3">
+          <div class="ssd-audio-icon">
+            <i class="fa fa-volume-up fa-lg text-main-color"></i>
+          </div>
+          <div class="ssd-audio-content">
+            <span class="ssd-audio-label">System Audio</span>
+            <div class="mt-2">
+              <label class="ssd-label-sm">Volume — <strong class="text-main-color">{{systemAudioVolume}}%</strong></label>
+              <input type="range" class="form-control-range ssd-range"
+                     [(ngModel)]="systemAudioVolume"
+                     min="0" max="200" step="5">
+            </div>
+          </div>
+        </div>
+
+        <!-- Not captured → show actionable warning -->
+        <div *ngIf="systemAudioMissing" class="ssd-error mb-3">
+          <i class="fa fa-exclamation-triangle mr-2"></i>
+          Your browser or source did not capture system audio.
+          To include audio, go <strong>Back</strong> and choose <em>Share a Tab</em>, then tick
+          <em>Share tab audio</em> in the browser picker.
+        </div>
       </div>
 
       <!-- Microphone toggle -->
@@ -219,6 +300,10 @@
         <div class="ssd-summary-title"><i class="fa fa-check-circle text-success mr-2"></i>Ready to go!</div>
         <div class="ssd-summary-rows">
           <div class="ssd-summary-row">
+            <span class="ssd-summary-key">Audience</span>
+            <span class="ssd-summary-val">{{ resolvedAudienceLabel }} — {{ audienceSummaryText }}</span>
+          </div>
+          <div class="ssd-summary-row">
             <span class="ssd-summary-key">Source</span>
             <span class="ssd-summary-val">{{ sourceOptions | sourceLabel:selectedSourceId }}</span>
           </div>
@@ -240,7 +325,11 @@
           </div>
           <div class="ssd-summary-row">
             <span class="ssd-summary-key">System Audio</span>
-            <span class="ssd-summary-val">{{shareSystemAudio ? 'Included' : 'Not included'}}</span>
+            <span class="ssd-summary-val">
+              <ng-container *ngIf="systemAudioMissing">Not captured (browser limitation)</ng-container>
+              <ng-container *ngIf="!systemAudioMissing && shareSystemAudio">Included @ {{systemAudioVolume}}%</ng-container>
+              <ng-container *ngIf="!shareSystemAudio">Off</ng-container>
+            </span>
           </div>
         </div>
       </div>

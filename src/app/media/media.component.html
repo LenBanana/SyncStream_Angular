@@ -19,6 +19,20 @@
                   [IsHost]="false">
       </app-file-share-player>
 
+      <!-- RtmpFileShare host instance: shown immediately after the host picks a file. -->
+      <app-rtmp-file-share-player
+        *ngIf="CurrentPlayerType==PlayerType.RtmpFileShare && (webRtcService.isPreparingRtmpFileShareHost || webRtcService.isRtmpFileShareHost)"
+        [UniqueId]="UniqueId"
+        [IsHost]="true">
+      </app-rtmp-file-share-player>
+
+      <!-- RtmpFileShare viewer instance: shown to non-host members while a file is being shared. -->
+      <app-rtmp-file-share-player
+        *ngIf="CurrentPlayerType==PlayerType.RtmpFileShare && !(webRtcService.isPreparingRtmpFileShareHost || webRtcService.isRtmpFileShareHost)"
+        [UniqueId]="UniqueId"
+        [IsHost]="false">
+      </app-rtmp-file-share-player>
+
       <div [class.none]="CurrentPlayerType!=PlayerType.Nothing" class="nothing-playing vh-big">
         <span><i class="fa fa-pause-circle" aria-hidden="true"></i> Nothing playing</span>
       </div>
