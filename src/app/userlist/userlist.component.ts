@@ -4,7 +4,7 @@ import { Member } from '../Interfaces/Member';
 import { HttpClient } from '@angular/common/http';
 import { MainUser } from '../helper/Globals';
 import { Location } from '@angular/common';
-import { UserUpdate } from '../player/player.component';
+import { UserUpdate } from '../Interfaces/UserUpdate';
 import { AlertType, Dialog } from '../Interfaces/Dialog';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
 import { WebrtcService } from '../media/webrtc/webrtc-service/webrtc.service';

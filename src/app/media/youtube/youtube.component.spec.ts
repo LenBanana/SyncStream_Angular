@@ -7,7 +7,8 @@ import { PlaylistService } from '../../playlist/playlist-service/playlist.servic
 import { MediaService } from '../media-service/media.service';
 import { YoutubePlayerService } from './youtube-player.service';
 import { SponsorBlockService } from './sponsor-block/sponsor-block.service';
-import { PlayerType } from '../../player/player.component';
+import { PlayerType } from '../../Interfaces/PlayerType';
+import { TimeSync } from '../sync/time-sync';
 
 class PlyrStub {
   currentTime = 0;
@@ -41,7 +42,7 @@ describe('YoutubeComponent', () => {
     extractVideoId: jasmine.Spy;
   };
   let playerServiceMock: {
-    currentTime: BehaviorSubject<number>;
+    currentTime: BehaviorSubject<TimeSync>;
     isplaying: BehaviorSubject<boolean>;
     player: BehaviorSubject<any>;
     PlayPause: jasmine.Spy;
@@ -51,11 +52,12 @@ describe('YoutubeComponent', () => {
   };
   let mediaServiceMock: {
     playerTime: BehaviorSubject<number>;
+    playerTimeImmediate: BehaviorSubject<number>;
   };
 
   beforeEach(async () => {
     playerServiceMock = {
-      currentTime: new BehaviorSubject<number>(null),
+      currentTime: new BehaviorSubject<TimeSync>(null),
       isplaying: new BehaviorSubject<boolean>(null),
       player: new BehaviorSubject<any>(null),
       PlayPause: jasmine.createSpy('PlayPause')
@@ -64,7 +66,8 @@ describe('YoutubeComponent', () => {
       nextVideo: jasmine.createSpy('nextVideo')
     };
     mediaServiceMock = {
-      playerTime: new BehaviorSubject<number>(null)
+      playerTime: new BehaviorSubject<number>(null),
+      playerTimeImmediate: new BehaviorSubject<number>(null)
     };
     youtubePlayerServiceMock = {
       createPlayer: jasmine.createSpy('createPlayer').and.callFake(() => new PlyrStub()),
@@ -140,16 +143,32 @@ describe('YoutubeComponent', () => {
     expect(player.play).toHaveBeenCalled();
   }));
 
-  it('should accept zero time sync updates for viewers', () => {
+  it('should accept a report that the room is at zero', () => {
+    // Position zero is a real position, not a missing one. A host at the very start of a video, or one that
+    // just seeked back to it, reports zero, and treating that as nothing left viewers stranded wherever they
+    // happened to be. The report is an object now rather than a bare number, so the guard against a missing
+    // report no longer has to distinguish the two.
     component.CurrentPlayerType = PlayerType.YouTube;
     component.IsHost = false;
     component.IsReady = true;
     component['player'] = new PlyrStub() as any;
     component['player'].currentTime = 5;
 
-    playerServiceMock.currentTime.next(0);
+    playerServiceMock.currentTime.next({ mediaTime: 0, ageMs: 0, isPlaying: true });
 
     expect(component['player'].currentTime).toBe(0);
+  });
+
+  it('should ignore a missing report', () => {
+    component.CurrentPlayerType = PlayerType.YouTube;
+    component.IsHost = false;
+    component.IsReady = true;
+    component['player'] = new PlyrStub() as any;
+    component['player'].currentTime = 5;
+
+    playerServiceMock.currentTime.next(null);
+
+    expect(component['player'].currentTime).toBe(5);
   });
 
   it('should skip enabled SponsorBlock segments for hosts', () => {
