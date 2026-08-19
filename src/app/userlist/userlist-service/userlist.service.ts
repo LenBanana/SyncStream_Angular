@@ -43,10 +43,6 @@ export class UserlistService {
     hubConnection.invoke('RemoveUser', UniqueId);
   }
 
-  public updateUser(username: string, UniqueId: string) {
-    hubConnection.invoke('UpdateUser', username, UniqueId);
-  }
-
   public changeHost(usernameMember: string, UniqueId: string) {
     hubConnection.invoke('ChangeHost', usernameMember, UniqueId);
   }

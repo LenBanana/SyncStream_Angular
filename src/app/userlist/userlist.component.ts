@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, Output, EventEmitter, OnDestroy } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 import { UserlistService } from './userlist-service/userlist.service';
 import { Member } from '../Interfaces/Member';
 import { HttpClient } from '@angular/common/http';
@@ -11,6 +11,7 @@ import { WebrtcService } from '../media/webrtc/webrtc-service/webrtc.service';
 import { StreamAudience, StreamStartConfig } from '../media/webrtc/stream-start-dialog/stream-start-dialog.component';
 import { BrowserSettings, loadBrowserSettings } from '../Interfaces/BrowserSettings';
 import * as sha512 from 'js-sha512';
+import { SignalRService } from '../services/signal-r.service';
 declare var $:any
 
 @Component({
@@ -18,10 +19,11 @@ declare var $:any
   templateUrl: './userlist.component.html',
   styleUrls: ['./userlist.component.scss']
 })
-export class UserlistComponent implements OnInit, OnDestroy {
+export class UserlistComponent implements OnInit, OnChanges, OnDestroy {
 
   constructor(public userService: UserlistService, private http: HttpClient, private loc: Location,
-              private dialogService: DialogService, public webrtcService: WebrtcService) { }
+              private dialogService: DialogService, public webrtcService: WebrtcService,
+              private signalRService: SignalRService) { }
 
   @Input() nav: boolean;
   @Input() UniqueId: string;
@@ -44,7 +46,8 @@ export class UserlistComponent implements OnInit, OnDestroy {
   private _loadSettings(): BrowserSettings {
     return loadBrowserSettings();
   }
-  UserUpdate;
+  connectionUpdate;
+  private wasDisconnected = false;
   FailedPassword = false;
   RoomPassword = "";
   publicIP = "";
@@ -53,25 +56,38 @@ export class UserlistComponent implements OnInit, OnDestroy {
   memberUpdate;
   hostUpdate;
 
+  ngOnChanges(changes: SimpleChanges) {
+    // The parent sets DelInterval to ask us to leave. This used to be noticed by the next poll tick.
+    if (changes['DelInterval'] && this.DelInterval) {
+      this.userService.removeUser(this.UniqueId);
+      this.intervalOff.emit();
+    }
+  }
+
   ngOnDestroy() {
-    clearInterval(this.UserUpdate);
     this.userFailUpdate.unsubscribe();
     this.memberUpdate.unsubscribe();
     this.hostUpdate.unsubscribe();
+    this.connectionUpdate?.unsubscribe();
     this.userService.NullAllSubs();
   }
 
   ngOnInit(): void {
     this.Privileges = MainUser.userprivileges;
-    this.UserUpdate = setInterval(() => {
-      if (this.DelInterval) {
-        clearInterval(this.UserUpdate);
-        this.userService.removeUser(this.UniqueId);
-        this.intervalOff.emit();
+    // Rejoin explicitly after a dropped connection. A reconnect brings a new connection id, so the server
+    // has already removed the old member; without this the user sits in a room the server does not think
+    // they are in. The old code relied on a 2.5s poll whose fallback re-joined with an empty password,
+    // which silently failed forever in a password-protected room.
+    this.connectionUpdate = this.signalRService.connectionClosed.subscribe(closed => {
+      if (closed === true) {
+        this.wasDisconnected = true;
         return;
       }
-      this.userService.updateUser(this.Username, this.UniqueId);
-    }, 2500);
+      if (closed === false && this.wasDisconnected) {
+        this.wasDisconnected = false;
+        this.AddUser();
+      }
+    });
     this.userFailUpdate = this.userService.addUserFail.subscribe(room => {
       if (room == null) {
         return;
