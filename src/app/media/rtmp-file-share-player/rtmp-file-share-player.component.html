@@ -27,6 +27,59 @@
           </div>
         </div>
 
+        <div class="rtmp-setup-section" *ngIf="isProbingRtmpMedia || rtmpMediaProbe || rtmpMediaProbeError">
+          <div class="rtmp-setup-section-title">Detected Tracks</div>
+          <div *ngIf="isProbingRtmpMedia" class="rtmp-track-status">
+            <span class="spinner-border spinner-border-sm text-main-color" role="status" aria-hidden="true"></span>
+            <span>Inspecting local file…</span>
+          </div>
+          <div *ngIf="rtmpMediaProbeError" class="rtmp-track-status text-warning">
+            {{ rtmpMediaProbeError }}
+          </div>
+
+          <ng-container *ngIf="rtmpMediaProbe">
+            <div class="rtmp-track-group">
+              <div class="rtmp-track-group-title">Audio Track</div>
+              <div class="rtmp-track-list">
+                <button class="rtmp-track-row"
+                        [class.selected]="selectedAudioOrdinal === null"
+                        (click)="selectDetectedAudioTrack(null)">
+                  <span class="rtmp-track-main">Automatic</span>
+                  <span class="rtmp-track-meta">Use language priority</span>
+                </button>
+                <button *ngFor="let track of rtmpMediaProbe.audioTracks; trackBy: trackByRtmpTrackOrdinal"
+                        class="rtmp-track-row"
+                        [class.selected]="selectedAudioOrdinal === track.ordinal"
+                        (click)="selectDetectedAudioTrack(track.ordinal)">
+                  <span class="rtmp-track-main">{{ track.label }}</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="rtmp-track-group">
+              <div class="rtmp-track-group-title">Subtitle Track</div>
+              <div class="rtmp-track-list">
+                <button class="rtmp-track-row"
+                        [class.selected]="selectedSubtitleOrdinal === null"
+                        (click)="selectDetectedSubtitleTrack(null)">
+                  <span class="rtmp-track-main">Automatic</span>
+                  <span class="rtmp-track-meta">Use best server match</span>
+                </button>
+                <button *ngFor="let track of rtmpMediaProbe.subtitleTracks; trackBy: trackByRtmpTrackOrdinal"
+                        class="rtmp-track-row"
+                        [class.selected]="selectedSubtitleOrdinal === track.ordinal"
+                        [disabled]="!track.burnable"
+                        (click)="selectDetectedSubtitleTrack(track)">
+                  <span class="rtmp-track-main">{{ track.label }}</span>
+                  <span class="rtmp-track-meta" *ngIf="!track.burnable">Unsupported for burn-in</span>
+                  <span class="rtmp-track-meta" *ngIf="track.burnMethod === 'bitmap'">Bitmap overlay</span>
+                  <span class="rtmp-track-meta" *ngIf="track.burnMethod === 'text'">Text render</span>
+                </button>
+              </div>
+            </div>
+          </ng-container>
+        </div>
+
         <div class="rtmp-setup-section">
           <div class="rtmp-setup-section-title">Audio Priority</div>
           <div class="rtmp-audio-order-list">
@@ -51,7 +104,7 @@
 
       <div class="rtmp-setup-footer">
         <button class="btn btn-secondary" (click)="cancelPendingHostShare()">Cancel</button>
-        <button class="btn btn-primary" (click)="confirmHostShareSettings()">Start RTMP Stream</button>
+        <button class="btn btn-primary" (click)="confirmHostShareSettings()" [disabled]="isProbingRtmpMedia">Start RTMP Stream</button>
       </div>
     </div>
   </div>

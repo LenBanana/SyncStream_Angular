@@ -6,15 +6,14 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HomeComponent } from './home/home.component';
 import { RoomsComponent } from './rooms/rooms.component';
-import {HttpClientJsonpModule, HttpClientModule} from '@angular/common/http';
+import {HTTP_INTERCEPTORS, HttpClientJsonpModule, HttpClientModule} from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { SafePipe } from './pipes/safe-urlpipe.pipe';
 import { PlaylistComponent } from './playlist/playlist.component';
-import { PlayerComponent } from './player/player.component';
+
 import { DreckchatComponent } from './dreckchat/dreckchat.component';
 import { UserlistComponent } from './userlist/userlist.component';
 import {CDK_DRAG_CONFIG, DragDropModule} from '@angular/cdk/drag-drop';
-import { TwitchPlayerComponent } from './twitch-player/twitch-player.component';
 import { SideNavComponent } from './side-nav/side-nav.component';
 import { LoginModalComponent } from './login-modal/login-modal.component';
 import { NetflixPlayerComponent } from './iframe-players/netflix-player/netflix-player.component';
@@ -43,7 +42,6 @@ import { YoutubeComponent } from './media/youtube/youtube.component';
 import { PlyrPlayerComponent } from './media/plyr-player/plyr-player.component';
 import { TwitchComponent } from './media/twitch/twitch.component';
 import { FileInfoPipe } from './file-view/file-info-pipe/file-info.pipe';
-import { Html5PlayerComponent } from './media/html5-player/html5-player.component';
 import { VideojsPlayerComponent } from './media/videojs-player/videojs-player.component';
 import { MpegtsPlayerComponent } from './media/mpegts-player/mpegts-player.component';
 import { LiveStreamViewComponent } from './live-stream-view/live-stream-view.component';
@@ -64,6 +62,7 @@ import { StreamStartDialogComponent } from './media/webrtc/stream-start-dialog/s
 import { SourceLabelPipe } from './media/webrtc/stream-start-dialog/source-label.pipe';
 import { FileSharePlayerComponent } from './media/file-share-player/file-share-player.component';
 import { RtmpFileSharePlayerComponent } from './media/rtmp-file-share-player/rtmp-file-share-player.component';
+import { ApiCredentialsInterceptor } from './core/api-credentials.interceptor';
 const DragConfig = {
   dragStartThreshold: 0,
   pointerDirectionChangeThreshold: 5,
@@ -76,10 +75,8 @@ const DragConfig = {
     RoomsComponent,
     SafePipe,
     PlaylistComponent,
-    PlayerComponent,
     DreckchatComponent,
     UserlistComponent,
-    TwitchPlayerComponent,
     SideNavComponent,
     LoginModalComponent,
     NetflixPlayerComponent,
@@ -103,7 +100,6 @@ const DragConfig = {
     PlyrPlayerComponent,
     TwitchComponent,
     FileInfoPipe,
-    Html5PlayerComponent,
     VideojsPlayerComponent,
     MpegtsPlayerComponent,
     LiveStreamViewComponent,
@@ -140,7 +136,13 @@ const DragConfig = {
     NoopAnimationsModule,
     NgbdSortableHeader
   ],
-  providers: [DatePipe,{  provide: CDK_DRAG_CONFIG, useValue: DragConfig }],
+  providers: [
+    DatePipe,
+    { provide: CDK_DRAG_CONFIG, useValue: DragConfig },
+    // Sends the session cookie with API requests. Without this every authenticated HTTP call is
+    // anonymous, because cross-origin requests omit cookies unless asked.
+    { provide: HTTP_INTERCEPTORS, useClass: ApiCredentialsInterceptor, multi: true }
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

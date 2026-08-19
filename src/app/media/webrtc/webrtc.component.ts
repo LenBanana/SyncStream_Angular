@@ -10,9 +10,9 @@ import {
 import {Subscription} from 'rxjs';
 import {filter} from 'rxjs/operators';
 import {SfuRecordingInfo, WebrtcService} from './webrtc-service/webrtc.service';
-import {token} from '../../global.settings';
+
 import {StreamStartConfig} from './stream-start-dialog/stream-start-dialog.component';
-import {BrowserSettings, browserSettingName} from '../../Interfaces/BrowserSettings';
+import {BrowserSettings, loadBrowserSettings} from '../../Interfaces/BrowserSettings';
 
 @Component({
   selector: 'app-webrtc',
@@ -52,12 +52,7 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(public webrtcService: WebrtcService) {}
 
   private _loadSettings(): BrowserSettings {
-    try {
-      const raw = localStorage.getItem(browserSettingName);
-      return raw ? JSON.parse(raw) as BrowserSettings : new BrowserSettings();
-    } catch {
-      return new BrowserSettings();
-    }
+    return loadBrowserSettings();
   }
 
   ngOnInit(): void {
@@ -124,13 +119,29 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.isBroadcasting && !this.hasStream && !this.showLocalPreview && !!this.localPreviewStream;
   }
 
-  private attachStream(stream: MediaStream): void {
+  private async attachStream(stream: MediaStream): Promise<void> {
     if (!this.remoteVideoRef) return;
     const video = this.remoteVideoRef.nativeElement;
     video.srcObject = stream;
-    video.play().catch(() => {
-      // Autoplay may be blocked; the user can click Play.
-    });
+    video.muted = false;
+
+    try {
+      await video.play();
+      return;
+    } catch (err) {
+      console.warn('[WebRTC] video.play() failed; trying muted autoplay fallback', err);
+    }
+
+    if (stream.getAudioTracks().length === 0) {
+      return;
+    }
+
+    try {
+      video.muted = true;
+      await video.play();
+    } catch (err) {
+      console.warn('[WebRTC] muted autoplay fallback failed', err);
+    }
   }
 
   private detachStream(): void {
@@ -165,7 +176,14 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
       config.stream.getVideoTracks()[0]?.addEventListener('ended', () => {
         if (this.isBroadcasting) this.stopBroadcast();
       });
-      await this.webrtcService.startStreamingToRoom(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
+      await this.webrtcService.startStreamingToRoom(
+        this.UniqueId,
+        config.stream,
+        config.maxBitrate,
+        config.resolution,
+        config.frameRate,
+        config.contentPreference
+      );
     } catch (err) {
       this.isLoading = true;
       console.error('Failed to start broadcast:', err);

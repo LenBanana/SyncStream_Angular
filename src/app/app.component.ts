@@ -53,7 +53,6 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
-
   @ViewChild('addVideoSuccess') successMsgEl: ElementRef;
 
   showSuccessMessage() {

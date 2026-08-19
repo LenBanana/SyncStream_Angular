@@ -1,9 +1,8 @@
 import { Injectable } from '@angular/core';
-import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
+import { hubConnection, baseUrl, SignalRService , logHubFailure} from '../../services/signal-r.service';
 import { BehaviorSubject, from } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { User } from '../../Interfaces/User';
-import { RememberToken } from '../../Interfaces/RememberToken';
+import { User, UserSummary } from '../../Interfaces/User';
 import { AlertType } from '../../Interfaces/Dialog';
 import { ServerHealth } from '../../Interfaces/ServerHealth';
 
@@ -12,7 +11,7 @@ import { ServerHealth } from '../../Interfaces/ServerHealth';
 })
 export class UserAdminService {
 
-  Users: BehaviorSubject<User[]> = new BehaviorSubject(null);
+  Users: BehaviorSubject<UserSummary[]> = new BehaviorSubject(null);
   ServerHealth: BehaviorSubject<ServerHealth> = new BehaviorSubject(null);
   constructor(private http: HttpClient, private signalRService: SignalRService) {
     signalRService.connectionClosed.subscribe(isClosed => {
@@ -31,28 +30,29 @@ export class UserAdminService {
     this.Users.next(null);
   }
 
-  public PublicAnnouncement(token: string, message: string, alertType: AlertType) {
-    hubConnection.invoke('PublicAnnouncement', token, message, alertType);
+  public PublicAnnouncement(message: string, alertType: AlertType) {
+    hubConnection.invoke('PublicAnnouncement', message, alertType).catch(logHubFailure);
   }
 
-  public GetUsers(token: string, userID: number) {
-    hubConnection.invoke('GetUsers', token, userID);
+  public GetUsers() {
+    hubConnection.invoke('GetUsers').catch(logHubFailure);
   }
 
-  public DeleteUser(token: string, userID: number, removeID: number) {
-    hubConnection.invoke('DeleteUser', token, userID, removeID);
-  }//SetUserPrivileges
-
-  public ApproveUser(token: string, userID: number, approveID: number, prove: boolean) {
-    hubConnection.invoke('ApproveUser', token, userID, approveID, prove);
+  // The acting user is the connection's own identity, so only the target is passed.
+  public DeleteUser(removeID: number) {
+    hubConnection.invoke('DeleteUser', removeID).catch(logHubFailure);
   }
 
-  public SetUserPrivileges(token: string, userID: number, changeID: number, privileges: number) {
-    hubConnection.invoke('SetUserPrivileges', token, userID, changeID, privileges);
+  public ApproveUser(approveID: number, prove: boolean) {
+    hubConnection.invoke('ApproveUser', approveID, prove).catch(logHubFailure);
+  }
+
+  public SetUserPrivileges(changeID: number, privileges: number) {
+    hubConnection.invoke('SetUserPrivileges', changeID, privileges).catch(logHubFailure);
   }
 
   public addUserListener() {
-    hubConnection.on('getusers', (data: User[]) => {
+    hubConnection.on('getusers', (data: UserSummary[]) => {
       this.Users.next(data);
     });
   }

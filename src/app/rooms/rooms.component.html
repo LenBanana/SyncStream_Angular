@@ -55,16 +55,16 @@
           *ngFor="let room of filterRooms | slice: (page-1) * pageSize : page * pageSize; let i=index; let last = last;trackBy: trackByFn; let first = first;">
           <div class="room-info-bubbles row skew10" [class.showAlways]="browserSettings.layoutSettings.showCountInfo">
             <div class="room-user-bubble rounded-bottom" style="background-color: #27ae60;">
-              <p class="counterSkew10">{{room.server.members.length}} <i class="fa fa-user"></i></p>
+              <p class="counterSkew10">{{room.members.length}} <i class="fa fa-user"></i></p>
             </div>
             <div class="room-user-bubble rounded-bottom ml-2" style="background-color: #2980b9;">
-              <p class="counterSkew10">{{room.server.playlist.length}} <i class="fa "
-                  [ngClass]="{ 'fa-play-circle': room.server.isplaying&&room.server.members.length>0, 'fa-pause-circle':  !room.server.isplaying||room.server.members.length==0}"></i>
+              <p class="counterSkew10">{{room.playlist.length}} <i class="fa "
+                  [ngClass]="{ 'fa-play-circle': room.isplaying&&room.members.length>0, 'fa-pause-circle':  !room.isplaying||room.members.length==0}"></i>
               </p>
             </div>
           </div>
           <div *ngIf="user.userprivileges>1&&!room.isPrivileged" class="delete-bubble info-bubble hide-btn pointer"
-            (click)="room.server.members.length==0 && DeleteRoom(room.uniqueId, room.server.members.length)"><i
+            (click)="room.members.length==0 && DeleteRoom(room.uniqueId, room.members.length)"><i
               class="fa fa-times"></i></div>
           <div id="room-card-{{room.uniqueId}}" class="room-card top-corner skew10 pointer room-shadow"
             (click)="Join(room)">
@@ -74,17 +74,17 @@
                 <div class="room-text">
                   <p class="short-text font-weight-bold text-shadow-default" style="font-size: 1.75rem;"
                     title="{{room.name}}">{{room.name}}</p>
-                  <p style="font-size: .9rem;" class="short-text mt-3" [innerHTML]="room.server.title"
-                    [title]="room.server.title"></p>
+                  <p style="font-size: .9rem;" class="short-text mt-3" [innerHTML]="room.title"
+                    [title]="room.title"></p>
                 </div>
                 <ng-container *ngTemplateOutlet="roomIcons; context: { $implicit: room }"></ng-container>
               </div>
               <div class="col-4 room-info-container rounded shadow-sm">
                 <div class="room-playlist-info">
                   <p class="text-center font-weight-bold mt-2 counterSkew10" style="margin: 0;">Playlist</p>
-                  <p *ngIf="room.server.playlist==0" style="font-size: 10px;" class="text-center">Nothing here yet</p>
+                  <p *ngIf="room.playlist==0" style="font-size: 10px;" class="text-center">Nothing here yet</p>
                   <ul class="room-liststyle">
-                    <li *ngFor="let video of room.server.playlist">
+                    <li *ngFor="let video of room.playlist">
                       <i class="fa fa-youtube-play"
                         style="color: #ff4c4c;background-image: radial-gradient(at center, #fff 40%, transparent 40%);"
                         aria-hidden="true" *ngIf="IsYt(room)"></i>
@@ -100,9 +100,9 @@
                 </div>
                 <div class="room-user-info">
                   <p class="text-center font-weight-bold mt-2 counterSkew10" style="margin: 0;">Member</p>
-                  <p *ngIf="room.server.members==0" style="font-size: 10px;" class="text-center">No members yet</p>
+                  <p *ngIf="room.members==0" style="font-size: 10px;" class="text-center">No members yet</p>
                   <ul class="room-liststyle">
-                    <li *ngFor="let member of room.server.members">
+                    <li *ngFor="let member of room.members">
                       <span *ngIf="member&&member!=null" style="font-size: 10px;"><span class="list-arrow text-primary"
                           style="color: #2980b9;">&#10148;</span> {{member.username}}</span>
                     </li>
@@ -185,12 +185,12 @@
 <ng-template #roomIcons let-room>
   <div class="room-icon counterSkew10">
     <i class="fa-brands fa-youtube" style="color: #232734;" aria-hidden="true"
-      *ngIf="room.server.playlist.length!=0&&(room.server.playlist.length>0)&&IsYt(room)"></i>
+      *ngIf="room.playlist.length!=0&&(room.playlist.length>0)&&IsYt(room)"></i>
     <i class="fa-brands fa-twitch" aria-hidden="true" style="color: #232734;"
-      *ngIf="room.server.playlist.length>0&&IsTwitch(room)"></i>
+      *ngIf="room.playlist.length>0&&IsTwitch(room)"></i>
     <i class="fa-solid fa-dumpster-fire" style="color: #232734;" aria-hidden="true"
-      *ngIf="room.server.playlist.length==0"></i>
+      *ngIf="room.playlist.length==0"></i>
     <i class="fa-solid fa-clapperboard" style="color: #232734;" aria-hidden="true"
-      *ngIf="room.server.playlist.length>0&&!IsTwitch(room)&&!IsYt(room)"></i>
+      *ngIf="room.playlist.length>0&&!IsTwitch(room)&&!IsYt(room)"></i>
   </div>
 </ng-template>

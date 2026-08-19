@@ -1,7 +1,7 @@
 import { Component, Input, OnInit, ViewChild } from '@angular/core';
 import { MatMenuTrigger } from '@angular/material/menu';
 import { DownloadManagerService } from '../download-manager/download-manger-service/download-manager.service';
-import { getCookie } from '../global.settings';
+
 import { AlertType, Dialog } from '../Interfaces/Dialog';
 import { DownloadFile } from '../Interfaces/DownloadInfo';
 import { VideoDTO } from '../Interfaces/VideoDTO';
@@ -10,6 +10,7 @@ import { PlaylistService } from '../playlist/playlist-service/playlist.service';
 import { baseUrl } from '../services/signal-r.service';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
 import { BrowserSettings } from '../Interfaces/BrowserSettings';
+import { AuthService } from '../services/auth.service';
 declare var $: any;
 
 @Component({
@@ -19,7 +20,7 @@ declare var $: any;
 })
 export class FileViewComponent implements OnInit {
 
-  constructor(private dialogService: DialogService, private downloadService: DownloadManagerService, private playerService: PlayerService, private playlistService: PlaylistService) { }
+  constructor(private dialogService: DialogService, private downloadService: DownloadManagerService, private playerService: PlayerService, private playlistService: PlaylistService, private authService: AuthService) { }
   @Input() filterFiles: DownloadFile[];
   @Input() pageSize: number = 5;
   @Input() page: number = 1;
@@ -39,18 +40,17 @@ export class FileViewComponent implements OnInit {
   }
 
   DownloadDbFile(file: DownloadFile) {
-    var Token = getCookie("login-token");
-    if (Token) {
-      var fileUrl = this.GetDownloadUri(file);
+    const fileUrl = this.GetDownloadUri(file);
+    if (fileUrl) {
       window.open(fileUrl, "_blank");
     }
   }
 
   GetDownloadUri(file: DownloadFile) {
-    var Token = getCookie("login-token");
-    if (Token) {
-      return baseUrl + "api/video/fileByToken?fileKey=" + file.fileKey + "&token=" + Token;
+    if (this.authService.user.value) {
+      return baseUrl + "api/video/fileByToken?fileKey=" + file.fileKey;
     }
+    return null;
   }
 
   timeFromSeconds(sec) {
@@ -216,8 +216,7 @@ export class FileViewComponent implements OnInit {
     if (!navigator || !navigator.clipboard || !navigator.clipboard.writeText) {
       return;
     }
-    var Token = getCookie("login-token");
-    if (!Token) {
+    if (!this.authService.user.value) {
       return;
     }
     var fileUrl = baseUrl + "api/video/fileByToken?fileKey=" + file.fileKey;

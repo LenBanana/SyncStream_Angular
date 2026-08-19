@@ -2,14 +2,15 @@ import {AfterContentInit, Component, EventEmitter, Input, OnDestroy, OnInit, Out
 import {Subject, Subscription} from 'rxjs';
 import {VideoDTO} from '../Interfaces/VideoDTO';
 import {PlayerService} from '../player/player-service/player.service';
-import {PlayerType} from '../player/player.component';
+import { PlayerType } from '../Interfaces/PlayerType';
 import {PlaylistService} from '../playlist/playlist-service/playlist.service';
 import {PingService} from '../services/pingservice.service';
+import {PlaybackSyncService} from './sync/playback-sync.service';
 import {SignalRService} from '../services/signal-r.service';
 import {MediaService} from './media-service/media.service';
 import {delay} from '../helper/generic';
 import {WebrtcService} from "./webrtc/webrtc-service/webrtc.service";
-import {browserSettingName, BrowserSettings} from "../Interfaces/BrowserSettings";
+import {loadBrowserSettings} from "../Interfaces/BrowserSettings";
 import {WebrtcVoipService} from "./webrtc-voip/webrtc-voip-service/webrtc-voip.service";
 import {DreckchatService} from "../dreckchat/dreckchat-service/dreckchat.service";
 import {UserPrivileges} from "../user-admin-modal/user-admin-modal.component";
@@ -30,7 +31,8 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
               private signalrService: SignalRService,
               public webRtcService: WebrtcService,
               private voipService: WebrtcVoipService,
-              private chatService: DreckchatService
+              private chatService: DreckchatService,
+              private playbackSync: PlaybackSyncService
   ) {
   }
 
@@ -40,12 +42,9 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
   @Input() Username = "";
   @Input() IsHost: boolean;
   @Input() twitchChat = false;
-  @Input() Threshhold = .5;
   @Output() isPlayingEvent = new EventEmitter();
   @Output() playlistChange = new EventEmitter();
-  @Output() threshholdChange = new EventEmitter();
   @Output() hideChat = new EventEmitter();
-  CurrentPing = 0;
   readyEvent: Subject<void> = new Subject<void>();
   CurrentPlayerType: PlayerType = PlayerType.Nothing;
   LastPlayerType: PlayerType = PlayerType.Nothing;
@@ -53,6 +52,13 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
   Playlist: VideoDTO[] = [];
   CurrentlyPlaying: VideoDTO;
   LastTime: number = 0;
+  private lastReportMs = 0;
+
+  /** The source the sync service was last reset for. */
+  private syncedSourceUrl: string | null = null;
+
+  /** How often the host reports its position while playing. */
+  private static readonly reportIntervalMs = 1000;
   Voip: boolean = false;
 
   Subscriptions: Subscription[] = [];
@@ -68,6 +74,11 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
   }
 
   ngOnInit(): void {
+    // Keeps PlaybackSyncService supplied with round-trip samples. Nothing here reads the ping itself; the
+    // sync service takes the smallest of the recent ones to estimate how stale a host report is on arrival.
+    // Measured at once as well as on the interval: waiting for the first tick left the first five seconds in a
+    // room, which is exactly when a joining viewer is furthest out of step, with no measurement at all.
+    this.pingService.GetPing();
     this.PingInterval = setInterval(() => {
       this.pingService.GetPing();
     }, 5000);
@@ -113,20 +124,6 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
           this.CurrentPlayerType = this.LastPlayerType;
         }
       }),
-      this.signalrService.pingStream.subscribe(ping => {
-        if (!ping) {
-          return;
-        }
-        this.CurrentPing = Number.parseFloat(ping.toFixed(2));
-        if (this.Threshhold < this.CurrentPing || (this.IsHost && this.Threshhold > 2 && this.CurrentPing < 2) || (!this.IsHost && this.Threshhold > .5 && this.CurrentPing < .5)) {
-          if (!this.IsHost) {
-            this.Threshhold = this.CurrentPing < .5 ? .5 : Number.parseFloat(ping.toFixed(2));
-          } else {
-            this.Threshhold = (this.CurrentPing < 2 ? 2 : Number.parseFloat(ping.toFixed(2))) * 2;
-          }
-          this.threshholdChange.emit(this.Threshhold);
-        }
-      }),
       this.playerService.playerType.subscribe(async type => {
         if (!type) {
           this.CurrentPlayerType = PlayerType.Nothing;
@@ -138,6 +135,24 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
           this.CurrentPlayerType = type as PlayerType;
           this.hideChat.emit(this.CurrentPlayerType === PlayerType.Blackjack);
         }
+      }),
+      this.playerService.player.subscribe(video => {
+        // A new source is a new timeline, so the sync service must drop the quiet period it is holding from
+        // the last correction on the old one. Without this the first correction on a newly started video can
+        // be swallowed for up to the cooldown, which is exactly when a viewer is furthest out of step.
+        const url = video ? video.url : null;
+        if (url === this.syncedSourceUrl) {
+          return;
+        }
+        this.syncedSourceUrl = url;
+        this.playbackSync.reset();
+
+        // Drop the last position along with it. The room's position is published through a BehaviorSubject, so
+        // it hands its most recent value to whoever subscribes next, and a player component created for the new
+        // video sets IsReady immediately before subscribing. It therefore received the previous video's position
+        // and seeked the new one straight to it. Nulled here because null means "not known yet", which is the
+        // truth between a video changing and the host reporting where it has reached, about a second later.
+        this.playerService.currentTime.next(null);
       }),
       this.playerService.isplaying.subscribe(play => {
         if (play != null) {
@@ -151,8 +166,15 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
         this.Playlist = result;
       }),
       this.mediaService.playerTime.subscribe(t => {
-        if (t > 0) {
+        // Position zero is a real position: rejecting it meant a host at the very start of a video, or one
+        // that had just seeked back to it, reported nothing.
+        if (t != null && t >= 0) {
           this.SetTime(t);
+        }
+      }),
+      this.mediaService.playerTimeImmediate.subscribe(t => {
+        if (t != null && t >= 0) {
+          this.reportPositionNow(t);
         }
       }),
       this.voipService.joinRoom.subscribe(result => {
@@ -174,8 +196,7 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
   }
 
   fetchSettings() {
-    const itemBackup = localStorage.getItem(browserSettingName);
-    const browserSettings = JSON.parse(itemBackup) as BrowserSettings;
+    const browserSettings = loadBrowserSettings();
     if (browserSettings && browserSettings.generalSettings.defaultVoip && !this.Voip) {
       this.chatService.joinVoice.next(this.UniqueId);
     }
@@ -185,11 +206,36 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
     this.CurrentlyPlaying = video;
   }
 
-  private SetTime(currentTime: number) {
-    if ((currentTime > (this.LastTime + this.Threshhold) || currentTime < (this.LastTime - this.Threshhold))) {
-      this.LastTime = currentTime;
-      this.playerService.SetTime(currentTime, this.UniqueId);
+  /**
+   * Records where the host has reached, at a steady rate.
+   *
+   * The host used to publish only once its position had moved further than a deadband derived from the ping,
+   * which worked out to at least four seconds. So viewers got a fresh reference roughly every four seconds
+   * of playback and had nothing to correct against in between, which is half the reason drift became visible
+   * before anything fixed it. One report per second per room is nothing, and it means a viewer is never
+   * working from a stale position.
+   *
+   * A seek, a play, a pause or a change of video reports immediately, so a scrub propagates at once instead
+   * of waiting for the next tick.
+   */
+  private SetTime(currentTime: number, immediate = false) {
+    if (!this.IsHost || typeof currentTime !== 'number' || !isFinite(currentTime)) {
+      return;
     }
+
+    const now = Date.now();
+    if (!immediate && now - this.lastReportMs < MediaComponent.reportIntervalMs) {
+      return;
+    }
+
+    this.lastReportMs = now;
+    this.LastTime = currentTime;
+    this.playerService.SetTime(currentTime, this.UniqueId, this.playbackSync.oneWayLatencySeconds);
+  }
+
+  /** Reports the current position at once, for a seek or a play state change. */
+  reportPositionNow(currentTime: number) {
+    this.SetTime(currentTime, true);
   }
 
   protected readonly UserPrivileges = UserPrivileges;

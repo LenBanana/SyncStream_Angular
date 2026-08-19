@@ -1,7 +1,6 @@
 import { Directive, EventEmitter, Input, Output } from "@angular/core";
 import { PrivilegeInfo } from "../permission-view/permission-service/permission-view.service";
 
-
 export type SortColumn = keyof PrivilegeInfo | '';
 export type SortDirection = 'asc' | 'desc' | '';
 const rotate: { [key: string]: SortDirection } = { asc: 'desc', desc: '', '': 'asc' };

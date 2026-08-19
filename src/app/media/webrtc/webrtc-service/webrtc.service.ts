@@ -1,16 +1,37 @@
 ﻿import {Injectable, OnDestroy} from '@angular/core';
 import {BehaviorSubject, Subject} from 'rxjs';
-import {SignalRService, hubConnection, baseUrl} from '../../../services/signal-r.service';
-import {token} from '../../../global.settings';
+import {SignalRService, hubConnection, baseUrl, logHubFailure} from '../../../services/signal-r.service';
+
 import {HttpClient} from "@angular/common/http";
 import * as mediasoupClient from 'mediasoup-client';
 
 export type RtmpSubtitleMode = 'auto' | 'always' | 'never';
 export type RtmpAudioLanguagePreference = 'japanese' | 'english' | 'german' | 'other';
+export type RtmpSubtitleBurnMethod = 'text' | 'bitmap';
 
 export interface RtmpPlaybackPreferences {
   subtitleMode: RtmpSubtitleMode;
   audioLanguagePriority: RtmpAudioLanguagePreference[];
+  selectedAudioOrdinal?: number | null;
+  selectedSubtitleOrdinal?: number | null;
+  selectedSubtitleCodecName?: string | null;
+}
+
+export interface RtmpLocalMediaTrack {
+  ordinal: number;
+  label: string;
+  language: string;
+  title: string;
+  codecName: string;
+  isDefault: boolean;
+  isForced: boolean;
+  burnMethod?: RtmpSubtitleBurnMethod | null;
+  burnable?: boolean;
+}
+
+export interface RtmpLocalMediaProbeResult {
+  audioTracks: RtmpLocalMediaTrack[];
+  subtitleTracks: RtmpLocalMediaTrack[];
 }
 
 @Injectable({
@@ -39,6 +60,10 @@ export class WebrtcService implements OnDestroy {
   private viewerCandidateBuffer: Map<string, RTCIceCandidate[]> = new Map();
   /** Max bitrate (bps) requested by the streamer; 0 = unconstrained. */
   private localStreamMaxBitrate = 0;
+  /** Max framerate requested by the streamer; 0 = unconstrained. */
+  private localStreamMaxFrameRate = 0;
+  /** Encoder priority requested by the streamer. */
+  private localStreamContentPreference: StreamContentPreference = 'motion';
   /** True when the current live screen-share session is using the SFU path rather than P2P. */
   private liveStreamUsesSfu = false;
   /** Whether the current local stream is opt-in live or room-stage live. */
@@ -247,9 +272,7 @@ export class WebrtcService implements OnDestroy {
   }
 
   private GetWebRtcCredentials() {
-    if (token) {
-      return this.http.get<WebRtcCredentials>(baseUrl + 'api/webrtc/GetWebRtcCredentials?token=' + token);
-    }
+    return this.http.get<WebRtcCredentials>(baseUrl + 'api/webrtc/GetWebRtcCredentials');
   }
 
   // ================================================================
@@ -257,9 +280,8 @@ export class WebrtcService implements OnDestroy {
   // ================================================================
 
   public async checkSfuAvailable(): Promise<boolean> {
-    if (!token) return false;
     try {
-      this.sfuAvailable = await hubConnection.invoke<boolean>('IsSfuAvailable', token);
+      this.sfuAvailable = await hubConnection.invoke<boolean>('IsSfuAvailable');
     } catch {
       this.sfuAvailable = false;
     }
@@ -448,6 +470,67 @@ export class WebrtcService implements OnDestroy {
     return track.kind === 'video' && typeof settings.displaySurface === 'string' && settings.displaySurface.length > 0;
   }
 
+  private applyVideoTrackContentPreference(
+    track: MediaStreamTrack,
+    contentPreference: StreamContentPreference
+  ): boolean {
+    const isDisplay = this.isDisplayTrack(track);
+    try {
+      // contentHint guides the encoder: 'detail' keeps screen text sharp, while
+      // 'motion' asks the browser to preserve framerate for games/video.
+      track.contentHint = isDisplay ? contentPreference : 'motion';
+    } catch {
+      // Best-effort only.
+    }
+    return isDisplay;
+  }
+
+  private applyStreamContentPreference(stream: MediaStream, contentPreference: StreamContentPreference): void {
+    stream.getVideoTracks().forEach(track => this.applyVideoTrackContentPreference(track, contentPreference));
+  }
+
+  private findVideoCodec(
+    mimeType: string,
+    predicate?: (codec: any) => boolean
+  ): mediasoupClient.types.RtpCodecCapability | undefined {
+    return this.sfuDevice?.rtpCapabilities.codecs?.find((codec: any) => {
+      if (codec.mimeType?.toLowerCase() !== mimeType.toLowerCase()) return false;
+      return predicate ? predicate(codec) : true;
+    }) as mediasoupClient.types.RtpCodecCapability | undefined;
+  }
+
+  private findMotionCodec(): mediasoupClient.types.RtpCodecCapability | undefined {
+    return this.findVideoCodec('video/h264', (codec: any) => {
+      const profile = String(codec.parameters?.['profile-level-id'] ?? '').toLowerCase();
+      return profile.startsWith('42e0');
+    })
+      ?? this.findVideoCodec('video/h264')
+      ?? this.findVideoCodec('video/vp8');
+  }
+
+  private buildSingleVideoEncoding(
+    track: MediaStreamTrack,
+    topBitrate: number,
+    preferredResolution?: number,
+    preferredFrameRate?: number
+  ): mediasoupClient.types.RtpEncodingParameters {
+    const settings = track.getSettings();
+    const sourceHeight = typeof settings.height === 'number' && settings.height > 0
+      ? settings.height
+      : (preferredResolution && preferredResolution > 0 ? preferredResolution : 1080);
+    const targetHeight = preferredResolution && preferredResolution > 0
+      ? Math.min(preferredResolution, sourceHeight)
+      : sourceHeight;
+    const scaleResolutionDownBy = Number(Math.max(1, sourceHeight / targetHeight).toFixed(2));
+    const frameRate = preferredFrameRate && preferredFrameRate > 0 ? preferredFrameRate : undefined;
+
+    return {
+      maxBitrate: topBitrate,
+      maxFramerate: frameRate,
+      scaleResolutionDownBy
+    } as any;
+  }
+
   /**
    * Builds 3-layer VP8 simulcast encodings for a display (screen-share) track.
    * Uses the source and target resolution to calculate scale factors, giving
@@ -456,7 +539,9 @@ export class WebrtcService implements OnDestroy {
   private buildDisplayEncodings(
     track: MediaStreamTrack,
     topBitrate: number,
-    preferredResolution?: number
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
   ): {
     encodings: mediasoupClient.types.ProducerOptions['encodings'];
     sourceHeight: number;
@@ -472,12 +557,14 @@ export class WebrtcService implements OnDestroy {
     const highScale  = Math.max(1, sourceHeight / targetHeight);
     const midScale   = Math.max(highScale, highScale * 2);
     const lowScale   = Math.max(midScale,  highScale * 4);
+    const temporalMode = contentPreference === 'motion' || (preferredFrameRate ?? 0) >= 60 ? 'L1T3' : 'L1T2';
+    const frameRate = preferredFrameRate && preferredFrameRate > 0 ? preferredFrameRate : undefined;
 
     return {
       encodings: [
-        {rid: 'q', maxBitrate: Math.max(400_000,  Math.round(topBitrate / 8)), scaleResolutionDownBy: Number(lowScale.toFixed(2)),  scalabilityMode: 'L1T2'},
-        {rid: 'h', maxBitrate: Math.max(1_000_000, Math.round(topBitrate / 3)), scaleResolutionDownBy: Number(midScale.toFixed(2)),   scalabilityMode: 'L1T2'},
-        {rid: 'f', maxBitrate: topBitrate,                                       scaleResolutionDownBy: Number(highScale.toFixed(2)),  scalabilityMode: 'L1T2'},
+        {rid: 'q', maxBitrate: Math.max(400_000,  Math.round(topBitrate / 8)), scaleResolutionDownBy: Number(lowScale.toFixed(2)),  scalabilityMode: temporalMode, maxFramerate: frameRate},
+        {rid: 'h', maxBitrate: Math.max(1_000_000, Math.round(topBitrate / 3)), scaleResolutionDownBy: Number(midScale.toFixed(2)),   scalabilityMode: temporalMode, maxFramerate: frameRate},
+        {rid: 'f', maxBitrate: topBitrate,                                       scaleResolutionDownBy: Number(highScale.toFixed(2)),  scalabilityMode: temporalMode, maxFramerate: frameRate},
       ] as any,
       sourceHeight,
       targetHeight
@@ -487,24 +574,29 @@ export class WebrtcService implements OnDestroy {
   private buildVideoProducerOptions(
     track: MediaStreamTrack,
     maxBitrate?: number,
-    preferredResolution?: number
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
   ): mediasoupClient.types.ProducerOptions {
     const topBitrate = maxBitrate && maxBitrate > 0 ? maxBitrate : 6_000_000;
-    const isDisplay = this.isDisplayTrack(track);
-
-    try {
-      // contentHint guides the encoder: 'detail' keeps resolution stable under
-      // congestion (good for screen text), 'motion' keeps framerate stable (good
-      // for camera).  This replaces the need for RTCRtpSender.degradationPreference.
-      track.contentHint = isDisplay ? 'detail' : 'motion';
-    } catch {
-      // Best-effort only.
-    }
+    const isDisplay = this.applyVideoTrackContentPreference(track, contentPreference);
+    const frameRate = preferredFrameRate && preferredFrameRate > 0 ? preferredFrameRate : undefined;
 
     const produceOptions: mediasoupClient.types.ProducerOptions = {
       track,
       codecOptions: {videoGoogleStartBitrate: Math.max(1000, Math.round(topBitrate / 1000))}
     };
+
+    if (contentPreference === 'motion') {
+      const motionCodec = this.findMotionCodec();
+      if (motionCodec) {
+        produceOptions.codec = motionCodec as any;
+      }
+      produceOptions.encodings = [
+        this.buildSingleVideoEncoding(track, topBitrate, preferredResolution, preferredFrameRate)
+      ] as any;
+      return produceOptions;
+    }
 
     // Prefer VP9 K-SVC (L3T3_KEY): a single encoding covers 3 spatial × 3 temporal
     // layers.  Each viewer independently receives the layer that fits their link.
@@ -515,7 +607,7 @@ export class WebrtcService implements OnDestroy {
     );
     if (vp9Codec) {
       produceOptions.codec = vp9Codec as any;
-      produceOptions.encodings = [{scalabilityMode: 'L3T3_KEY', maxBitrate: topBitrate}] as any;
+      produceOptions.encodings = [{scalabilityMode: 'L3T3_KEY', maxBitrate: topBitrate, maxFramerate: frameRate}] as any;
       return produceOptions;
     }
 
@@ -524,16 +616,17 @@ export class WebrtcService implements OnDestroy {
     // full (f) = top bitrate @ native resolution.
     if (isDisplay) {
       if (preferredResolution && preferredResolution > 0) {
-        const displayProfile = this.buildDisplayEncodings(track, topBitrate, preferredResolution);
+        const displayProfile = this.buildDisplayEncodings(track, topBitrate, preferredResolution, preferredFrameRate, contentPreference);
         produceOptions.encodings = displayProfile.encodings as any;
       } else {
-        produceOptions.encodings = [{maxBitrate: topBitrate}];
+        produceOptions.encodings = [{maxBitrate: topBitrate, maxFramerate: frameRate}];
       }
     } else {
+      const temporalMode = frameRate && frameRate >= 60 ? 'L1T3' : 'L1T2';
       produceOptions.encodings = [
-        {rid: 'q', maxBitrate: Math.round(topBitrate / 8), scaleResolutionDownBy: 4, scalabilityMode: 'L1T2'},
-        {rid: 'h', maxBitrate: Math.round(topBitrate / 3), scaleResolutionDownBy: 2, scalabilityMode: 'L1T2'},
-        {rid: 'f', maxBitrate: topBitrate,                                            scalabilityMode: 'L1T2'},
+        {rid: 'q', maxBitrate: Math.round(topBitrate / 8), scaleResolutionDownBy: 4, scalabilityMode: temporalMode, maxFramerate: frameRate},
+        {rid: 'h', maxBitrate: Math.round(topBitrate / 3), scaleResolutionDownBy: 2, scalabilityMode: temporalMode, maxFramerate: frameRate},
+        {rid: 'f', maxBitrate: topBitrate,                                            scalabilityMode: temporalMode, maxFramerate: frameRate},
       ] as any;
     }
 
@@ -566,8 +659,14 @@ export class WebrtcService implements OnDestroy {
   /**
    * Starts streaming via the SFU.  Falls back to P2P if SFU is not available.
    */
-  public async startStreamingSfu(roomId: string, stream: MediaStream, maxBitrate?: number, preferredResolution?: number): Promise<void> {
-    if (!token) return;
+  public async startStreamingSfu(
+    roomId: string,
+    stream: MediaStream,
+    maxBitrate?: number,
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
+  ): Promise<void> {
 
     await this.ensureSfuDevice();
     this.liveStreamUsesSfu = true;
@@ -575,12 +674,12 @@ export class WebrtcService implements OnDestroy {
     this.localStream = stream;
 
     const existingProducers: SfuProducerEntry[] = await hubConnection.invoke<SfuProducerEntry[]>(
-      'JoinSfuRoom', token, roomId
+      'JoinSfuRoom', roomId
     );
 
     // Create a send transport.
     const transportInfo: SfuTransportInfo = await hubConnection.invoke<SfuTransportInfo>(
-      'CreateWebRtcTransport', token, roomId, 0 /* Send = 0 */
+      'CreateWebRtcTransport', roomId, 0 /* Send = 0 */
     );
     this.sfuSendTransport = this.sfuDevice!.createSendTransport({
       id: transportInfo.id,
@@ -591,7 +690,7 @@ export class WebrtcService implements OnDestroy {
 
     this.sfuSendTransport.on('connect', async ({dtlsParameters}, callback, errback) => {
       try {
-        await hubConnection.invoke('ConnectTransport', token, roomId, transportInfo.id, dtlsParameters);
+        await hubConnection.invoke('ConnectTransport', roomId, transportInfo.id, dtlsParameters);
         callback();
       } catch (err) {
         errback(err);
@@ -601,7 +700,7 @@ export class WebrtcService implements OnDestroy {
     this.sfuSendTransport.on('produce', async ({kind, rtpParameters, appData}, callback, errback) => {
       try {
         const producerId = await hubConnection.invoke<string>(
-          'Produce', token, roomId, transportInfo.id, kind, rtpParameters
+          'Produce', roomId, transportInfo.id, kind, rtpParameters
         );
         callback({id: producerId});
       } catch (err) {
@@ -612,7 +711,7 @@ export class WebrtcService implements OnDestroy {
     // Produce each track from the local stream.
     for (const track of stream.getTracks()) {
       const produceOptions: mediasoupClient.types.ProducerOptions = track.kind === 'video'
-        ? this.buildVideoProducerOptions(track, maxBitrate, preferredResolution)
+        ? this.buildVideoProducerOptions(track, maxBitrate, preferredResolution, preferredFrameRate, contentPreference)
         : this.buildAudioProducerOptions(track);
       const producer = await this.sfuSendTransport.produce(produceOptions);
       this.sfuProducers.set(producer.id, producer);
@@ -620,26 +719,25 @@ export class WebrtcService implements OnDestroy {
     this.ensureRtcDebugStatsPolling();
 
     // Notify the room that SFU streaming has started; late-joiners will auto-join.
-    await hubConnection.invoke('StartSfuStream', token, roomId)
+    await hubConnection.invoke('StartSfuStream', roomId)
       .catch(err => console.error('StartSfuStream failed:', err));
   }
 
   /** Stop SFU streaming and tear down send transport + producers. */
   public async stopStreamingSfu(roomId: string): Promise<void> {
-    if (!token) return;
     // Signal the room first so viewers get notified before transports close.
-    await hubConnection.invoke('StopSfuStream', token, roomId)
+    await hubConnection.invoke('StopSfuStream', roomId)
       .catch(err => console.error('StopSfuStream failed:', err));
     for (const [id, producer] of this.sfuProducers) {
       try {
-        await hubConnection.invoke('CloseProducer', token, roomId, id);
+        await hubConnection.invoke('CloseProducer', roomId, id);
       } catch { /* best-effort */ }
       producer.close();
     }
     this.sfuProducers.clear();
     this.sfuSendTransport?.close();
     this.sfuSendTransport = null;
-    await hubConnection.invoke('LeaveSfuRoom', token, roomId).catch(() => {});
+    await hubConnection.invoke('LeaveSfuRoom', roomId).catch(() => {});
     this.sfuRoomId = null;
     this.maybeStopRtcDebugStatsPolling();
     this.cleanUpStreamerSide();
@@ -649,24 +747,30 @@ export class WebrtcService implements OnDestroy {
    * Starts an opt-in live screen-share over the SFU without switching the room's
    * main player or auto-joining viewers.
    */
-  private async startOptInStreamingSfu(roomId: string, stream: MediaStream, maxBitrate?: number, preferredResolution?: number): Promise<void> {
-    if (!token) return;
+  private async startOptInStreamingSfu(
+    roomId: string,
+    stream: MediaStream,
+    maxBitrate?: number,
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
+  ): Promise<void> {
     const bitrate = maxBitrate ?? this.localStreamMaxBitrate;
 
     this.liveStreamUsesSfu = true;
     try {
-      const liveRoomId = await hubConnection.invoke<string>('StartSfuOptInStream', token, roomId);
+      const liveRoomId = await hubConnection.invoke<string>('StartSfuOptInStream', roomId);
       if (!liveRoomId) {
         throw new Error('StartSfuOptInStream did not return a live room id.');
       }
 
-      await this.startSfuSendTransportOnly(liveRoomId, stream, bitrate, preferredResolution);
+      await this.startSfuSendTransportOnly(liveRoomId, stream, bitrate, preferredResolution, preferredFrameRate, contentPreference);
     } catch (err) {
       this.liveStreamUsesSfu = false;
       const liveRoomId = this.sfuRoomId;
       for (const [id, producer] of this.sfuProducers) {
         if (liveRoomId) {
-          try { await hubConnection.invoke('CloseProducer', token, liveRoomId, id); } catch { /* best-effort */ }
+          try { await hubConnection.invoke('CloseProducer', liveRoomId, id); } catch { /* best-effort */ }
         }
         producer.close();
       }
@@ -674,7 +778,7 @@ export class WebrtcService implements OnDestroy {
       this.sfuSendTransport?.close();
       this.sfuSendTransport = null;
       if (liveRoomId) {
-        await hubConnection.invoke('LeaveSfuRoom', token, liveRoomId).catch(() => {});
+        await hubConnection.invoke('LeaveSfuRoom', liveRoomId).catch(() => {});
       }
       this.sfuRoomId = null;
       this.maybeStopRtcDebugStatsPolling();
@@ -684,11 +788,10 @@ export class WebrtcService implements OnDestroy {
 
   /** Stops the active opt-in live screen-share routed through the SFU. */
   private async stopOptInStreamingSfu(roomId: string): Promise<void> {
-    if (!token) return;
     const liveRoomId = this.sfuRoomId;
     this.liveStreamUsesSfu = false;
 
-    await hubConnection.invoke('StopSfuOptInStream', token, roomId)
+    await hubConnection.invoke('StopSfuOptInStream', roomId)
       .catch(err => console.error('StopSfuOptInStream failed:', err));
 
     if (!liveRoomId) {
@@ -696,13 +799,13 @@ export class WebrtcService implements OnDestroy {
     }
 
     for (const [id, producer] of this.sfuProducers) {
-      try { await hubConnection.invoke('CloseProducer', token, liveRoomId, id); } catch { /* best-effort */ }
+      try { await hubConnection.invoke('CloseProducer', liveRoomId, id); } catch { /* best-effort */ }
       producer.close();
     }
     this.sfuProducers.clear();
     this.sfuSendTransport?.close();
     this.sfuSendTransport = null;
-    await hubConnection.invoke('LeaveSfuRoom', token, liveRoomId).catch(() => {});
+    await hubConnection.invoke('LeaveSfuRoom', liveRoomId).catch(() => {});
     this.sfuRoomId = null;
     this.cleanUpStreamerSide();
     this.maybeStopRtcDebugStatsPolling();
@@ -714,19 +817,18 @@ export class WebrtcService implements OnDestroy {
 
   /** Joins an SFU room as a viewer and begins consuming all active producers. */
   public async joinStreamSfu(roomId: string): Promise<void> {
-    if (!token) return;
 
     await this.ensureSfuDevice();
     this.sfuRoomId = roomId;
     this.currentRoomId = roomId;
 
     const existingProducers: SfuProducerEntry[] = await hubConnection.invoke<SfuProducerEntry[]>(
-      'JoinSfuRoom', token, roomId
+      'JoinSfuRoom', roomId
     );
 
     // Create a single recv transport for all consumers.
     const transportInfo: SfuTransportInfo = await hubConnection.invoke<SfuTransportInfo>(
-      'CreateWebRtcTransport', token, roomId, 1 /* Recv = 1 */
+      'CreateWebRtcTransport', roomId, 1 /* Recv = 1 */
     );
     this.sfuRecvTransport = this.sfuDevice!.createRecvTransport({
       id: transportInfo.id,
@@ -737,7 +839,7 @@ export class WebrtcService implements OnDestroy {
 
     this.sfuRecvTransport.on('connect', async ({dtlsParameters}, callback, errback) => {
       try {
-        await hubConnection.invoke('ConnectTransport', token, roomId, transportInfo.id, dtlsParameters);
+        await hubConnection.invoke('ConnectTransport', roomId, transportInfo.id, dtlsParameters);
         callback();
       } catch (err) {
         errback(err);
@@ -758,12 +860,12 @@ export class WebrtcService implements OnDestroy {
 
   /** Leave the SFU room and release all consumer resources. */
   public async leaveStreamSfu(): Promise<void> {
-    if (!token || !this.sfuRoomId) return;
+    if (!this.sfuRoomId) return;
     this.sfuConsumers.forEach(c => c.close());
     this.sfuConsumers.clear();
     this.sfuRecvTransport?.close();
     this.sfuRecvTransport = null;
-    await hubConnection.invoke('LeaveSfuRoom', token, this.sfuRoomId).catch(() => {});
+    await hubConnection.invoke('LeaveSfuRoom', this.sfuRoomId).catch(() => {});
     this.sfuRoomId = null;
     this.currentRoomId = null;
     this.remoteStream.next(null);
@@ -778,10 +880,10 @@ export class WebrtcService implements OnDestroy {
     transport: mediasoupClient.types.Transport,
     producerId: string
   ): Promise<void> {
-    if (!token || !this.sfuDevice) return;
+    if (!this.sfuDevice) return;
     try {
       const consumerInfo: SfuConsumerInfo = await hubConnection.invoke<SfuConsumerInfo>(
-        'Consume', token, roomId, transport.id, producerId, this.sfuDevice.rtpCapabilities
+        'Consume', roomId, transport.id, producerId, this.sfuDevice.rtpCapabilities
       );
       const consumer = await transport.consume({
         id: consumerInfo.id,
@@ -825,11 +927,11 @@ export class WebrtcService implements OnDestroy {
     transport: mediasoupClient.types.Transport,
     producerId: string
   ): Promise<void> {
-    if (!token || !this.sfuDevice) return;
+    if (!this.sfuDevice) return;
     try {
       this.logPopoutDebug('Consuming popout producer', {roomId, transportId: transport.id, producerId});
       const consumerInfo: SfuConsumerInfo = await hubConnection.invoke<SfuConsumerInfo>(
-        'Consume', token, roomId, transport.id, producerId, this.sfuDevice.rtpCapabilities
+        'Consume', roomId, transport.id, producerId, this.sfuDevice.rtpCapabilities
       );
       const consumer = await transport.consume({
         id: consumerInfo.id,
@@ -895,9 +997,8 @@ export class WebrtcService implements OnDestroy {
   private async ensureSfuDevice(): Promise<void> {
     if (this.sfuDevice?.loaded) return;
     if (this.sfuDeviceLoading) return this.sfuDeviceLoading;
-    if (!token) return;
     this.sfuDeviceLoading = (async () => {
-      const rtpCapabilities = await hubConnection.invoke<object>('GetRouterRtpCapabilities', token);
+      const rtpCapabilities = await hubConnection.invoke<object>('GetRouterRtpCapabilities');
       this.sfuDevice = new mediasoupClient.Device();
       await this.sfuDevice.load({routerRtpCapabilities: rtpCapabilities as any});
     })();
@@ -913,30 +1014,48 @@ export class WebrtcService implements OnDestroy {
   // ================================================================
 
   /** Begin broadcasting via P2P. Use startStreamingSfu when SFU is available. */
-  public async startStreaming(roomId: string, stream: MediaStream, maxBitrate?: number, preferredResolution?: number): Promise<void> {
+  public async startStreaming(
+    roomId: string,
+    stream: MediaStream,
+    maxBitrate?: number,
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
+  ): Promise<void> {
     this.currentRoomId = roomId;
     this.localStream = stream;
+    this.applyStreamContentPreference(stream, contentPreference);
     this.localStreamMaxBitrate = maxBitrate ?? 0;
+    this.localStreamMaxFrameRate = preferredFrameRate ?? 0;
+    this.localStreamContentPreference = contentPreference;
     this.localStreamAudience = 'personal';
     const canUseSfu = await this.checkSfuAvailable();
     if (canUseSfu) {
-      await this.startOptInStreamingSfu(roomId, stream, maxBitrate, preferredResolution);
+      await this.startOptInStreamingSfu(roomId, stream, maxBitrate, preferredResolution, preferredFrameRate, contentPreference);
       return;
     }
 
     this.liveStreamUsesSfu = false;
     this.invalidateCredentials();
-    if (token) {
-      await hubConnection.invoke('StartWebRtcStream', token, roomId)
-        .catch(err => console.error('StartWebRtcStream failed:', err));
-    }
+    await hubConnection.invoke('StartWebRtcStream', roomId)
+      .catch(err => console.error('StartWebRtcStream failed:', err));
   }
 
   /** Begin streaming directly to the room player instead of the opt-in live list. */
-  public async startStreamingToRoom(roomId: string, stream: MediaStream, maxBitrate?: number, preferredResolution?: number): Promise<void> {
+  public async startStreamingToRoom(
+    roomId: string,
+    stream: MediaStream,
+    maxBitrate?: number,
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
+  ): Promise<void> {
     this.currentRoomId = roomId;
     this.localStream = stream;
+    this.applyStreamContentPreference(stream, contentPreference);
     this.localStreamMaxBitrate = maxBitrate ?? 0;
+    this.localStreamMaxFrameRate = preferredFrameRate ?? 0;
+    this.localStreamContentPreference = contentPreference;
     this.localStreamAudience = 'room';
     this.roomStagePreviewStream.next(stream);
     this.roomStageBroadcastActive.next(true);
@@ -944,16 +1063,14 @@ export class WebrtcService implements OnDestroy {
     try {
       const canUseSfu = await this.checkSfuAvailable();
       if (canUseSfu) {
-        await this.startStreamingSfu(roomId, stream, maxBitrate, preferredResolution);
+        await this.startStreamingSfu(roomId, stream, maxBitrate, preferredResolution, preferredFrameRate, contentPreference);
         return;
       }
 
       this.liveStreamUsesSfu = false;
       this.invalidateCredentials();
-      if (token) {
-        await hubConnection.invoke('StartWebRtcStream', token, roomId)
-          .catch(err => console.error('StartWebRtcStream failed:', err));
-      }
+      await hubConnection.invoke('StartWebRtcStream', roomId)
+        .catch(err => console.error('StartWebRtcStream failed:', err));
     } catch (err) {
       this.localStreamAudience = 'none';
       this.roomStagePreviewStream.next(null);
@@ -969,10 +1086,8 @@ export class WebrtcService implements OnDestroy {
       return;
     }
 
-    if (token) {
-      await hubConnection.invoke('StopWebRtcStream', token, roomId)
-        .catch(err => console.error('StopWebRtcStream failed:', err));
-    }
+    await hubConnection.invoke('StopWebRtcStream', roomId)
+      .catch(err => console.error('StopWebRtcStream failed:', err));
     this.cleanUpStreamerSide();
   }
 
@@ -983,10 +1098,8 @@ export class WebrtcService implements OnDestroy {
       return;
     }
 
-    if (token) {
-      await hubConnection.invoke('StopWebRtcStream', token, roomId)
-        .catch(err => console.error('StopWebRtcStream failed:', err));
-    }
+    await hubConnection.invoke('StopWebRtcStream', roomId)
+      .catch(err => console.error('StopWebRtcStream failed:', err));
     this.cleanUpStreamerSide();
   }
 
@@ -1019,6 +1132,8 @@ export class WebrtcService implements OnDestroy {
     this.localStream?.getTracks().forEach(track => track.stop());
     this.localStream = null;
     this.localStreamMaxBitrate = 0;
+    this.localStreamMaxFrameRate = 0;
+    this.localStreamContentPreference = 'motion';
     this.liveStreamUsesSfu = false;
     this.localStreamAudience = 'none';
     this.roomStagePreviewStream.next(null);
@@ -1042,8 +1157,8 @@ export class WebrtcService implements OnDestroy {
     this.localStream?.getTracks().forEach(track => pc.addTrack(track, this.localStream!));
 
     pc.onicecandidate = event => {
-      if (event.candidate && token) {
-        hubConnection.invoke('SendIceCandidateToViewer', token, viewerId, event.candidate)
+      if (event.candidate) {
+        hubConnection.invoke('SendIceCandidateToViewer', viewerId, event.candidate)
           .catch(err => console.error('Error sending ICE candidate to viewer:', err));
       }
     };
@@ -1051,13 +1166,23 @@ export class WebrtcService implements OnDestroy {
     pc.onconnectionstatechange = () => {
       // Apply bitrate limit once negotiation is fully complete — setParameters is
       // only valid after the initial offer/answer exchange has finished.
-      if (pc.connectionState === 'connected' && this.localStreamMaxBitrate > 0) {
+      if (pc.connectionState === 'connected') {
         pc.getSenders()
           .filter(s => s.track?.kind === 'video')
           .forEach(sender => {
             const p = sender.getParameters();
             if (p.encodings?.length) {
-              p.encodings.forEach(e => { e.maxBitrate = this.localStreamMaxBitrate; });
+              p.encodings.forEach(e => {
+                if (this.localStreamMaxBitrate > 0) {
+                  e.maxBitrate = this.localStreamMaxBitrate;
+                }
+                if (this.localStreamMaxFrameRate > 0) {
+                  (e as any).maxFramerate = this.localStreamMaxFrameRate;
+                }
+              });
+              (p as any).degradationPreference = this.localStreamContentPreference === 'motion'
+                ? 'maintain-framerate'
+                : 'maintain-resolution';
               sender.setParameters(p).catch(e => console.warn('setParameters failed:', e));
             }
           });
@@ -1086,13 +1211,11 @@ export class WebrtcService implements OnDestroy {
       const bitratedSdp = this.injectBitrateIntoSdp(fixedSdp, this.localStreamMaxBitrate);
       const fixedOffer = new RTCSessionDescription({type: rawOffer.type, sdp: bitratedSdp});
       await pc.setLocalDescription(fixedOffer);
-      if (token) {
-        await hubConnection.invoke('SendOfferToViewer', token, viewerId, {
-          type: pc.localDescription!.type,
-          sdp: pc.localDescription!.sdp,
-          roomId: this.currentRoomId   // let auto-joined viewers know which room they're in
-        });
-      }
+      await hubConnection.invoke('SendOfferToViewer', viewerId, {
+        type: pc.localDescription!.type,
+        sdp: pc.localDescription!.sdp,
+        roomId: this.currentRoomId   // let auto-joined viewers know which room they're in
+      });
     } catch (err) {
       console.error('Error creating offer for viewer:', err);
     }
@@ -1226,18 +1349,16 @@ export class WebrtcService implements OnDestroy {
     this.incomingOfferInProgress = false;
     this.watchRequest.next({streamerId, username, roomId});
     this.logPopoutDebug('startWatching requested', {roomId, streamerId, username});
-    if (token) {
-      const isSfuOptInStream = await hubConnection.invoke<boolean>('IsSfuOptInStreamActive', token, roomId, streamerId)
-        .catch(() => false);
-      this.logPopoutDebug('IsSfuOptInStreamActive result', {roomId, streamerId, isSfuOptInStream});
-      if (isSfuOptInStream) {
-        await this.startWatchingSfu(roomId, streamerId);
-        return;
-      }
-
-      await hubConnection.invoke('JoinWebRtcStream', token, roomId, streamerId)
-        .catch(err => console.error('JoinWebRtcStream failed:', err));
+    const isSfuOptInStream = await hubConnection.invoke<boolean>('IsSfuOptInStreamActive', roomId, streamerId)
+      .catch(() => false);
+    this.logPopoutDebug('IsSfuOptInStreamActive result', {roomId, streamerId, isSfuOptInStream});
+    if (isSfuOptInStream) {
+      await this.startWatchingSfu(roomId, streamerId);
+      return;
     }
+
+    await hubConnection.invoke('JoinWebRtcStream', roomId, streamerId)
+      .catch(err => console.error('JoinWebRtcStream failed:', err));
   }
 
   /** Stop watching the current P2P stream and dismiss the popout. */
@@ -1249,10 +1370,8 @@ export class WebrtcService implements OnDestroy {
   /** @deprecated Use startWatching() for the new Discord-style opt-in flow. */
   public async joinStream(roomId: string): Promise<void> {
     this.currentRoomId = roomId;
-    if (token) {
-      await hubConnection.invoke('JoinWebRtcStream', token, roomId, '')
-        .catch(err => console.error('JoinWebRtcStream failed:', err));
-    }
+    await hubConnection.invoke('JoinWebRtcStream', roomId, '')
+      .catch(err => console.error('JoinWebRtcStream failed:', err));
   }
 
   /** Leave the current P2P stream and clean up. */
@@ -1262,8 +1381,8 @@ export class WebrtcService implements OnDestroy {
 
   /** Request ICE restart from the specific streamer we are watching. */
   public async requestIceRestart(roomId: string): Promise<void> {
-    if (token && this.currentViewingStreamerId) {
-      await hubConnection.invoke('RequestIceRestart', token, roomId, this.currentViewingStreamerId)
+    if (this.currentViewingStreamerId) {
+      await hubConnection.invoke('RequestIceRestart', roomId, this.currentViewingStreamerId)
         .catch(err => console.error('RequestIceRestart failed:', err));
     }
   }
@@ -1283,8 +1402,8 @@ export class WebrtcService implements OnDestroy {
     this.watchSfuConsumers.clear();
     this.watchSfuRecvTransport?.close();
     this.watchSfuRecvTransport = null;
-    if (token && this.watchSfuRoomId) {
-      hubConnection.invoke('LeaveSfuRoom', token, this.watchSfuRoomId).catch(() => {});
+    if (this.watchSfuRoomId) {
+      hubConnection.invoke('LeaveSfuRoom', this.watchSfuRoomId).catch(() => {}).catch(logHubFailure);
     }
     this.watchSfuRoomId = null;
     this.currentRoomId = null;
@@ -1296,7 +1415,6 @@ export class WebrtcService implements OnDestroy {
   }
 
   private async startWatchingSfu(roomId: string, streamerId: string): Promise<void> {
-    if (!token) return;
 
     await this.ensureSfuDevice();
     const liveRoomId = this.buildOptInLiveSfuRoomId(roomId, streamerId);
@@ -1304,7 +1422,7 @@ export class WebrtcService implements OnDestroy {
     this.logPopoutDebug('Joining SFU watch room', {roomId, streamerId, liveRoomId});
 
     const existingProducers: SfuProducerEntry[] = await hubConnection.invoke<SfuProducerEntry[]>(
-      'JoinSfuRoom', token, liveRoomId
+      'JoinSfuRoom', liveRoomId
     );
     this.logPopoutDebug('Joined SFU watch room', {
       liveRoomId,
@@ -1313,7 +1431,7 @@ export class WebrtcService implements OnDestroy {
     });
 
     const transportInfo: SfuTransportInfo = await hubConnection.invoke<SfuTransportInfo>(
-      'CreateWebRtcTransport', token, liveRoomId, 1 /* Recv = 1 */
+      'CreateWebRtcTransport', liveRoomId, 1 /* Recv = 1 */
     );
     this.logPopoutDebug('Created SFU watch recv transport', {
       liveRoomId,
@@ -1329,7 +1447,7 @@ export class WebrtcService implements OnDestroy {
 
     this.watchSfuRecvTransport.on('connect', async ({dtlsParameters}, callback, errback) => {
       try {
-        await hubConnection.invoke('ConnectTransport', token, liveRoomId, transportInfo.id, dtlsParameters);
+        await hubConnection.invoke('ConnectTransport', liveRoomId, transportInfo.id, dtlsParameters);
         callback();
       } catch (err) {
         errback(err);
@@ -1349,9 +1467,9 @@ export class WebrtcService implements OnDestroy {
     this.streamerPc = pc;
 
     pc.onicecandidate = event => {
-      if (event.candidate && token && this.currentRoomId && this.currentViewingStreamerId) {
+      if (event.candidate && this.currentRoomId && this.currentViewingStreamerId) {
         hubConnection.invoke(
-          'SendIceCandidate', token, this.currentRoomId, this.currentViewingStreamerId, event.candidate
+          'SendIceCandidate', this.currentRoomId, this.currentViewingStreamerId, event.candidate
         ).catch(err => console.error('Error sending ICE candidate to streamer:', err));
       }
     };
@@ -1385,8 +1503,8 @@ export class WebrtcService implements OnDestroy {
       this.streamerCandidateBuffer = [];
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      if (token && this.currentViewingStreamerId) {
-        await hubConnection.invoke('CreateStreamAnswer', token, this.currentViewingStreamerId, {
+      if (this.currentViewingStreamerId) {
+        await hubConnection.invoke('CreateStreamAnswer', this.currentViewingStreamerId, {
           type: pc.localDescription.type,
           sdp: pc.localDescription.sdp,
           roomId: this.currentRoomId
@@ -1432,7 +1550,7 @@ export class WebrtcService implements OnDestroy {
     // Moderator broadcast: forced auto-join — everyone connects immediately.
     hubConnection.on('broadcastStream', (streamerId: string, roomId: string) => {
       // For force-broadcast, treat it like an explicit watch request.
-      if (roomId && token) {
+      if (roomId ) {
         this.logPopoutDebug('broadcastStream received', {roomId, streamerId});
         this.startWatching(roomId, streamerId, '').catch(err =>
           console.error('JoinWebRtcStream (broadcast) failed:', err)
@@ -1724,17 +1842,18 @@ export class WebrtcService implements OnDestroy {
     roomId: string,
     stream: MediaStream,
     maxBitrate?: number,
-    preferredResolution?: number
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
   ): Promise<void> {
-    if (!token) return;
     await this.ensureSfuDevice();
     this.sfuRoomId = roomId;
     this.localStream = stream;
 
-    await hubConnection.invoke<SfuProducerEntry[]>('JoinSfuRoom', token, roomId);
+    await hubConnection.invoke<SfuProducerEntry[]>('JoinSfuRoom', roomId);
 
     const transportInfo: SfuTransportInfo = await hubConnection.invoke<SfuTransportInfo>(
-      'CreateWebRtcTransport', token, roomId, 0 /* Send = 0 */
+      'CreateWebRtcTransport', roomId, 0 /* Send = 0 */
     );
     this.sfuSendTransport = this.sfuDevice!.createSendTransport({
       id: transportInfo.id,
@@ -1745,7 +1864,7 @@ export class WebrtcService implements OnDestroy {
 
     this.sfuSendTransport.on('connect', async ({dtlsParameters}, callback, errback) => {
       try {
-        await hubConnection.invoke('ConnectTransport', token, roomId, transportInfo.id, dtlsParameters);
+        await hubConnection.invoke('ConnectTransport', roomId, transportInfo.id, dtlsParameters);
         callback();
       } catch (err) { errback(err); }
     });
@@ -1753,7 +1872,7 @@ export class WebrtcService implements OnDestroy {
     this.sfuSendTransport.on('produce', async ({kind, rtpParameters}, callback, errback) => {
       try {
         const producerId = await hubConnection.invoke<string>(
-          'Produce', token, roomId, transportInfo.id, kind, rtpParameters
+          'Produce', roomId, transportInfo.id, kind, rtpParameters
         );
         callback({id: producerId});
       } catch (err) { errback(err); }
@@ -1761,7 +1880,7 @@ export class WebrtcService implements OnDestroy {
 
     for (const track of stream.getTracks()) {
       const produceOptions: mediasoupClient.types.ProducerOptions = track.kind === 'video'
-        ? this.buildVideoProducerOptions(track, maxBitrate, preferredResolution)
+        ? this.buildVideoProducerOptions(track, maxBitrate, preferredResolution, preferredFrameRate, contentPreference)
         : this.buildAudioProducerOptions(track);
       const producer = await this.sfuSendTransport.produce(produceOptions);
       this.sfuProducers.set(producer.id, producer);
@@ -1782,13 +1901,18 @@ export class WebrtcService implements OnDestroy {
    *
    * The fileShareStarted listener handles the viewer-side SFU join.
    */
-  public async startFileShare(roomId: string, stream: MediaStream, maxBitrate?: number): Promise<void> {
-    if (!token) return;
+  public async startFileShare(
+    roomId: string,
+    stream: MediaStream,
+    maxBitrate?: number,
+    preferredResolution?: number,
+    preferredFrameRate: number = 60
+  ): Promise<void> {
     const bitrate = maxBitrate ?? 8_000_000;
     this.isFileShareHost = true;
     try {
-      await this.startSfuSendTransportOnly(roomId, stream, bitrate);
-      await hubConnection.invoke('StartFileShare', token, roomId);
+      await this.startSfuSendTransportOnly(roomId, stream, bitrate, preferredResolution, preferredFrameRate, 'motion');
+      await hubConnection.invoke('StartFileShare', roomId);
       this.isPreparingFileShareHost = false;
       this.pendingFileShareFile.next(null);
     } catch (err) {
@@ -1796,13 +1920,13 @@ export class WebrtcService implements OnDestroy {
       this.isPreparingFileShareHost = false;
       this.pendingFileShareFile.next(null);
       for (const [id, producer] of this.sfuProducers) {
-        try { await hubConnection.invoke('CloseProducer', token, roomId, id); } catch { /* best-effort */ }
+        try { await hubConnection.invoke('CloseProducer', roomId, id); } catch { /* best-effort */ }
         producer.close();
       }
       this.sfuProducers.clear();
       this.sfuSendTransport?.close();
       this.sfuSendTransport = null;
-      await hubConnection.invoke('LeaveSfuRoom', token, roomId).catch(() => {});
+      await hubConnection.invoke('LeaveSfuRoom', roomId).catch(() => {});
       this.sfuRoomId = null;
       throw err;
     }
@@ -1816,7 +1940,6 @@ export class WebrtcService implements OnDestroy {
    * broadcast again and confuse room state).
    */
   public async stopFileShare(roomId: string): Promise<void> {
-    if (!token) return;
     const wasServerShare = this.isServerFileShare;
     const wasPreparing   = this.isPreparingFileShareHost;
 
@@ -1837,7 +1960,7 @@ export class WebrtcService implements OnDestroy {
       if (uploadId) {
         const cancelUrl =
           `${baseUrl}api/video/roomUpload/cancel` +
-          `?token=${encodeURIComponent(token)}` +
+          `` +
           `&uploadId=${encodeURIComponent(uploadId)}`;
         this.http.delete(cancelUrl).toPromise().catch(() => {});
       }
@@ -1848,7 +1971,7 @@ export class WebrtcService implements OnDestroy {
 
     this._serverShareUploadId = null;
     this.fileShareStopInProgress = true;
-    await hubConnection.invoke('StopFileShare', token, roomId)
+    await hubConnection.invoke('StopFileShare', roomId)
       .catch(err => console.error('StopFileShare failed:', err));
     await this.teardownFileShareSender(roomId);
     if (wasServerShare) {
@@ -1862,16 +1985,16 @@ export class WebrtcService implements OnDestroy {
   private async teardownFileShareSender(roomId?: string): Promise<void> {
     const activeRoomId = roomId ?? this.sfuRoomId;
     for (const [id, producer] of this.sfuProducers) {
-      if (token && activeRoomId) {
-        try { await hubConnection.invoke('CloseProducer', token, activeRoomId, id); } catch { /* best-effort */ }
+      if (activeRoomId) {
+        try { await hubConnection.invoke('CloseProducer', activeRoomId, id); } catch { /* best-effort */ }
       }
       producer.close();
     }
     this.sfuProducers.clear();
     this.sfuSendTransport?.close();
     this.sfuSendTransport = null;
-    if (token && activeRoomId) {
-      await hubConnection.invoke('LeaveSfuRoom', token, activeRoomId).catch(() => {});
+    if (activeRoomId) {
+      await hubConnection.invoke('LeaveSfuRoom', activeRoomId).catch(() => {});
     }
     this.sfuRoomId = null;
     this.maybeStopRtcDebugStatsPolling();
@@ -1882,8 +2005,7 @@ export class WebrtcService implements OnDestroy {
    * Call this whenever the local <video> element plays or pauses.
    */
   public async broadcastFileSharePlayPause(roomId: string, isPlaying: boolean): Promise<void> {
-    if (!token) return;
-    await hubConnection.invoke('FileSharePlayPause', token, roomId, isPlaying)
+    await hubConnection.invoke('FileSharePlayPause', roomId, isPlaying)
       .catch(err => console.error('FileSharePlayPause failed:', err));
   }
 
@@ -1892,8 +2014,7 @@ export class WebrtcService implements OnDestroy {
    * No-op for browser-captureStream shares.
    */
   public async broadcastFileShareSeek(roomId: string, positionSec: number): Promise<void> {
-    if (!token) return;
-    await hubConnection.invoke('FileShareSeek', token, roomId, positionSec)
+    await hubConnection.invoke('FileShareSeek', roomId, positionSec)
       .catch(err => console.error('FileShareSeek failed:', err));
   }
 
@@ -1911,11 +2032,10 @@ export class WebrtcService implements OnDestroy {
    * notification causes the host to join the SFU as a consumer (not a sender).
    */
   public async startServerFileShare(roomId: string, fileKey: string): Promise<void> {
-    if (!token) return;
     this.isFileShareHost  = true;
     this.isServerFileShare = true;
     try {
-      await hubConnection.invoke('StartServerFileShare', token, roomId, fileKey);
+      await hubConnection.invoke('StartServerFileShare', roomId, fileKey);
       this.isPreparingFileShareHost = false;
       this.pendingFileShareFile.next(null);
     } catch (err) {
@@ -1959,7 +2079,6 @@ export class WebrtcService implements OnDestroy {
   }
 
   public async beginServerFileShare(file: File, roomId: string): Promise<void> {
-    if (!token) throw new Error('Not authenticated');
     this.fileShareUploadProgress.next(0);
     // Probe duration in the background — does NOT block the upload.
     this.probeFileDuration(file).then(d => { this._serverShareFileDuration = d; }).catch(() => {});
@@ -1970,7 +2089,7 @@ export class WebrtcService implements OnDestroy {
 
     const startUrl =
       `${baseUrl}api/video/roomUpload/start` +
-      `?token=${encodeURIComponent(token)}` +
+      `` +
       `&uniqueId=${encodeURIComponent(roomId)}` +
       `&name=${encodeURIComponent(name)}` +
       `&fileEnding=${encodeURIComponent(ext)}` +
@@ -1995,7 +2114,7 @@ export class WebrtcService implements OnDestroy {
     if (!this.isPreparingFileShareHost) {
       // User cancelled during the first-chunk upload.
       await this.http.delete(
-        `${baseUrl}api/video/roomUpload/cancel?token=${encodeURIComponent(token)}&uploadId=${encodeURIComponent(uploadId)}`
+        `${baseUrl}api/video/roomUpload/cancel?uploadId=${encodeURIComponent(uploadId)}`
       ).toPromise().catch(() => {});
       this._serverShareUploadId = null;
       throw new Error('Share was cancelled');
@@ -2005,11 +2124,11 @@ export class WebrtcService implements OnDestroy {
     this.isFileShareHost   = true;
     this.isServerFileShare = true;
     try {
-      await hubConnection.invoke('StartServerFileShareFromUpload', token, roomId, uploadId);
+      await hubConnection.invoke('StartServerFileShareFromUpload', roomId, uploadId);
 
       // Guard against the user pressing Stop while the hub call was in flight.
       if (!this.isFileShareHost) {
-        await hubConnection.invoke('StopFileShare', token, roomId).catch(() => {});
+        await hubConnection.invoke('StopFileShare', roomId).catch(() => {});
         this._serverShareUploadId = null;
         throw new Error('Share was cancelled');
       }
@@ -2035,7 +2154,6 @@ export class WebrtcService implements OnDestroy {
 
   private chunkUrl(uploadId: string, offset: number): string {
     return `${baseUrl}api/video/roomUpload/chunk` +
-      `?token=${encodeURIComponent(token!)}` +
       `&uploadId=${encodeURIComponent(uploadId)}` +
       `&startByte=${offset}`;
   }
@@ -2075,11 +2193,10 @@ export class WebrtcService implements OnDestroy {
       // All bytes written — tell the server the file is complete.
       const completeUrl =
         `${baseUrl}api/video/roomUpload/complete` +
-        `?token=${encodeURIComponent(token!)}` +
         `&uploadId=${encodeURIComponent(uploadId)}`;
       await this.http.post(completeUrl, null).toPromise();
       // Notify the hub that the upload is complete so the seek guard is cleared.
-      await hubConnection.invoke('MarkFileShareUploadComplete', token, _roomId, uploadId).catch(() => {});
+      await hubConnection.invoke('MarkFileShareUploadComplete', _roomId, uploadId).catch(() => {});
       this.fileShareUploadProgress.next(100);
       this.backgroundUploadInProgress.next(false);
     } catch (err: any) {
@@ -2130,6 +2247,135 @@ export class WebrtcService implements OnDestroy {
     this.pendingRtmpFileShareFile.next(null);
   }
 
+  public async probeRtmpFileTracks(file: File): Promise<RtmpLocalMediaProbeResult> {
+    const mediaInfoFactory = (await import('mediainfo.js')).default;
+    const mediaInfo = await mediaInfoFactory({
+      format: 'object',
+      full: true,
+      locateFile: () => 'assets/mediainfo/MediaInfoModule.wasm'
+    });
+
+    try {
+      const result: any = await mediaInfo.analyzeData(file.size, (size: number, offset: number) =>
+        this.readFileChunk(file, offset, size)
+      );
+      const tracks: any[] = Array.isArray(result?.media?.track) ? result.media.track : [];
+      const audioTracks: RtmpLocalMediaTrack[] = [];
+      const subtitleTracks: RtmpLocalMediaTrack[] = [];
+
+      tracks.forEach((track: any) => {
+        const type = track?.['@type'];
+        if (type === 'Audio') {
+          audioTracks.push(this.toRtmpLocalMediaTrack(track, audioTracks.length, false));
+        } else if (this.isMediaInfoSubtitleTrack(track)) {
+          subtitleTracks.push(this.toRtmpLocalMediaTrack(track, subtitleTracks.length, true));
+        }
+      });
+
+      return {audioTracks, subtitleTracks};
+    } finally {
+      mediaInfo.close();
+    }
+  }
+
+  private readFileChunk(file: File, offset: number, size: number): Promise<Uint8Array> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(file.slice(offset, offset + size));
+    });
+  }
+
+  private toRtmpLocalMediaTrack(track: any, fallbackOrdinal: number, isSubtitle: boolean): RtmpLocalMediaTrack {
+    const ordinal = isSubtitle ? fallbackOrdinal : this.readMediaInfoOrdinal(track, fallbackOrdinal);
+    const language = this.readFirstMediaInfoValue(track, ['Language_String3', 'Language_String', 'Language']) || 'und';
+    const title = this.readFirstMediaInfoValue(track, ['Title', 'StreamName', 'Name']) || '';
+    const codecName = this.normalizeMediaInfoCodecName(
+      this.readFirstMediaInfoValue(track, ['Format', 'Format_String', 'Format_Commercial', 'CodecID', 'CodecID_String']) || ''
+    );
+    const isDefault = this.readMediaInfoFlag(track, ['Default', 'Default_String']);
+    const isForced = this.readMediaInfoFlag(track, ['Forced', 'Forced_String']);
+    const burnMethod = isSubtitle ? this.getRtmpSubtitleBurnMethod(codecName) : null;
+    const parts = [
+      `#${ordinal + 1}`,
+      language !== 'und' ? language : null,
+      codecName || null,
+      title || null,
+      isForced ? 'forced' : null,
+      isDefault ? 'default' : null,
+    ].filter(Boolean);
+
+    return {
+      ordinal,
+      language,
+      title,
+      codecName,
+      isDefault,
+      isForced,
+      burnMethod,
+      burnable: !!burnMethod,
+      label: parts.join(' · ')
+    };
+  }
+
+  private isMediaInfoSubtitleTrack(track: any): boolean {
+    if (track?.['@type'] === 'Text') return true;
+    if (track?.['@type'] !== 'Image') return false;
+
+    const codecName = this.normalizeMediaInfoCodecName(
+      this.readFirstMediaInfoValue(track, ['Format', 'Format_String', 'Format_Commercial', 'CodecID', 'CodecID_String']) || ''
+    );
+    return this.getRtmpSubtitleBurnMethod(codecName) !== null;
+  }
+
+  private readMediaInfoOrdinal(track: any, fallbackOrdinal: number): number {
+    const raw = track?.StreamKindPos ?? track?.['@typeorder'];
+    const parsed = typeof raw === 'number' ? raw : parseInt(String(raw ?? ''), 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed - 1 : fallbackOrdinal;
+  }
+
+  private readFirstMediaInfoValue(track: any, keys: string[]): string | null {
+    for (const key of keys) {
+      const value = track?.[key];
+      if (value !== undefined && value !== null && String(value).trim()) {
+        return String(value).trim();
+      }
+    }
+    return null;
+  }
+
+  private readMediaInfoFlag(track: any, keys: string[]): boolean {
+    const value = this.readFirstMediaInfoValue(track, keys)?.toLowerCase();
+    return value === 'yes' || value === 'true' || value === '1';
+  }
+
+  private normalizeMediaInfoCodecName(codecName: string): string {
+    const normalized = codecName.trim().toLowerCase();
+    const compact = normalized.replace(/[\s_\-/]/g, '');
+    if (compact.includes('pgs') || compact.includes('hdmv')) return 'hdmv_pgs_subtitle';
+    if (compact.includes('vobsub') || compact.includes('dvdsubtitle') || compact.includes('dvdsub')) return 'dvd_subtitle';
+    if (compact.includes('dvbsubtitle') || compact.includes('dvbsub')) return 'dvb_subtitle';
+    if (compact.includes('xsub')) return 'xsub';
+    if (compact.includes('ass')) return 'ass';
+    if (compact.includes('ssa')) return 'ssa';
+    if (compact.includes('webvtt') || compact.includes('vtt')) return 'webvtt';
+    if (compact.includes('movtext') || compact.includes('tx3g')) return 'mov_text';
+    if (compact.includes('subrip') || compact.includes('srt') || compact.includes('utf8')) return 'subrip';
+    if (compact.includes('text')) return 'text';
+    return normalized;
+  }
+
+  private getRtmpSubtitleBurnMethod(codecName: string): RtmpSubtitleBurnMethod | null {
+    if (['subrip', 'srt', 'ass', 'ssa', 'webvtt', 'mov_text', 'text'].includes(codecName)) {
+      return 'text';
+    }
+    if (['hdmv_pgs_subtitle', 'pgs', 'dvd_subtitle', 'dvdsub', 'vobsub', 'xsub', 'dvb_subtitle'].includes(codecName)) {
+      return 'bitmap';
+    }
+    return null;
+  }
+
   /**
    * Uploads the first chunk, tells the server to start ffmpeg (RTMP push),
    * then continues uploading in the background while the stream is live.
@@ -2142,7 +2388,6 @@ export class WebrtcService implements OnDestroy {
     roomId: string,
     playbackPreferences: RtmpPlaybackPreferences
   ): Promise<void> {
-    if (!token) throw new Error('Not authenticated');
     this.rtmpFileShareUploadProgress.next(0);
     this.probeFileDuration(file).then(d => { this._rtmpShareFileDuration = d; }).catch(() => {});
     this.rtmpFileShareCanSeek.next(false);
@@ -2154,7 +2399,7 @@ export class WebrtcService implements OnDestroy {
 
     const startUrl =
       `${baseUrl}api/video/roomUpload/start` +
-      `?token=${encodeURIComponent(token)}` +
+      `` +
       `&uniqueId=${encodeURIComponent(roomId)}` +
       `&name=${encodeURIComponent(name)}` +
       `&fileEnding=${encodeURIComponent(ext)}` +
@@ -2178,7 +2423,7 @@ export class WebrtcService implements OnDestroy {
 
     if (!this.isPreparingRtmpFileShareHost) {
       await this.http.delete(
-        `${baseUrl}api/video/roomUpload/cancel?token=${encodeURIComponent(token)}&uploadId=${encodeURIComponent(uploadId)}`
+        `${baseUrl}api/video/roomUpload/cancel?uploadId=${encodeURIComponent(uploadId)}`
       ).toPromise().catch(() => {});
       this._rtmpShareUploadId = null;
       throw new Error('Share was cancelled');
@@ -2186,10 +2431,10 @@ export class WebrtcService implements OnDestroy {
 
     this.isRtmpFileShareHost = true;
     try {
-      await hubConnection.invoke('StartRtmpFileShareFromUpload', token, roomId, uploadId, playbackPreferences);
+      await hubConnection.invoke('StartRtmpFileShareFromUpload', roomId, uploadId, playbackPreferences);
 
       if (!this.isRtmpFileShareHost) {
-        await hubConnection.invoke('StopRtmpFileShare', token, roomId).catch(() => {});
+        await hubConnection.invoke('StopRtmpFileShare', roomId).catch(() => {});
         this._rtmpShareUploadId = null;
         throw new Error('Share was cancelled');
       }
@@ -2241,10 +2486,9 @@ export class WebrtcService implements OnDestroy {
       if (!this.isRtmpFileShareHost) return;
       const completeUrl =
         `${baseUrl}api/video/roomUpload/complete` +
-        `?token=${encodeURIComponent(token!)}` +
         `&uploadId=${encodeURIComponent(uploadId)}`;
       await this.http.post(completeUrl, null).toPromise();
-      await hubConnection.invoke('MarkRtmpFileShareUploadComplete', token, roomId, uploadId).catch(() => {});
+      await hubConnection.invoke('MarkRtmpFileShareUploadComplete', roomId, uploadId).catch(() => {});
       this.rtmpFileShareUploadProgress.next(100);
       this.rtmpFileShareBackgroundUploadInProgress.next(false);
     } catch (err: any) {
@@ -2258,25 +2502,22 @@ export class WebrtcService implements OnDestroy {
   }
 
   public async stopRtmpFileShare(roomId: string): Promise<void> {
-    if (!token) return;
     this._rtmpShareStopInProgress = true;
     this.cancelPreparingRtmpFileShare();
     try {
-      await hubConnection.invoke('StopRtmpFileShare', token, roomId);
+      await hubConnection.invoke('StopRtmpFileShare', roomId);
     } catch (err) {
       console.error('StopRtmpFileShare failed:', err);
     }
   }
 
   public async broadcastRtmpFileSharePlayPause(roomId: string, isPlaying: boolean): Promise<void> {
-    if (!token) return;
-    await hubConnection.invoke('RtmpFileSharePlayPause', token, roomId, isPlaying)
+    await hubConnection.invoke('RtmpFileSharePlayPause', roomId, isPlaying)
       .catch(err => console.error('RtmpFileSharePlayPause failed:', err));
   }
 
   public async broadcastRtmpFileShareSeek(roomId: string, positionSec: number): Promise<void> {
-    if (!token) return;
-    await hubConnection.invoke('RtmpFileShareSeek', token, roomId, positionSec)
+    await hubConnection.invoke('RtmpFileShareSeek', roomId, positionSec)
       .catch(err => console.error('RtmpFileShareSeek failed:', err));
   }
 
@@ -2295,29 +2536,35 @@ export class WebrtcService implements OnDestroy {
    *
    * A P2P fallback is retained for the rare case where the SFU is unreachable.
    */
-  public async broadcastToRoom(roomId: string, stream: MediaStream, maxBitrate?: number, preferredResolution?: number): Promise<void> {
+  public async broadcastToRoom(
+    roomId: string,
+    stream: MediaStream,
+    maxBitrate?: number,
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
+  ): Promise<void> {
     this.localStreamMaxBitrate = maxBitrate ?? 0;
+    this.localStreamMaxFrameRate = preferredFrameRate ?? 0;
+    this.localStreamContentPreference = contentPreference;
+    this.applyStreamContentPreference(stream, contentPreference);
     const canUseSfu = await this.checkSfuAvailable();
     if (canUseSfu) {
       // Set currentRoomId so any teardown path that reads it stays consistent.
       this.currentRoomId = roomId;
       // Set up SFU producers in the opt-in live room (does NOT flip the room player).
-      await this.startOptInStreamingSfu(roomId, stream, maxBitrate, preferredResolution);
+      await this.startOptInStreamingSfu(roomId, stream, maxBitrate, preferredResolution, preferredFrameRate, contentPreference);
       // Once producers are ready, push the notification so viewers auto-join via SFU.
-      if (token) {
-        await hubConnection.invoke('ForceSfuBroadcast', token, roomId)
-          .catch(err => console.error('ForceSfuBroadcast failed:', err));
-      }
+      await hubConnection.invoke('ForceSfuBroadcast', roomId)
+        .catch(err => console.error('ForceSfuBroadcast failed:', err));
       return;
     }
     // P2P fallback — only reached when the SFU is unreachable.
     this.currentRoomId = roomId;
     this.localStream = stream;
     this.invalidateCredentials();
-    if (token) {
-      await hubConnection.invoke('ForceBroadcast', token, roomId)
-        .catch(err => console.error('ForceBroadcast failed:', err));
-    }
+    await hubConnection.invoke('ForceBroadcast', roomId)
+      .catch(err => console.error('ForceBroadcast failed:', err));
   }
 
   /** Stop a moderator broadcast (calls the same StopWebRtcStream under the hood). */
@@ -2351,8 +2598,7 @@ export class WebrtcService implements OnDestroy {
    * Call with spatialLayer 0 (lowest) to 2 (highest) to adapt to bandwidth.
    */
   public async setPreferredLayers(roomId: string, consumerId: string, spatialLayer: number, temporalLayer: number = 2): Promise<void> {
-    if (!token) return;
-    await hubConnection.invoke('SetPreferredLayers', token, roomId, consumerId, spatialLayer, temporalLayer)
+    await hubConnection.invoke('SetPreferredLayers', roomId, consumerId, spatialLayer, temporalLayer)
       .catch(err => console.error('SetPreferredLayers failed:', err));
   }
 
@@ -2367,15 +2613,13 @@ export class WebrtcService implements OnDestroy {
 
   /** Starts server-side recording for the SFU room. */
   public async startRecording(roomId: string): Promise<void> {
-    if (!token) return;
-    await hubConnection.invoke('StartRecording', token, roomId)
+    await hubConnection.invoke('StartRecording', roomId)
       .catch(err => console.error('StartRecording failed:', err));
   }
 
   /** Stops the active server-side recording. */
   public async stopRecording(roomId: string): Promise<void> {
-    if (!token) return;
-    await hubConnection.invoke('StopRecording', token, roomId)
+    await hubConnection.invoke('StopRecording', roomId)
       .catch(err => console.error('StopRecording failed:', err));
   }
 
@@ -2433,6 +2677,8 @@ export enum Resolution {
   UHD = 2160
 }
 
+export type StreamContentPreference = 'detail' | 'motion';
+
 export interface WebRtcCandidateExchange extends RTCIceCandidate {
   viewerId: string;
 }
@@ -2474,5 +2720,4 @@ export interface SfuRecordingInfo {
   filename: string;
   startedAtUnixMs: number;
 }
-
 

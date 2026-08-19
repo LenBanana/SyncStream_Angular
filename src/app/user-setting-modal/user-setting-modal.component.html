@@ -25,17 +25,21 @@
                     <label class="mt-3">Username<span class="text-danger"> *</span></label>
                     <input [(ngModel)]="User.username" minlength="2" type="text" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Username" required>
                     <label class="mt-3">Password (new)<span class="text-danger"> *</span></label>
-                    <input [(ngModel)]="User.password" minlength="2" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
+                    <input [(ngModel)]="User.password" [minlength]="MinPasswordLength" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
                     <label class="mt-3">Password (repeat new)<span class="text-danger"> *</span></label>
-                    <input [(ngModel)]="RepeatPassword" minlength="2" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
+                    <input [(ngModel)]="RepeatPassword" [minlength]="MinPasswordLength" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
                     <div class="text-danger">
                         <div *ngIf="RepeatPassword!==User.password">
                             Make sure your password matches
                         </div>
+                        <div *ngIf="User.password && User.password.length < MinPasswordLength">
+                            Use at least {{MinPasswordLength}} characters
+                        </div>
                     </div>
                     <hr>
                     <label class="mt-3">Password (confirmation)<span class="text-danger"> *</span></label>
-                    <input [(ngModel)]="Password" minlength="2" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
+                    <!-- No minimum here: this is the password the account already has, which may predate the rule. -->
+                    <input [(ngModel)]="Password" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
                   </div>
                   <div *ngIf="CurrentSettings==SettingsMenu.General" class="container-fluid py-3">
                     <h3>Layout</h3>
@@ -75,6 +79,71 @@
                         <input [(ngModel)]="BrowserSettings.generalSettings.playVoipJoinSound" type="checkbox" class="custom-control-input" id="voipAudioCheck" (change)="ChangeSettings()">
                         <label class="custom-control-label" for="voipAudioCheck">Play sound</label>
                       </div>
+                    </div>
+                    <div class="mt-3">
+                      <h3 class="pt-3">YouTube</h3>
+                      <div class="custom-control custom-checkbox pt-2">
+                        <input [(ngModel)]="BrowserSettings.playbackSettings.youtubeCaptions" type="checkbox" class="custom-control-input" id="youtubeCaptionsCheck" (change)="ChangeSettings()">
+                        <label class="custom-control-label" for="youtubeCaptionsCheck">Start videos with captions showing</label>
+                      </div>
+                      <p class="text-muted small mt-2 mb-0">
+                        Applies from the next video. YouTube offers no dependable way to change captions in a player that is
+                        already running, so this is set when the player is built. With this off, captions stay off rather
+                        than following whatever your Google account prefers.
+                      </p>
+                    </div>
+                    <div class="mt-3">
+                      <h3 class="pt-3">YouTube SponsorBlock</h3>
+                      <p class="text-muted mb-2">
+                        Uses SponsorBlock community segment data through the Drecktube backend proxy. Auto-skip only runs on the host so the room stays synchronized.
+                      </p>
+                      <div class="custom-control custom-checkbox pt-2">
+                        <input [(ngModel)]="BrowserSettings.playbackSettings.sponsorBlock.enabled" type="checkbox" class="custom-control-input" id="sponsorBlockEnabledCheck" (change)="ChangeSettings()">
+                        <label class="custom-control-label" for="sponsorBlockEnabledCheck">Enable SponsorBlock for YouTube</label>
+                      </div>
+                      <div class="custom-control custom-checkbox pt-2">
+                        <input [(ngModel)]="BrowserSettings.playbackSettings.sponsorBlock.showMarkers" type="checkbox" class="custom-control-input" id="sponsorBlockMarkersCheck" (change)="ChangeSettings()">
+                        <label class="custom-control-label" for="sponsorBlockMarkersCheck">Show progress bar markers</label>
+                      </div>
+                      <div class="custom-control custom-checkbox pt-2">
+                        <input [(ngModel)]="BrowserSettings.playbackSettings.sponsorBlock.showSkipNotice" type="checkbox" class="custom-control-input" id="sponsorBlockNoticeCheck" (change)="ChangeSettings()">
+                        <label class="custom-control-label" for="sponsorBlockNoticeCheck">Show skip notice with jump back action</label>
+                      </div>
+                      <label class="mt-3 mb-2 d-block">Marker categories</label>
+                      <p class="text-muted small mb-2">
+                        Which categories are drawn on your progress bar. Yours alone, and it does not change what is
+                        skipped.
+                      </p>
+                      <div class="row">
+                        <div class="col-md-6" *ngFor="let category of SponsorBlockCategoryOrder">
+                          <div class="custom-control custom-checkbox pt-2">
+                            <input [(ngModel)]="BrowserSettings.playbackSettings.sponsorBlock.categories[category]" type="checkbox" class="custom-control-input" [id]="'sponsorBlockCategory-' + category" (change)="ChangeSettings()">
+                            <label class="custom-control-label" [for]="'sponsorBlockCategory-' + category">{{SponsorBlockCategoryLabels[category]}}</label>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div *ngIf="User?.userprivileges >= UserPrivileges.Administrator" class="mt-4">
+                        <label class="mb-2 d-block">Auto-skip categories (everyone)</label>
+                        <p class="text-muted small mb-2">
+                          What the room skips. Set once for the site, because only the host performs a skip and the rest
+                          of the room follows the position it jumps to, so this cannot be a personal choice.
+                        </p>
+                        <div class="row">
+                          <div class="col-md-6" *ngFor="let category of SponsorBlockCategoryOrder">
+                            <div class="custom-control custom-checkbox pt-2">
+                              <input [checked]="IsSkipped(category)" (change)="ToggleSkipped(category, $any($event.target).checked)" type="checkbox" class="custom-control-input" [id]="'sponsorBlockSkip-' + category">
+                              <label class="custom-control-label" [for]="'sponsorBlockSkip-' + category">{{SponsorBlockCategoryLabels[category]}}</label>
+                            </div>
+                          </div>
+                        </div>
+                        <button class="btn btn-primary mt-3" [disabled]="SavingSkipPolicy" (click)="SaveSkipPolicy()">
+                          {{SavingSkipPolicy ? 'Saving...' : 'Save for everyone'}}
+                        </button>
+                      </div>
+                      <p class="text-muted small mt-3 mb-0">
+                        SponsorBlock API/database is provided by the SponsorBlock project and used here for non-commercial room playback.
+                      </p>
                     </div>
                   </div>
                   <div *ngIf="CurrentSettings==SettingsMenu.Stream" class="container-fluid py-3">

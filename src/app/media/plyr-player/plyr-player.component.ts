@@ -1,16 +1,19 @@
 import { AfterViewInit, Component, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
 import Plyr from 'plyr';
 import { Subscription } from 'rxjs';
-import { getCookie } from '../../global.settings';
+
 import { delay } from '../../helper/generic';
 import { VideoDTO } from '../../Interfaces/VideoDTO';
 import { PlayerService } from '../../player/player-service/player.service';
-import { PlayerType } from '../../player/player.component';
+import { PlayerType } from '../../Interfaces/PlayerType';
 import { PlaylistService } from '../../playlist/playlist-service/playlist.service';
 import { baseUrl } from '../../services/signal-r.service';
 import { MediaService } from '../media-service/media.service';
 import { AlertType, Dialog } from '../../Interfaces/Dialog';
 import { DialogService } from '../../text-dialog/text-dialog-service/dialog-service.service';
+import { PlaybackSyncService } from '../../media/sync/playback-sync.service';
+import { PlyrTarget } from '../../media/sync/playback-target';
+import { startPlayback } from '../../media/sync/playback-start';
 declare var $: any;
 export var player: Plyr = undefined;
 @Component({
@@ -20,12 +23,10 @@ export var player: Plyr = undefined;
 })
 export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
 
-  constructor(private playlistService: PlaylistService, private playerService: PlayerService, private mediaService: MediaService, private dialogService: DialogService) { }
+  constructor(private playlistService: PlaylistService, private playerService: PlayerService, private mediaService: MediaService, private dialogService: DialogService, private playbackSync: PlaybackSyncService) { }
   @Input() CurrentPlayerType = PlayerType.Nothing;
   @Input() IsHost = false;
   @Input() UniqueId = "";
-  @Input() CurrentPing = 0;
-  @Input() Threshhold = .5;
   PlayerType = PlayerType;
   IsPlaying = false;
   IsReady = false;
@@ -52,7 +53,6 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
   ngAfterViewInit(): void {
   }
 
-
   ngOnChanges() {
     if (this.IsReady && this.CurrentPlayerType != PlayerType.Vimeo) {
       player.pause();
@@ -64,39 +64,48 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
     this.IsPlayingUpdate?.unsubscribe();
     this.VideoUpdate?.unsubscribe();
     this.ServerTimeUpdate?.unsubscribe();
-    player.off("play", () => {});
-    player.off("pause", () => {});
-    player.off("timeupdate", () => {});
-    player.off("ended", () => {});
-    player.off("ready", () => {});
+
+    // Destroyed and cleared, so the next mount builds its own.
+    //
+    // The instance lives in a module variable and was only created when that variable was still undefined, so
+    // leaving it behind meant the next component to mount skipped InitPlayer entirely: it never attached its own
+    // handlers, never called AddSubscriptions, and left IsReady false, so it did not follow the room's position
+    // at all. Meanwhile the handlers from this component stayed attached to the shared instance and kept
+    // reporting with whatever IsHost and CurrentPlayerType it had when it was torn down.
+    //
+    // The off calls this replaces removed nothing: each passed a freshly created function, and removing a
+    // listener needs the same reference that was added.
+    try {
+      player?.destroy();
+    } catch {
+      // A player whose element has already gone is nothing to clean up.
+    }
+    player = undefined;
   }
 
   AddSubscriptions() {
     //Time update from server
-    this.ServerTimeUpdate = this.playerService.currentTime.subscribe(t => {
-      if (!this.IsReady || !t || t == null || this.IsHost || this.CurrentPlayerType != PlayerType.Vimeo) {
+    this.ServerTimeUpdate = this.playerService.currentTime.subscribe(sync => {
+      if (!this.IsReady || !sync || this.IsHost || this.CurrentPlayerType != PlayerType.Vimeo) {
         return;
       }
-      let playerTime = player.currentTime;
-      if (playerTime >= 0 && ((t > (playerTime + this.Threshhold) || t < (playerTime - this.Threshhold)))) {
-        if (player.buffered > 0) {
-          player.currentTime = t + this.CurrentPing;
-          //player.play();
-        }
-      }
+      this.playbackSync.apply(new PlyrTarget(player), sync);
     });
     //Play/Pause update from server
     this.IsPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {
-      if (isplaying != null) {
-        this.IsPlaying = isplaying;
+      // Null means the state is not known rather than not playing, and the subject is reset to it. Falling
+      // through to the pause branch on it answers "no idea" by pausing.
+      if (isplaying == null) {
+        return;
       }
+      this.IsPlaying = isplaying;
       if (!this.IsReady || this.IsHost || this.CurrentPlayerType != PlayerType.Vimeo) {
         return;
       }
       if (player.buffered > 0) {
         if (isplaying) {
-          player.play();
-        } else if (!isplaying) {
+          startPlayback(() => player.play());
+        } else {
           player.pause();
         }
       }
@@ -108,13 +117,6 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
         return;
       }
       if (vid.url.startsWith(baseUrl)) {
-        var Token = getCookie("login-token");
-        if (Token) {
-          vid.url += "&token=" + Token;
-        } else {
-          this.dialogService.PushPermissionDialog();
-          return;
-        }
       }
       this.setVideo(vid);
     });
@@ -159,7 +161,16 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
   InitPlayer() {
     player.on("play", event => {
       if (this.IsHost) {
+        // Tearing this component down raises pause, so without the player-type check an outgoing player
+        // announces a state change and a position for the video that replaced it.
+        if (this.CurrentPlayerType != PlayerType.Vimeo) {
+          return;
+        }
         this.playerService.PlayPause(true, this.UniqueId);
+        // Publish the exact frame the host stopped or resumed on. No timeupdate fires while paused,
+        // so without this every viewer sits wherever the last cadence tick left them, up to a
+        // second away, and nothing arrives afterwards to correct it.
+        this.mediaService.playerTimeImmediate.next(player.currentTime);
       } else {
         if (!this.IsPlaying && this.CurrentPlayerType == PlayerType.Vimeo) {
           player.pause();
@@ -168,11 +179,25 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
     });
     player.on("pause", event => {
       if (this.IsHost) {
+        // Tearing this component down raises pause, so without the player-type check an outgoing player
+        // announces a state change and a position for the video that replaced it.
+        if (this.CurrentPlayerType != PlayerType.Vimeo) {
+          return;
+        }
         this.playerService.PlayPause(false, this.UniqueId);
+        // Publish the exact frame the host stopped or resumed on. No timeupdate fires while paused,
+        // so without this every viewer sits wherever the last cadence tick left them, up to a
+        // second away, and nothing arrives afterwards to correct it.
+        this.mediaService.playerTimeImmediate.next(player.currentTime);
       } else {
         if (this.IsPlaying && this.CurrentPlayerType == PlayerType.Vimeo) {
-          player.play();
+          startPlayback(() => player.play());
         }
+      }
+    });
+    player.on("seeked", () => {
+      if (this.IsHost && this.CurrentPlayerType == PlayerType.Vimeo) {
+        this.mediaService.playerTimeImmediate.next(player.currentTime);
       }
     });
     player.on("timeupdate", timeupdated => {

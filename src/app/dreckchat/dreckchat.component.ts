@@ -16,7 +16,7 @@ import {Observable, OperatorFunction, Subscription} from 'rxjs';
 import {debounceTime, distinctUntilChanged, map} from 'rxjs/operators';
 import {UserlistService} from '../userlist/userlist-service/userlist.service';
 import {Member} from '../Interfaces/Member';
-import {smileys} from '../global.settings';
+import { smileys } from '../global.settings';
 import {WebrtcVoipService} from "../media/webrtc-voip/webrtc-voip-service/webrtc-voip.service";
 import {UserPrivileges} from "../user-admin-modal/user-admin-modal.component";
 

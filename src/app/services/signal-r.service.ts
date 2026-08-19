@@ -1,177 +1,178 @@
-import {
-  Injectable
-} from '@angular/core';
-import * as signalR from "@aspnet/signalr";
-import {
-  BehaviorSubject
-} from 'rxjs';
-import { RememberToken } from '../Interfaces/RememberToken';
-import { randomIntFromInterval } from '../helper/generic';
-import { User } from '../Interfaces/User';
-import { Room } from '../Interfaces/Room';
-import { Token } from '../helper/Globals';
-import { getCookie, token } from '../global.settings';
-export var hubConnection: signalR.HubConnection;
+import { Injectable } from '@angular/core';
+import * as signalR from '@microsoft/signalr';
+import { BehaviorSubject } from 'rxjs';
+import { CreateRoomRequest, RoomSummary } from '../Interfaces/Room';
+import { resolveApiBaseUrl } from '../core/api-origin';
+
 export var CurrentPing: number = 0.5;
-export var baseUrl: string = "https://sync.dreckbu.de/";
-//export var baseUrl: string = "https://sync.drecktu.be/";
-//export var baseUrl: string = "https://localhost:44371/";
-//export var baseUrl: string = "https://localhost:32780/";
+
+/**
+ * API origin, derived from the page's hostname so the session cookie stays same-site.
+ * Exported because much of the app builds URLs from it.
+ */
+export var baseUrl: string = resolveApiBaseUrl();
+
+/**
+ * Built eagerly, so it is never undefined.
+ *
+ * Constructing a HubConnection does not open anything, so there is no cost to doing it at module load.
+ * It used to be created inside startConnection, which left a window where any service reaching for it
+ * crashed with "cannot access property invoke of undefined" instead of simply failing to send. That
+ * window was real: on a reload the admin view called the hub before the connection existed.
+ *
+ * Invoking before the connection is up now rejects the returned promise, which callers can handle, and
+ * two components calling startConnection no longer build two connections and clobber this reference.
+ */
+export var hubConnection: signalR.HubConnection = new signalR.HubConnectionBuilder()
+  // withCredentials sends the session cookie on the negotiate request and the socket handshake.
+  // Anonymous connections are allowed: guests can watch without an account.
+  .withUrl(baseUrl + 'server', { withCredentials: true })
+  // Replaces a hand-rolled setTimeout loop. Retries at 0s, 2s, 10s, 30s, then gives up.
+  .withAutomaticReconnect()
+  .build();
+
+/**
+ * Logs a failed hub invocation instead of letting it kill the page.
+ *
+ * A hub invocation returns a promise, and the server now rejects one the caller is not allowed to make.
+ * Under the old privilege aspect a refusal came back as a completed task, so denial was silent; an
+ * unhandled rejection is a fatal zone error, which blanked the whole app for a signed-out visitor the
+ * moment anything privileged was attempted.
+ *
+ * Attach this to fire-and-forget invocations. Calls whose result is actually used should handle their own
+ * failure, since for those a refusal usually needs to be shown to the person.
+ */
+export function logHubFailure(error: unknown): undefined {
+  // "Not allowed" and "something broke" are different things and were being logged identically. A refusal
+  // is an expected answer for a guest, so it is informational; anything else is a genuine failure worth
+  // noticing, and lumping the two together is how a real fault hides behind routine noise.
+  if (isAuthorizationRefusal(error)) {
+    console.info('Hub refused the call, which needs an account:', describeHubError(error));
+    return undefined;
+  }
+
+  console.error('Hub invocation failed:', error);
+  return undefined;
+}
+
+/** Whether the hub refused a call for lack of privilege, rather than failing. */
+export function isAuthorizationRefusal(error: unknown): boolean {
+  return /because user is unauthorized/i.test(describeHubError(error));
+}
+
+function describeHubError(error: unknown): string {
+  if (typeof error === 'string') return error;
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
 @Injectable({
   providedIn: 'root'
 })
-
 export class SignalRService {
-  room: BehaviorSubject <Room[]> = new BehaviorSubject([]);
-  tokenUpdate: BehaviorSubject<RememberToken> = new BehaviorSubject(null);
-  connectionClosed: BehaviorSubject < boolean > = new BehaviorSubject(null);
-  loginRequest: BehaviorSubject<User> = new BehaviorSubject(null);
-  registerRequest: BehaviorSubject<User> = new BehaviorSubject(null);
-  pingStream: BehaviorSubject<number> = new BehaviorSubject(CurrentPing);
+  room: BehaviorSubject<RoomSummary[]> = new BehaviorSubject([]);
 
-  public AddLoginListener() {
-    hubConnection.on('userlogin', (data) => {
-      this.loginRequest.next(data);
-    });
-  }
+  /**
+   * False while the connection is usable, true while it is not.
+   *
+   * Feature services key their handler registration off this: they add handlers on false and remove
+   * them on true. It must therefore go true before it goes false again, or `.on()` would stack a second
+   * handler onto the same event and every message would arrive twice.
+   */
+  connectionClosed: BehaviorSubject<boolean> = new BehaviorSubject(null);
 
-  public RemoveLoginListener() {
-    hubConnection.off('userlogin');
-    this.loginRequest.next(null);
-  }
+  /**
+   * Round trips in seconds, as measured.
+   *
+   * Starts empty rather than on CurrentPing's initial value: the latency estimate takes the smallest sample it
+   * has seen, so a made-up figure published before anything was measured would stand as the estimate for as
+   * long as it undercut the real round trips.
+   */
+  pingStream: BehaviorSubject<number> = new BehaviorSubject(null);
 
-  public AddRegisterListener() {
-    hubConnection.on('userRegister', (data) => {
-      this.registerRequest.next(data);
-    });
-  }
-
-  public RemoveRegisterListener() {
-    hubConnection.off('userRegister');
-    this.registerRequest.next(null);
-  }
-
-  public LoginRequest(user: User, userInfo: string) {
-    hubConnection.invoke('LoginRequest', user, userInfo);
-  }
-
-  public RegisterRequest(user: User) {
-    hubConnection.invoke('RegisterRequest', user);
-  }
+  private lifecycleWired = false;
 
   public async startConnection() {
-    this.tokenUpdate.subscribe(result => {
-      if (result==null) {
-        return;
-      }
-      const curDate = new Date();
-      curDate.setDate(curDate.getDate() + 30);
-      document.cookie = "login-token=" + result.token + "; expires=" + curDate.toUTCString() + "; path=/";
-      document.cookie = "user-id=" + result.userID + "; expires=" + curDate.toUTCString() + "; path=/";
+    this.wireLifecycle();
+    await this.connect();
+  }
+
+  private wireLifecycle() {
+    if (this.lifecycleWired) {
+      return;
+    }
+    this.lifecycleWired = true;
+
+    hubConnection.onreconnecting(() => {
+      console.log('Connection lost, reconnecting');
+      this.connectionClosed.next(true);
     });
 
+    hubConnection.onreconnected(() => {
+      console.log('Reconnected');
+      this.connectionClosed.next(false);
+    });
 
-    hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl(baseUrl + 'server')
-      .build();
-
-    await this.connect().finally(() => {
-      hubConnection.onclose(() => {
-        console.log("Connection closed... Attempting to reconnect");
-        this.connectionClosed.next(true);
-        this.removeRoomListener();
-        this.RemoveLoginListener();
-        this.RemoveRegisterListener();
-        this.RemovePingListener();
-        this.RemoveTokenListener();
-        setTimeout(() => {
-          this.connect();
-        }, 1000);
-      });
+    hubConnection.onclose(() => {
+      // Reached only once automatic reconnect has exhausted its attempts.
+      console.log('Connection closed, retrying from scratch');
+      this.connectionClosed.next(true);
+      setTimeout(() => this.connect(), 5000);
     });
   }
 
   public async connect() {
-    await hubConnection
-      .start()
-      .then(() => {
-        console.log('Connection started');
-        this.addRoomListener();
-        this.AddLoginListener();
-        this.AddRegisterListener();
-        this.AddPingListener();
-        this.AddTokenListener();
+    // Called from more than one component, and again by the retry paths, so only start when idle.
+    if (hubConnection.state !== signalR.HubConnectionState.Disconnected) {
+      if (hubConnection.state === signalR.HubConnectionState.Connected) {
         this.connectionClosed.next(false);
+      }
+      return;
+    }
 
-        let token = getCookie("login-token");
-        let userId = getCookie("user-id");
-        if (token==undefined) {
-          token = "";
-        }
-        let userNo = Number.parseInt(userId);
-        if (!userId || userId == undefined || isNaN(userNo)) {
-          userId = "-1";
-        }
-        let numberId = Number.parseInt(userId);
-        this.ValidateToken(token, numberId);
-      })
-      .catch(async err => {
-        console.log('Error while starting connection: ' + err + '... Attempting to reconnect');
-        await hubConnection
-          .stop()
-          .then(() => {
-            console.log('Connection stopped');
-            setTimeout(() => {
-              this.connect();
-            }, 1000);
-          })
-          .catch(err => console.log('Error while stopping connection: ' + err))
-      });
+    try {
+      await hubConnection.start();
+      console.log('Connection started');
+      this.addRoomListener();
+      this.AddPingListener();
+      this.connectionClosed.next(false);
+    } catch (error) {
+      console.log('Error while starting connection: ' + error + ', retrying');
+      setTimeout(() => this.connect(), 2000);
+    }
   }
 
   public async stopConnection() {
-    await hubConnection
-      .stop()
-      .then(() => console.log('Connection stopped'))
-      .catch(err => console.log('Error while stopping connection: ' + err))
+    try {
+      await hubConnection.stop();
+      console.log('Connection stopped');
+    } catch (error) {
+      console.log('Error while stopping connection: ' + error);
+    }
   }
 
   public addRoomListener() {
+    hubConnection.off('getrooms');
     hubConnection.on('getrooms', (data) => {
       this.room.next(data);
     });
   }
 
   public removeRoomListener() {
-    hubConnection.off('getrooms', (data) => {});
+    hubConnection.off('getrooms');
     this.room.next(null);
   }
 
-  public addRoom(room: Room) {
-    let tk = "";
-    if (token) {
-      tk = token;
-    }
-    hubConnection.invoke('AddRoom', room, tk);
+  public addRoom(room: CreateRoomRequest) {
+    hubConnection.invoke('AddRoom', room).catch(logHubFailure);
   }
 
   public removeRoom(UniqueId: string) {
-    if (token) {
-      hubConnection.invoke('RemoveRoom', UniqueId, token);
-    }
-  }
-
-  public AddTokenListener() {
-    hubConnection.on('rememberToken', (data) => {
-      let token = data as RememberToken;
-      Token.token = token.token;
-      Token.id = token.id;
-      Token.userID = token.userID;
-      this.tokenUpdate.next(data);
-    });
+    hubConnection.invoke('RemoveRoom', UniqueId).catch(logHubFailure);
   }
 
   public AddPingListener() {
+    hubConnection.off('PingTest');
     hubConnection.on('PingTest', (date: Date) => {
       let diff = new Date().getTime() - new Date(date).getTime();
       CurrentPing = (diff / 1000);
@@ -180,16 +181,6 @@ export class SignalRService {
   }
 
   public RemovePingListener() {
-    hubConnection.off('PingTest', (date) => {
-    });
-  }
-
-  public RemoveTokenListener() {
-    hubConnection.off('rememberToken');
-    this.tokenUpdate.next(null);
-  }
-
-  public ValidateToken(token: string, userId: number) {
-    hubConnection.invoke('ValidateToken', token, userId);
+    hubConnection.off('PingTest');
   }
 }

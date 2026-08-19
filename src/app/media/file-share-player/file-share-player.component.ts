@@ -167,13 +167,13 @@ export class FileSharePlayerComponent implements OnInit, AfterViewInit, OnDestro
     const height = videoEl.videoHeight || 720;
     const pixels = width * height;
 
-    // Targets are calibrated for VP8 real-time encode from a captureStream source.
-    // Higher values cause excessive CPU load from the simultaneous decode+encode pipeline.
-    if (pixels >= 3840 * 2160) return 12_000_000;
-    if (pixels >= 2560 * 1440) return  7_000_000;
-    if (pixels >= 1920 * 1080) return  5_000_000;
-    if (pixels >= 1280 * 720)  return  3_000_000;
-    return 1_500_000;
+    // Direct file share now prefers a single H.264/VP8 real-time encode, so the
+    // bitrate budget can be closer to video streaming needs without VP9/SVC cost.
+    if (pixels >= 3840 * 2160) return 35_000_000;
+    if (pixels >= 2560 * 1440) return 18_000_000;
+    if (pixels >= 1920 * 1080) return 10_000_000;
+    if (pixels >= 1280 * 720)  return  5_000_000;
+    return 2_500_000;
   }
 
   // Extensions that Chrome/Edge cannot natively decode — skip the browser-load
@@ -267,7 +267,14 @@ export class FileSharePlayerComponent implements OnInit, AfterViewInit, OnDestro
 
     // Set up the SFU transport and notify the server / room.
     try {
-      await this.webrtcService.startFileShare(this.UniqueId, captureStream, this.inferFileShareBitrate(videoEl));
+      const preferredResolution = videoEl.videoHeight || undefined;
+      await this.webrtcService.startFileShare(
+        this.UniqueId,
+        captureStream,
+        this.inferFileShareBitrate(videoEl),
+        preferredResolution,
+        60
+      );
     } catch (err) {
       console.error('FileSharePlayer: startFileShare failed.', err);
       this.resetHostPickerState(videoEl);
@@ -511,13 +518,30 @@ export class FileSharePlayerComponent implements OnInit, AfterViewInit, OnDestro
     } catch {}
   };
 
-  private attachRemoteStream(stream: MediaStream): void {
+  private async attachRemoteStream(stream: MediaStream): Promise<void> {
     if (!this.remoteVideoRef) return;
     const video = this.remoteVideoRef.nativeElement;
     this.loadViewerVolume(video);
-    video.addEventListener('volumechange', this.onViewerVolumeChange);
     video.srcObject = stream;
-    video.play().catch(() => {});
+
+    try {
+      await video.play();
+    } catch (err) {
+      console.warn('[FileSharePlayer] video.play() failed; trying muted autoplay fallback', err);
+
+      if (stream.getAudioTracks().length > 0) {
+        try {
+          video.muted = true;
+          await video.play();
+        } catch (fallbackErr) {
+          console.warn('[FileSharePlayer] muted autoplay fallback failed', fallbackErr);
+        }
+      }
+    }
+
+    if (video.srcObject === stream) {
+      video.addEventListener('volumechange', this.onViewerVolumeChange);
+    }
   }
 
   private detachRemoteStream(): void {

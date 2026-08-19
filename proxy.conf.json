@@ -1,0 +1,15 @@
+{
+  "/api": {
+    "target": "https://localhost:44371",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "warn"
+  },
+  "/server": {
+    "target": "https://localhost:44371",
+    "secure": false,
+    "changeOrigin": true,
+    "ws": true,
+    "logLevel": "warn"
+  }
+}

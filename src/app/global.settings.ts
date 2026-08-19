@@ -28,12 +28,6 @@ export interface SmileyCategory {
   name: string;
 }
 
-export function getCookie(name) {
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return parts.pop().split(';').shift();
-}
-
 export function getRandomColor(inputString: string): string {
   // Simple hash function to convert a string into a number
   let hash = 0;
@@ -46,12 +40,4 @@ export function getRandomColor(inputString: string): string {
 
   // Convert hue to an RGB color with reduced brightness and saturation for a dark theme
   return `hsl(${hue}, 50%, 30%)`;
-}
-
-export var token = getCookie("login-token");
-export var userId = Number.parseInt(getCookie("user-id"));
-
-export function resetToken() {
-  token = getCookie("login-token");
-  userId = Number.parseInt(getCookie("user-id"));
 }

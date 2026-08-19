@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { ChessGame, ChessMove } from '../../Interfaces/Games/chess';
-import { hubConnection, SignalRService } from '../../services/signal-r.service';
+import { hubConnection, SignalRService , logHubFailure} from '../../services/signal-r.service';
 
 @Injectable({
   providedIn: 'root'
@@ -80,18 +80,17 @@ export class ChessService {
     this.chessMove.next(null);
   }
 
-
   public moveChessPiece(UniqueId: string, move: ChessMove) {
-    hubConnection.invoke('MoveChessPiece', UniqueId, move);
+    hubConnection.invoke('MoveChessPiece', UniqueId, move).catch(logHubFailure);
   }
   public playChess(UniqueId: string) {
-    hubConnection.invoke('PlayChess', UniqueId);
+    hubConnection.invoke('PlayChess', UniqueId).catch(logHubFailure);
   }
   public endChess(UniqueId: string) {
-    hubConnection.invoke('EndChess', UniqueId);
+    hubConnection.invoke('EndChess', UniqueId).catch(logHubFailure);
   }
   public resetChess(UniqueId: string) {
-    hubConnection.invoke('ResetChess', UniqueId);
+    hubConnection.invoke('ResetChess', UniqueId).catch(logHubFailure);
   }
 }
 

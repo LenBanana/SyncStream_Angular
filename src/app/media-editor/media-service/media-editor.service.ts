@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { token } from '../../global.settings';
+
 import { HttpClient } from '@angular/common/http';
 import { SignalRService, baseUrl, hubConnection } from '../../services/signal-r.service';
 import { AlertType } from '../../Interfaces/Dialog';
@@ -45,30 +45,26 @@ export class MediaEditorService {
      });
    }
 
-  public ConvertMedia(file: File, apiKey: string, mediaType: number) {
-    if (token) {
-      const formData: FormData = new FormData();
-      formData.append('fileKey', file, file.name);
-      return this.http.post(baseUrl + "api/media/ConvertMedia?apiKey=" + apiKey + "&mediaType=" + mediaType, formData, {
-        reportProgress: true,
-        observe: 'events',
-        responseType: 'blob'
-      });
-    }
+  public ConvertMedia(file: File, mediaType: number) {
+    const formData: FormData = new FormData();
+    formData.append('fileKey', file, file.name);
+    return this.http.post(baseUrl + "api/media/ConvertMedia?mediaType=" + mediaType, formData, {
+      reportProgress: true,
+      observe: 'events',
+      responseType: 'blob'
+    });
   }
 
-  public CutMedia(file: File, apiKey: string, startMilliSeconds: number, endMilliSeconds: number) {
-    if (token) {
-      const formData: FormData = new FormData();
-      formData.append('fileKey', file, file.name);
-      formData.append('startMilliSeconds', startMilliSeconds.toString());
-      formData.append('endMilliSeconds', endMilliSeconds.toString());
-      return this.http.post(baseUrl + "api/media/CutMedia?apiKey=" + apiKey, formData, {
-        reportProgress: true,
-        observe: 'events',
-        responseType: 'blob'
-      });
-    }
+  public CutMedia(file: File, startMilliSeconds: number, endMilliSeconds: number) {
+    const formData: FormData = new FormData();
+    formData.append('fileKey', file, file.name);
+    formData.append('startMilliSeconds', startMilliSeconds.toString());
+    formData.append('endMilliSeconds', endMilliSeconds.toString());
+    return this.http.post(baseUrl + "api/media/CutMedia", formData, {
+      reportProgress: true,
+      observe: 'events',
+      responseType: 'blob'
+    });
   }
 }
 

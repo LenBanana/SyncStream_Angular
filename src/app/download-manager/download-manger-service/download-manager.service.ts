@@ -1,10 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { token } from '../../global.settings';
+
 import { AlertType } from '../../Interfaces/Dialog';
 import { DownloadFile, DownloadInfo, FileFolder } from '../../Interfaces/DownloadInfo';
-import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
+import { hubConnection, baseUrl, SignalRService , logHubFailure} from '../../services/signal-r.service';
 import { DialogService } from '../../text-dialog/text-dialog-service/dialog-service.service';
 import { User } from '../../Interfaces/User';
 
@@ -73,20 +73,16 @@ export class DownloadManagerService {
   }
 
   public CleanUpFiles(remove: boolean = false) {
-    if (token) {
-      hubConnection.invoke('CleanUpFiles', token, remove);
-    }
+    hubConnection.invoke('CleanUpFiles', remove).catch(logHubFailure);
   }
 
   public UploadFile(file: File) {
-    if (token) {
-      const formData: FormData = new FormData();
-      formData.append('fileKey', file, file.name);
-      return this.http.post(baseUrl + "api/video/addFile?token=" + token, formData, {
-        reportProgress: true,
-        observe: 'events'
-      });
-    }
+    const formData: FormData = new FormData();
+    formData.append('fileKey', file, file.name);
+    return this.http.post(baseUrl + "api/video/addFile", formData, {
+      reportProgress: true,
+      observe: 'events'
+    });
   }
 
   public async UploadRoomFileInChunks(
@@ -96,20 +92,10 @@ export class DownloadManagerService {
     onSessionCreated?: (uploadId: string) => void,
     abortSignal?: AbortSignal
   ): Promise<RoomUploadSessionResult> {
-    if (!token) {
-      return {
-        statusCode: 401,
-        errorMessage: 'You need to be logged in to upload a file to a room.',
-        chunkSize: 0,
-        nextOffset: 0,
-        totalSize: file?.size || 0
-      };
-    }
-
     const fileExt = file.name.includes('.') ? file.name.split('.').pop() : '';
     const startUrl = baseUrl
-      + `api/video/roomUpload/start?token=${encodeURIComponent(token)}`
-      + `&uniqueId=${encodeURIComponent(uniqueId)}`
+      + `api/video/roomUpload/start`
+      + `?uniqueId=${encodeURIComponent(uniqueId)}`
       + `&name=${encodeURIComponent(file.name)}`
       + `&fileEnding=${encodeURIComponent(fileExt)}`
       + `&totalSize=${encodeURIComponent(file.size.toString())}`;
@@ -133,8 +119,8 @@ export class DownloadManagerService {
     while (nextOffset < file.size) {
       const chunk = file.slice(nextOffset, nextOffset + chunkSize);
       const chunkUrl = baseUrl
-        + `api/video/roomUpload/chunk?token=${encodeURIComponent(token)}`
-        + `&uploadId=${encodeURIComponent(uploadId)}`
+        + `api/video/roomUpload/chunk`
+        + `?uploadId=${encodeURIComponent(uploadId)}`
         + `&startByte=${encodeURIComponent(nextOffset.toString())}`;
 
       const chunkResult = await this.sendChunkWithRetry(chunkUrl, uploadId, chunk, nextOffset, abortSignal);
@@ -149,8 +135,8 @@ export class DownloadManagerService {
     onProgress({ phase: 'processing', uploadedBytes: file.size, totalBytes: file.size });
 
     const completeUrl = baseUrl
-      + `api/video/roomUpload/complete?token=${encodeURIComponent(token)}`
-      + `&uploadId=${encodeURIComponent(uploadId)}`;
+      + `api/video/roomUpload/complete`
+      + `?uploadId=${encodeURIComponent(uploadId)}`;
     let completeResult = await this.fetchRoomUploadResult(completeUrl, {
       method: 'POST',
       signal: abortSignal
@@ -165,13 +151,13 @@ export class DownloadManagerService {
   }
 
   public async CancelRoomUpload(uploadId: string) {
-    if (!token || !uploadId) {
+    if (!uploadId) {
       return;
     }
 
     const url = baseUrl
-      + `api/video/roomUpload/cancel?token=${encodeURIComponent(token)}`
-      + `&uploadId=${encodeURIComponent(uploadId)}`;
+      + `api/video/roomUpload/cancel`
+      + `?uploadId=${encodeURIComponent(uploadId)}`;
 
     try {
       await this.fetchRoomUploadResult(url, { method: 'DELETE' });
@@ -182,8 +168,8 @@ export class DownloadManagerService {
 
   private async GetRoomUploadStatus(uploadId: string, abortSignal?: AbortSignal): Promise<RoomUploadSessionResult> {
     const statusUrl = baseUrl
-      + `api/video/roomUpload/status?token=${encodeURIComponent(token)}`
-      + `&uploadId=${encodeURIComponent(uploadId)}`;
+      + `api/video/roomUpload/status`
+      + `?uploadId=${encodeURIComponent(uploadId)}`;
 
     return await this.fetchRoomUploadResult(statusUrl, {
       method: 'GET',
@@ -277,111 +263,75 @@ export class DownloadManagerService {
   }
 
   public DownloadFile(url: string, name: string, preset: ConversionPreset) {
-    if (token) {
-      hubConnection.invoke('DownloadFile', token, url, name, preset);
-    }
+    hubConnection.invoke('DownloadFile', url, name, preset).catch(logHubFailure);
   }
 
   public DownloadYtFile(url: string, quality: string, audioOnly: boolean, downloadSubtitles: boolean) {
-    if (token) {
-      hubConnection.invoke('DownloadYtVideo', token, url, quality, audioOnly, downloadSubtitles);
-    }
+    hubConnection.invoke('DownloadYtVideo', url, quality, audioOnly, downloadSubtitles).catch(logHubFailure);
   }
 
   public GetYtQuality(url: string) {
-    if (token) {
-      return this.http.get<number[]>(baseUrl + "api/video/getYoutubeQuality?url=" + url + "&token=" + token);
-    }
+    return this.http.get<number[]>(baseUrl + "api/video/getYoutubeQuality?url=" + encodeURIComponent(url));
   }
 
   public ChangeDownload(fileId: number, fileName: string) {
-    if (token) {
-      hubConnection.invoke('ChangeDownload', token, fileId, fileName);
-    }
+    hubConnection.invoke('ChangeDownload', fileId, fileName).catch(logHubFailure);
   }
 
   public GetDownloads() {
-    if (token) {
-      hubConnection.invoke('GetDownloads', token);
-    }
+    hubConnection.invoke('GetDownloads').catch(logHubFailure);
   }
 
   public GetFolders(folderId: number = 1) {
-    if (token) {
-      hubConnection.invoke('GetFolders', token, folderId);
-    }
+    hubConnection.invoke('GetFolders', folderId).catch(logHubFailure);
   }
 
   public AddFolder(folderId: number) {
-    if (token) {
-      hubConnection.invoke('AddFolder', token, folderId);
-    }
+    hubConnection.invoke('AddFolder', folderId).catch(logHubFailure);
   }
 
   public ShareFolder(folderId: number, userId: number) {
-    if (token) {
-      hubConnection.invoke('ShareFolder', token, folderId, userId);
-    }
+    hubConnection.invoke('ShareFolder', folderId, userId).catch(logHubFailure);
   }
 
   public GetFolderUsers(folderId: number) {
-    if (token) {
-      hubConnection.invoke('GetFolderUsers', token, folderId);
-    }
+    hubConnection.invoke('GetFolderUsers', folderId).catch(logHubFailure);
   }
 
   public DeleteFolder(folderId: number) {
-    if (token) {
-      hubConnection.invoke('DeleteFolder', token, folderId);
-    }
+    hubConnection.invoke('DeleteFolder', folderId).catch(logHubFailure);
   }
 
   public ChangeFolderName(folderId: number, folderName: string) {
-    if (token) {
-      hubConnection.invoke('ChangeFolderName', token, folderId, folderName);
-    }
+    hubConnection.invoke('ChangeFolderName', folderId, folderName).catch(logHubFailure);
   }
 
   public GetFolderFiles(folderId: number) {
-    if (token) {
-      hubConnection.invoke('GetFolderFiles', token, folderId);
-    }
+    hubConnection.invoke('GetFolderFiles', folderId).catch(logHubFailure);
   }
 
   public ChangeFolder(fileId: number, folderId: number) {
-    if (token) {
-      hubConnection.invoke('ChangeFolder', token, fileId, folderId);
-    }
+    hubConnection.invoke('ChangeFolder', fileId, folderId).catch(logHubFailure);
   }
 
   public CancelM3U8Download(downloadId: string) {
-    if (token) {
-      hubConnection.invoke('CancelConversion', token, downloadId);
-    }
+    hubConnection.invoke('CancelConversion', downloadId).catch(logHubFailure);
   }
 
   public GetFileInfo(id: number) {
-    if (token) {
-      hubConnection.invoke('GetFileInfo', token, id);
-    }
+    hubConnection.invoke('GetFileInfo', id).catch(logHubFailure);
   }
 
   public RemoveFile(id: number) {
-    if (token) {
-      hubConnection.invoke('RemoveFile', token, id);
-    }
+    hubConnection.invoke('RemoveFile', id).catch(logHubFailure);
   }
 
   public MakeFilePermanent(id: number) {
-    if (token) {
-      hubConnection.invoke('MakeFilePermanent', token, id);
-    }
+    hubConnection.invoke('MakeFilePermanent', id).catch(logHubFailure);
   }
 
   public ToggleFilePublic(id: number) {
-    if (token) {
-      hubConnection.invoke('ToggleFilePublic', token, id);
-    }
+    hubConnection.invoke('ToggleFilePublic', id).catch(logHubFailure);
   }
 
   public addgetFolderUsersListener() {
@@ -394,7 +344,6 @@ export class DownloadManagerService {
     hubConnection.off('getFolderUsers', (data) => {
     });
   }
-
 
   public addUpdateFolderServerRequestListener() {
     hubConnection.on('updateFolders', (data) => {

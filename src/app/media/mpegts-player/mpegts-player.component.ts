@@ -1,10 +1,10 @@
 import {AfterViewInit, Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output} from '@angular/core';
 import { Subscription } from 'rxjs';
-import { getCookie } from '../../global.settings';
+
 import { delay } from '../../helper/generic';
 import { VideoDTO } from '../../Interfaces/VideoDTO';
 import { PlayerService } from '../../player/player-service/player.service';
-import { PlayerType } from '../../player/player.component';
+import { PlayerType } from '../../Interfaces/PlayerType';
 import { PlaylistService } from '../../playlist/playlist-service/playlist.service';
 import { MediaService } from '../media-service/media.service';
 declare var $: any;
@@ -22,8 +22,6 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
   @Input() CurrentPlayerType = PlayerType.Live;
   @Input() IsHost = true;
   @Input() UniqueId = "";
-  @Input() CurrentPing = 0;
-  @Input() Threshhold = .5;
   @Output() NetworkError = new EventEmitter();
   PlayerType = PlayerType;
   IsPlaying = false;
@@ -50,7 +48,6 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
     this.IsReady = true;
     this.AddSubscriptions();
   }
-
 
   ngOnChanges() {
     if (this.IsReady && this.CurrentPlayerType != PlayerType.Live) {
@@ -79,13 +76,7 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
         return;
       }
       if (vid.url.includes('//drecktu.be:8088/live') || vid.url.includes('live.drecktu.be')) {
-        var Token = getCookie("login-token");
-        if (Token) {
-          vid.url += "&app=live&port=1935&token=" + Token;
-        } else {
-          this.dialogService.PushPermissionDialog();
-          return;
-        }
+        vid.url += "&app=live&port=1935";
       }
       this.setVideo(vid);
     });

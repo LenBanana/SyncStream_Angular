@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { token } from '../../global.settings';
+
 import { LiveUser } from '../../Interfaces/liveStream';
 import { User } from '../../Interfaces/User';
-import { hubConnection, SignalRService } from '../../services/signal-r.service';
+import { hubConnection, SignalRService , logHubFailure} from '../../services/signal-r.service';
 
 @Injectable({
   providedIn: 'root'
@@ -48,14 +48,10 @@ export class LiveStreamService {
   }
 
   public GetUsersWatching(userName: string) {
-    if (token) {
-      hubConnection.invoke('GetUsersWatching', token, userName);
-    }
+    hubConnection.invoke('GetUsersWatching', userName).catch(logHubFailure);
   }
 
   public GetLiveUsers() {
-    if (token) {
-      hubConnection.invoke('GetLiveUsers', token);
-    }
+    hubConnection.invoke('GetLiveUsers').catch(logHubFailure);
   }
 }

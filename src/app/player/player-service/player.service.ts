@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
-import * as signalR from "@aspnet/signalr";
+import * as signalR from "@microsoft/signalr";
 import { VideoDTO } from '../../Interfaces/VideoDTO';
-import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
+import { hubConnection, baseUrl, SignalRService , logHubFailure} from '../../services/signal-r.service';
 import { BehaviorSubject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { PlayerType } from '../player.component';
+import { PlayerType } from '../../Interfaces/PlayerType';
+import { TimeSync } from '../../media/sync/time-sync';
 
 @Injectable({
   providedIn: 'root'
@@ -16,7 +17,7 @@ export class PlayerService {
   playerType: BehaviorSubject<PlayerType> = new BehaviorSubject(null);
   playingGallows: BehaviorSubject<string> = new BehaviorSubject(null);
   playingBlackjack: BehaviorSubject<boolean> = new BehaviorSubject(null);
-  currentTime: BehaviorSubject<number> = new BehaviorSubject(null);
+  currentTime: BehaviorSubject<TimeSync> = new BehaviorSubject(null);
   playFile: BehaviorSubject<string> = new BehaviorSubject(null);
   constructor(private http: HttpClient, private signalRService: SignalRService) {
     signalRService.connectionClosed.subscribe(isClosed => {
@@ -70,7 +71,7 @@ export class PlayerService {
   }
 
   public addTimeListener() {
-    hubConnection.on('timeupdate', (data: number) => {
+    hubConnection.on('timeupdate', (data: TimeSync) => {
       this.currentTime.next(data);
     });
   }
@@ -114,11 +115,16 @@ export class PlayerService {
   }
 
   public PlayPause(isplaying: boolean, UniqueId: string) {
-    hubConnection.invoke('PlayPause', isplaying, UniqueId);
+    hubConnection.invoke('PlayPause', isplaying, UniqueId).catch(logHubFailure);
   }
 
-  public SetTime(time: number, UniqueId: string) {
-    hubConnection.invoke('SetTime', time, UniqueId);
+  /**
+   * @param oneWayLatencySeconds The host's own transit time to the server, so the server can date the report
+   *   from when the position was read rather than from when it arrived. Without it every viewer sits behind
+   *   the host by exactly this much, permanently.
+   */
+  public SetTime(time: number, UniqueId: string, oneWayLatencySeconds: number) {
+    hubConnection.invoke('SetTime', time, UniqueId, oneWayLatencySeconds).catch(logHubFailure);
   }
 
   public GetYTInfo(url: string) {

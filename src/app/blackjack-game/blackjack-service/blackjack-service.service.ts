@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
 import { BlackjackDealer, BlackjackMember } from '../../Interfaces/Games/blackjack';
-import { hubConnection, SignalRService } from '../../services/signal-r.service';
+import { hubConnection, SignalRService , logHubFailure} from '../../services/signal-r.service';
 
 @Injectable({
   providedIn: 'root'
@@ -111,15 +111,15 @@ export class BlackjackService {
   }
 
   public setBet(UniqueId: string, bet: number) {
-    hubConnection.invoke('SetBet', UniqueId, bet);
+    hubConnection.invoke('SetBet', UniqueId, bet).catch(logHubFailure);
   }
 
   public pull(UniqueId: string, pull: boolean, doubleOption: boolean, splitOption: boolean) {
-    hubConnection.invoke('TakePull', UniqueId, pull, doubleOption, splitOption);
+    hubConnection.invoke('TakePull', UniqueId, pull, doubleOption, splitOption).catch(logHubFailure);
   }
 
   public splitpull(UniqueId: string, pull: boolean, pullForSplitHand: boolean) {
-    hubConnection.invoke('TakeSplitPull', UniqueId, pull, pullForSplitHand);
+    hubConnection.invoke('TakeSplitPull', UniqueId, pull, pullForSplitHand).catch(logHubFailure);
   }
 }
 

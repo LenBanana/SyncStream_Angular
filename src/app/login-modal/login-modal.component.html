@@ -27,7 +27,8 @@
               <div class="input-group-prepend">
                 <div class="btn btn-dark"><i class="fa fa-lock" aria-hidden="true"></i></div>
               </div>
-              <input #pwLoginInput maxlength="80" type="password" (keyup.enter)="LoginRequest()" (keyup)="PasswordInvalid()"
+              <!-- Matches the server's upper bound. At 80 a password from a manager could not be pasted in full. -->
+              <input #pwLoginInput maxlength="256" type="password" (keyup.enter)="LoginRequest()" (keyup)="PasswordInvalid()"
                 class="form-control bg-secondary text-light border-dark"
                 [class.is-invalid]="pwError||pwInvalid" id="userPw" placeholder="Password">
             </div>

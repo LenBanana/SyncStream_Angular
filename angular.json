@@ -27,6 +27,11 @@
               "src/favicon.ico",
               "src/assets",
               {
+                "glob": "MediaInfoModule.wasm",
+                "input": "./node_modules/mediainfo.js/dist/",
+                "output": "./assets/mediainfo/"
+              },
+              {
                 "glob": "**/*",
                 "input": "./node_modules/cardsJS/cards/",
                 "output": "./assets/"
@@ -93,7 +98,8 @@
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
-            "browserTarget": "SyncStream:build:development"
+            "browserTarget": "SyncStream:build:development",
+            "proxyConfig": "proxy.conf.json"
           },
           "configurations": {
             "production": {
@@ -117,6 +123,11 @@
             "assets": [
               "src/favicon.ico",
               "src/assets",
+              {
+                "glob": "MediaInfoModule.wasm",
+                "input": "./node_modules/mediainfo.js/dist/",
+                "output": "./assets/mediainfo/"
+              },
               {
                 "glob": "**/*",
                 "input": "./node_modules/cardsJS/cards/",

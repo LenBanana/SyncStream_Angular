@@ -1,8 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Member } from '../../Interfaces/Member';
 import { BehaviorSubject } from 'rxjs';
-import { hubConnection, SignalRService } from '../../services/signal-r.service';
-import { Room } from '../../Interfaces/Room';
+import { hubConnection, SignalRService , logHubFailure} from '../../services/signal-r.service';
 
 @Injectable({
   providedIn: 'root'
@@ -33,23 +32,19 @@ export class UserlistService {
   }
 
   public addUser(username: string, UniqueId: string, password: string) {
-    hubConnection.invoke('AddUser', username, UniqueId, password);
+    hubConnection.invoke('AddUser', username, UniqueId, password).catch(logHubFailure);
   }
 
   public banUser(username: string, UniqueId: string) {
-    hubConnection.invoke('BanUser', username, UniqueId);
+    hubConnection.invoke('BanUser', username, UniqueId).catch(logHubFailure);
   }
 
   public removeUser(UniqueId: string) {
-    hubConnection.invoke('RemoveUser', UniqueId);
-  }
-
-  public updateUser(username: string, UniqueId: string) {
-    hubConnection.invoke('UpdateUser', username, UniqueId);
+    hubConnection.invoke('RemoveUser', UniqueId).catch(logHubFailure);
   }
 
   public changeHost(usernameMember: string, UniqueId: string) {
-    hubConnection.invoke('ChangeHost', usernameMember, UniqueId);
+    hubConnection.invoke('ChangeHost', usernameMember, UniqueId).catch(logHubFailure);
   }
 
   public addUserListener() {

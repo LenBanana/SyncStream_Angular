@@ -12,7 +12,7 @@ import { PlaylistService } from '../playlist/playlist-service/playlist.service';
 import { UserlistService } from '../userlist/userlist-service/userlist.service';
 import { VideoDTO } from '../Interfaces/VideoDTO';
 import { Member } from '../Interfaces/Member';
-import { PlayerComponent, PlayerType } from '../player/player.component';
+import { PlayerType } from '../Interfaces/PlayerType';
 import { PlayerService } from '../player/player-service/player.service';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
 import { AlertType, Dialog } from '../Interfaces/Dialog';
@@ -65,18 +65,13 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() Username: string;
   @Input() Members: Member[];
   @Input() Playlist: VideoDTO[] = [];
-  @Input() playerComp: PlayerComponent;
-  @Input() ThreshholdNumber: number = 0.5;
   @Input() Privileges: number;
   @Input() BrowserSettings: BrowserSettings;
   @Input() ChatOpen: boolean;
-  @Output() threshholdChange = new EventEmitter();
   @Output() usernameChange = new EventEmitter();
   @Output() toggleDreckChat = new EventEmitter();
   @Output() menuEnter = new EventEmitter();
-  @Output() Draw = new EventEmitter();
   @Output() goBack = new EventEmitter();
-  Threshhold = false;
   showInput = false;
   showPlaylist = false;
   showYtApi = false;
@@ -178,7 +173,6 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
     if (top === 0 && left === 0) menu.css('transform', '');
   }
 
-
   getRelativePosition(position) {
     const x = position.left;
     const y = position.top;
@@ -228,13 +222,6 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
-    if (this.IsHost) {
-      this.ThreshholdNumber = 2;
-      this.threshholdChange.emit(this.ThreshholdNumber);
-    } else {
-      this.ThreshholdNumber = .5;
-      this.threshholdChange.emit(this.ThreshholdNumber);
-    }
     this.Subscriptions.push(this.playerService.playingGallows.subscribe(playGallows => {
       if (playGallows == null || !playGallows) {
         return;
@@ -345,7 +332,6 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
     changeSettings(this.BrowserSettings);
   }
 
-
   hideMenu() {
     setTimeout(() => {
       this.menuHidden = true;
@@ -389,15 +375,6 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  ToggleThreshhold() {
-    if (this.Threshhold) {
-      this.Threshhold = false;
-    } else {
-      this.ResetInputs();
-      this.Threshhold = true;
-    }
-  }
-
   ToggleUsername() {
     if (this.showUsername) {
       this.showUsername = false;
@@ -422,9 +399,6 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     if (this.showPlaylist) {
       this.TogglePlaylist();
-    }
-    if (this.Threshhold) {
-      this.ToggleThreshhold();
     }
     if (this.showUsername) {
       this.ToggleUsername();
@@ -530,9 +504,9 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
     this.showStreamDialog = false;
     try {
       if (config.audience === 'room') {
-        await this.webrtcService.startStreamingToRoom(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
+        await this.webrtcService.startStreamingToRoom(this.UniqueId, config.stream, config.maxBitrate, config.resolution, config.frameRate, config.contentPreference);
       } else {
-        await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
+        await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate, config.resolution, config.frameRate, config.contentPreference);
       }
       this.isStreaming = true;
       this.liveAudience = config.audience;

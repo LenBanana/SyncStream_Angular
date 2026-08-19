@@ -1,7 +1,6 @@
 import {Injectable} from '@angular/core';
 import {HttpClient} from "@angular/common/http";
 import {baseUrl} from "../../../../services/signal-r.service";
-import {token} from "../../../../global.settings";
 
 @Injectable({
   providedIn: 'root'
@@ -13,10 +12,7 @@ export class YoutubeApiService {
 
   //Make the order parameter a selection of string values
   public searchYoutube(searchTerm: string, order: Sortage = {column: "relevance"}, pageSize: number = 10, pageToken: string = null) {
-    if (!token) {
-      return;
-    }
-    let url = baseUrl + "api/youtube/YoutubeSearch?query=" + searchTerm + "&order=" + order.column + "&pageSize=" + pageSize + "&token=" + token;
+    let url = baseUrl + "api/youtube/YoutubeSearch?query=" + encodeURIComponent(searchTerm) + "&order=" + order.column + "&pageSize=" + pageSize;
     if (pageToken) {
       url += "&pageToken=" + pageToken;
     }
@@ -24,7 +20,7 @@ export class YoutubeApiService {
   }
 
   public async getInputSuggestions(searchTerm: string) {
-    if (!token || searchTerm.length === 0) {
+    if (searchTerm.length === 0) {
       return;
     }
     let url = "https://nodered.dreckbu.de/ytac/" + searchTerm;

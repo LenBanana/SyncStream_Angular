@@ -424,6 +424,86 @@ $text-muted-custom: #8891aa;
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+/* ── Stream priority ── */
+.ssd-priority-section {
+  margin-bottom: 20px;
+}
+
+.ssd-priority-title {
+  color: $text-muted-custom;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.ssd-priority-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.ssd-priority-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 74px;
+  padding: 12px;
+  background: $bg-card;
+  border: 2px solid $border-color;
+  border-radius: 10px;
+  color: #e9ecef;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+
+  &:hover {
+    border-color: $accent;
+    transform: translateY(-2px);
+  }
+
+  &.selected {
+    border-color: $accent;
+    background: $bg-card-selected;
+    box-shadow: 0 0 0 1px $accent;
+  }
+}
+
+.ssd-priority-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba($accent, 0.14);
+  color: $accent;
+}
+
+.ssd-priority-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ssd-priority-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.ssd-priority-hint {
+  color: $text-muted-custom;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.ssd-priority-check {
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 /* ── Custom controls ── */

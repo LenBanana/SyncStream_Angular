@@ -4,7 +4,7 @@ import $ from 'jquery';
 import { SignalRService } from '../services/signal-r.service';
 import { PlaylistService } from '../playlist/playlist-service/playlist.service';
 import { UserlistService } from '../userlist/userlist-service/userlist.service';
-import { PlayerComponent } from '../player/player.component';
+
 import { Location } from '@angular/common';
 import { Member } from '../Interfaces/Member';
 import { VideoDTO } from '../Interfaces/VideoDTO';
@@ -19,8 +19,6 @@ import { BrowserSettings, changeSettings, GeneralSettings } from '../Interfaces/
 })
 export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnChanges {
 
-
-  @ViewChild(PlayerComponent) playerComp;
   constructor(private route: ActivatedRoute, public datepipe: DatePipe, private router: Router, public signalRService: SignalRService, public dialogService: DialogService, public playlistService: PlaylistService, public userService: UserlistService, private cdRef: ChangeDetectorRef, private location: Location) {
 
   }
@@ -45,7 +43,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   isPlaying = false;
   twitchChat = false;
   Playlist: VideoDTO[] = [];
-  Threshhold: number = 0.5;
   currentTimeout;
   UserAdded = false;
   loginRequest;
@@ -69,10 +66,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   }
 
   ngOnChanges() {
-  }
-
-  DrawWhiteboard() {
-    this.playerComp.DrawWhiteboard();
   }
 
   userIntervalOff() {
@@ -130,11 +123,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
 
   ChangeHost(isHost: boolean) {
     this.IsHost = isHost;
-    if (this.IsHost) {
-      this.Threshhold = 2;
-    } else {
-      this.Threshhold = .5;
-    }
   }
 
   ngAfterViewChecked() {
@@ -153,14 +141,5 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
     }
   }
 
-
 }
-
-
-
-
-
-
-
-
 

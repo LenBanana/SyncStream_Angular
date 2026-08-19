@@ -2,12 +2,13 @@ import {Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output, Vi
 import {MatMenuTrigger} from '@angular/material/menu';
 import {Subscription} from 'rxjs';
 import {DownloadManagerService} from '../download-manager/download-manger-service/download-manager.service';
-import {getCookie, getRandomColor, userId} from '../global.settings';
+import { getRandomColor } from '../global.settings';
 import {DownloadFile, FileFolder} from '../Interfaces/DownloadInfo';
-import {SharedUser, User} from '../Interfaces/User';
+import {SharedUser, UserSummary} from '../Interfaces/User';
 import {UserPrivileges} from '../user-admin-modal/user-admin-modal.component';
 import {UserAdminService} from '../user-admin-modal/user-admin-service/user-admin.service';
 import {BrowserSettings} from '../Interfaces/BrowserSettings';
+import { AuthService } from '../services/auth.service';
 
 declare var $: any;
 
@@ -18,7 +19,7 @@ declare var $: any;
 })
 export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
 
-  constructor(private downloadService: DownloadManagerService, private userAdminService: UserAdminService) {
+  constructor(private downloadService: DownloadManagerService, private userAdminService: UserAdminService, private authService: AuthService) {
   }
 
   @Input() filterFiles: DownloadFile[];
@@ -38,7 +39,7 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
   userUpdate: Subscription;
   edit = false;
   editName = "";
-  Users: User[] = [];
+  Users: UserSummary[] = [];
   FilteredUsers: SharedUser[] = [];
   paginatedUsers: SharedUser[] = [];
   searchTerm: string = '';
@@ -56,7 +57,7 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
         return;
       }
       this.Users = users;
-      this.FilteredUsers = users.filter(x => x.userprivileges >= UserPrivileges.Administrator && x.id != userId).map(x => {
+      this.FilteredUsers = users.filter(x => x.userprivileges >= UserPrivileges.Administrator && x.id != this.getUserId()).map(x => {
         return {
           ...x,
           isShared: false,
@@ -67,7 +68,7 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
   }
 
   searchUsers() {
-    this.FilteredUsers = this.Users.filter(x => x.userprivileges >= UserPrivileges.Administrator && x.id != userId).map(x => {
+    this.FilteredUsers = this.Users.filter(x => x.userprivileges >= UserPrivileges.Administrator && x.id != this.getUserId()).map(x => {
       return {
         ...x,
         isShared: false,
@@ -79,8 +80,10 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
     }
   }
 
-  getUserId() {
-    return userId;
+  getUserId(): number {
+    // Previously read from a JS-readable cookie. The session cookie is HttpOnly now, so identity comes
+    // from the profile the server hands back on sign-in.
+    return this.authService.user.value?.id ?? -1;
   }
 
   ngOnDestroy(): void {
@@ -172,11 +175,7 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
 
   ShareFolderModal() {
     if (!this.FilteredUsers || this.FilteredUsers.length == 0) {
-      var Token = getCookie("login-token");
-      var UserID = Number.parseInt(getCookie("user-id"));
-      if (Token && UserID) {
-        this.userAdminService.GetUsers(Token, UserID);
-      }
+      this.userAdminService.GetUsers();
     }
     this.getFolderUsers = this.downloadService.folderShared.subscribe(users => {
       if (!users) {

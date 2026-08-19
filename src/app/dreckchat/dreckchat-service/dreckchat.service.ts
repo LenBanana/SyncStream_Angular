@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import * as signalR from "@aspnet/signalr";
+import * as signalR from "@microsoft/signalr";
 import { ChatMessage } from '../../Interfaces/Chatmessage';
 import { BehaviorSubject } from 'rxjs';
-import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
+import { hubConnection, baseUrl, SignalRService , logHubFailure} from '../../services/signal-r.service';
 import { HttpClient } from '@angular/common/http';
 import { Language } from '../../Interfaces/Language';
 
@@ -56,34 +56,34 @@ export class DreckchatService {
   }
 
   public sendMessage(message: ChatMessage, UniqueId: string) {
-    hubConnection.invoke('SendMessage', message, UniqueId);
+    hubConnection.invoke('SendMessage', message, UniqueId).catch(logHubFailure);
   }
 
   public getMessages(UniqueId: string) {
-    hubConnection.invoke('GetMessages', UniqueId);
+    hubConnection.invoke('GetMessages', UniqueId).catch(logHubFailure);
   }
 
   public clearChat(UniqueId: string) {
-    hubConnection.invoke('ClearChat', UniqueId);
+    hubConnection.invoke('ClearChat', UniqueId).catch(logHubFailure);
   }
 
   public playGallows(UniqueId: string, language: Language, drawTime: number = 90) {
-    hubConnection.invoke('PlayGallows', UniqueId, language, drawTime);
+    hubConnection.invoke('PlayGallows', UniqueId, language, drawTime).catch(logHubFailure);
   }
 
   public playBlackjack(UniqueId: string) {
-    hubConnection.invoke('PlayBlackjack', UniqueId);
+    hubConnection.invoke('PlayBlackjack', UniqueId).catch(logHubFailure);
   }
 
   public spectateBj(UniqueId: string) {
-    hubConnection.invoke('SpectateBlackjack', UniqueId);
+    hubConnection.invoke('SpectateBlackjack', UniqueId).catch(logHubFailure);
   }
 
   public AddBjAi(UniqueId: string) {
-    hubConnection.invoke('AddBlackjackAi', UniqueId);
+    hubConnection.invoke('AddBlackjackAi', UniqueId).catch(logHubFailure);
   }
 
   public MakeAi(UniqueId: string) {
-    hubConnection.invoke('MakeAi', UniqueId);
+    hubConnection.invoke('MakeAi', UniqueId).catch(logHubFailure);
   }
 }

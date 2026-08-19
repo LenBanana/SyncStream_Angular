@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import * as signalR from "@aspnet/signalr";
+import * as signalR from "@microsoft/signalr";
 import { VideoDTO } from '../../Interfaces/VideoDTO';
-import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
+import { hubConnection, baseUrl, SignalRService , logHubFailure} from '../../services/signal-r.service';
 import { BehaviorSubject, from } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 
@@ -38,23 +38,23 @@ export class PlaylistService {
   }
 
   public addVideo(key: VideoDTO, UniqueId: string) {
-    hubConnection.invoke('AddVideo', key, UniqueId);
+    hubConnection.invoke('AddVideo', key, UniqueId).catch(logHubFailure);
   }
 
   public removeVideo(key: string, UniqueId: string) {
-    hubConnection.invoke('RemoveVideo', key, UniqueId);
+    hubConnection.invoke('RemoveVideo', key, UniqueId).catch(logHubFailure);
   }
 
   public nextVideo(UniqueId: string) {
-    hubConnection.invoke('NextVideo', UniqueId);
+    hubConnection.invoke('NextVideo', UniqueId).catch(logHubFailure);
   }
 
   public playVideo(key: string, UniqueId: string) {
-    hubConnection.invoke('PlayVideo', key, UniqueId);
+    hubConnection.invoke('PlayVideo', key, UniqueId).catch(logHubFailure);
   }
 
   public moveVideo(fromIdx: number, toIdx: number, UniqueId: string) {
-    hubConnection.invoke('MoveVideo', fromIdx, toIdx, UniqueId);
+    hubConnection.invoke('MoveVideo', fromIdx, toIdx, UniqueId).catch(logHubFailure);
   }
 
 }
