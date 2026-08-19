@@ -5,6 +5,7 @@ import { hubConnection, baseUrl, SignalRService , logHubFailure} from '../../ser
 import { BehaviorSubject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { PlayerType } from '../player.component';
+import { TimeSync } from '../../media/sync/time-sync';
 
 @Injectable({
   providedIn: 'root'
@@ -16,7 +17,7 @@ export class PlayerService {
   playerType: BehaviorSubject<PlayerType> = new BehaviorSubject(null);
   playingGallows: BehaviorSubject<string> = new BehaviorSubject(null);
   playingBlackjack: BehaviorSubject<boolean> = new BehaviorSubject(null);
-  currentTime: BehaviorSubject<number> = new BehaviorSubject(null);
+  currentTime: BehaviorSubject<TimeSync> = new BehaviorSubject(null);
   playFile: BehaviorSubject<string> = new BehaviorSubject(null);
   constructor(private http: HttpClient, private signalRService: SignalRService) {
     signalRService.connectionClosed.subscribe(isClosed => {
@@ -70,7 +71,7 @@ export class PlayerService {
   }
 
   public addTimeListener() {
-    hubConnection.on('timeupdate', (data: number) => {
+    hubConnection.on('timeupdate', (data: TimeSync) => {
       this.currentTime.next(data);
     });
   }

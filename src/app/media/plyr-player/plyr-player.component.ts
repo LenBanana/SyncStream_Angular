@@ -11,6 +11,9 @@ import { baseUrl } from '../../services/signal-r.service';
 import { MediaService } from '../media-service/media.service';
 import { AlertType, Dialog } from '../../Interfaces/Dialog';
 import { DialogService } from '../../text-dialog/text-dialog-service/dialog-service.service';
+import { PlaybackSyncService } from '../../media/sync/playback-sync.service';
+import { PlyrTarget } from '../../media/sync/playback-target';
+import { startPlayback } from '../../media/sync/playback-start';
 declare var $: any;
 export var player: Plyr = undefined;
 @Component({
@@ -20,12 +23,10 @@ export var player: Plyr = undefined;
 })
 export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
 
-  constructor(private playlistService: PlaylistService, private playerService: PlayerService, private mediaService: MediaService, private dialogService: DialogService) { }
+  constructor(private playlistService: PlaylistService, private playerService: PlayerService, private mediaService: MediaService, private dialogService: DialogService, private playbackSync: PlaybackSyncService) { }
   @Input() CurrentPlayerType = PlayerType.Nothing;
   @Input() IsHost = false;
   @Input() UniqueId = "";
-  @Input() CurrentPing = 0;
-  @Input() Threshhold = .5;
   PlayerType = PlayerType;
   IsPlaying = false;
   IsReady = false;
@@ -72,17 +73,11 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
 
   AddSubscriptions() {
     //Time update from server
-    this.ServerTimeUpdate = this.playerService.currentTime.subscribe(t => {
-      if (!this.IsReady || !t || t == null || this.IsHost || this.CurrentPlayerType != PlayerType.Vimeo) {
+    this.ServerTimeUpdate = this.playerService.currentTime.subscribe(sync => {
+      if (!this.IsReady || !sync || this.IsHost || this.CurrentPlayerType != PlayerType.Vimeo) {
         return;
       }
-      let playerTime = player.currentTime;
-      if (playerTime >= 0 && ((t > (playerTime + this.Threshhold) || t < (playerTime - this.Threshhold)))) {
-        if (player.buffered > 0) {
-          player.currentTime = t + this.CurrentPing;
-          //player.play();
-        }
-      }
+      this.playbackSync.apply(new PlyrTarget(player), sync);
     });
     //Play/Pause update from server
     this.IsPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {
@@ -94,7 +89,7 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
       }
       if (player.buffered > 0) {
         if (isplaying) {
-          player.play();
+          startPlayback(() => player.play());
         } else if (!isplaying) {
           player.pause();
         }
@@ -163,8 +158,13 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
         this.playerService.PlayPause(false, this.UniqueId);
       } else {
         if (this.IsPlaying && this.CurrentPlayerType == PlayerType.Vimeo) {
-          player.play();
+          startPlayback(() => player.play());
         }
+      }
+    });
+    player.on("seeked", () => {
+      if (this.IsHost && this.CurrentPlayerType == PlayerType.Vimeo) {
+        this.mediaService.playerTimeImmediate.next(player.currentTime);
       }
     });
     player.on("timeupdate", timeupdated => {

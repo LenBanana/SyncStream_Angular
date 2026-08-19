@@ -270,7 +270,11 @@ export class RoomsComponent implements OnInit {
       this.currentRoom = uniqueId;
       this.currentTime = time;
       this.delInterval = false;
-      this.playerService.currentTime.next(time);
+      // A seed so the player has somewhere to start, not a report from the host. The position comes from the
+      // room list and may be old, and nothing here knows how old, so it is marked as not playing to keep the
+      // sync logic from extrapolating forward from a time it cannot date. The room replays its real state on
+      // join and the host reports again within a second, which is what actually positions the player.
+      this.playerService.currentTime.next({ mediaTime: time, ageMs: 0, isPlaying: false });
       this.roomService.JoinRoom.next(uniqueId);
       $('#join-animation-placeholder').removeClass('join-room').addClass('none');
     }, 250);

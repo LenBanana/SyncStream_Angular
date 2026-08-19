@@ -84,7 +84,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
   pingUpdate;
   playerUpdate;
   isPlayingUpdate;
-  timeUpdate;
   twitchChannel = "";
   twitchVOD = "";
   file: File;
@@ -130,7 +129,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
   removeListener() {
     this.playerUpdate.unsubscribe();
     this.isPlayingUpdate.unsubscribe();
-    this.timeUpdate.unsubscribe();
     this.playingGallows.unsubscribe();
     this.playingChess.unsubscribe();
     this.endChess.unsubscribe();
@@ -308,42 +306,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
       } else if (!isplaying && !this.IsHost) {
         this.YTPlayer.pauseVideo();
         player.pause();
-      }
-    });
-    this.timeUpdate = this.playerService.currentTime.subscribe(currentTime => {
-      if (!this.YTPlayer || !player) {
-        return;
-      }
-      if (!this.IsHost) {
-        if (this.CurrentPlayerType == PlayerType.YouTube) {
-          let playerTime = 0;
-          try {
-            playerTime = this.YTPlayer.getCurrentTime();
-            if (player.playing) {
-              player.pause();
-            }
-          } catch {}
-          if ((currentTime > (playerTime + this.Threshhold) || currentTime < (playerTime - this.Threshhold))) {
-            if (this.YTPlayer.getPlayerState() == YT.PlayerState.PAUSED) {
-              this.YTPlayer.playVideo();
-            }
-            this.YTPlayer.seekTo(currentTime + this.CurrentPing, true);
-          }
-        } else {
-          let playerTime = 0;
-          try {
-            playerTime = player.currentTime;
-            if (this.YTPlayer.getPlayerState() != YT.PlayerState.PAUSED) {
-              this.YTPlayer.pauseVideo();
-            }
-          } catch {}
-          if ((currentTime > (playerTime + this.Threshhold) || currentTime < (playerTime - this.Threshhold))) {
-            if (player.paused) {
-              player.play();
-            }
-            player.currentTime = currentTime;
-          }
-        }
       }
     });
   }

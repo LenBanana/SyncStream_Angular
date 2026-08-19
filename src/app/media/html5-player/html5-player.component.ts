@@ -11,6 +11,9 @@ import { baseUrl } from '../../services/signal-r.service';
 import { MediaService } from '../media-service/media.service';
 import { AlertType, Dialog } from '../../Interfaces/Dialog';
 import { DialogService } from '../../text-dialog/text-dialog-service/dialog-service.service';
+import { PlaybackSyncService } from '../../media/sync/playback-sync.service';
+import { MediaElementTarget } from '../../media/sync/playback-target';
+import { startPlayback } from '../../media/sync/playback-start';
 declare var $: any;
 
 @Component({
@@ -20,7 +23,7 @@ declare var $: any;
 })
 export class Html5PlayerComponent implements OnInit, AfterViewInit, OnDestroy, OnChanges {
 
-  constructor(private playlistService: PlaylistService, private playerService: PlayerService, private mediaService: MediaService, private dialogService: DialogService) { }
+  constructor(private playlistService: PlaylistService, private playerService: PlayerService, private mediaService: MediaService, private dialogService: DialogService, private playbackSync: PlaybackSyncService) { }
   @Input() CurrentPlayerType = PlayerType.Nothing;
   @Input() IsHost = false;
   @Input() UniqueId = "";
@@ -62,14 +65,11 @@ export class Html5PlayerComponent implements OnInit, AfterViewInit, OnDestroy, O
 
   AddSubscriptions() {
     //Time update from server
-    this.ServerTimeUpdate = this.playerService.currentTime.subscribe(t => {
-      if (!this.IsReady || !t || t == null || this.IsHost || this.CurrentPlayerType != PlayerType.External) {
+    this.ServerTimeUpdate = this.playerService.currentTime.subscribe(sync => {
+      if (!this.IsReady || !sync || this.IsHost || this.CurrentPlayerType != PlayerType.External) {
         return;
       }
-      let playerTime = this.html5player.currentTime;
-      if (playerTime >= 0 && ((t > (playerTime + this.Threshhold) || t < (playerTime - this.Threshhold)))) {
-        this.html5player.currentTime = t + this.CurrentPing;
-      }
+      this.playbackSync.apply(new MediaElementTarget(this.html5player), sync);
     });
     //Play/Pause update from server
     this.IsPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {
@@ -80,7 +80,7 @@ export class Html5PlayerComponent implements OnInit, AfterViewInit, OnDestroy, O
         return;
       }
       if (isplaying) {
-        this.html5player.play();
+        startPlayback(() => this.html5player.play());
       } else if (!isplaying) {
         this.html5player.pause();
       }
@@ -122,7 +122,7 @@ export class Html5PlayerComponent implements OnInit, AfterViewInit, OnDestroy, O
         this.playerService.PlayPause(false, this.UniqueId);
       } else {
         if (this.IsPlaying && this.CurrentPlayerType == PlayerType.External) {
-          this.html5player.play();
+          startPlayback(() => this.html5player.play());
         }
       }
     });

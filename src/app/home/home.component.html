@@ -1,8 +1,8 @@
 <ng-container *ngIf="UniqueId!==undefined&&Username!==undefined&&currentTime!==undefined&&DelInterval!==undefined">
     <!--<i class="fa fa-2x btn text-primary pointer fade menu-btn" *ngIf="UserAdded==true" (click)="toggleNav()" (mouseenter)="inMenu=true;" (mouseleave)="inMenu=false;" [class.navbtn]="!nav" [class.navbtn-left]="nav" aria-hidden="true" id="menuBtn" [class.left-24]="nav"
         [class.fa-bars]="!nav" [class.fa-times]="nav" [class.fade-out]="fullscreen"></i>-->
-    <app-side-nav *ngIf="UserAdded==true&&!nav" [logout]="logout" [Privileges]="Privileges" [BrowserSettings]="BrowserSettings" [ChatOpen]="twitchChat" [ThreshholdNumber]="Threshhold" [Playlist]="Playlist" [nav]="nav" [IsHost]="IsHost" [menuHidden]="fullscreen" [isPlaying]="isPlaying" [UniqueId]="UniqueId" [Username]="Username" [Members]="Members"
-        [playerComp]="playerComp" (goBack)="refresh()" (threshholdChange)="Threshhold=$event" (usernameChange)="Username=$event" (toggleDreckChat)="twitchChat=!twitchChat" (menuEnter)="menuEnter($event)" (Draw)="DrawWhiteboard()"></app-side-nav>
+    <app-side-nav *ngIf="UserAdded==true&&!nav" [logout]="logout" [Privileges]="Privileges" [BrowserSettings]="BrowserSettings" [ChatOpen]="twitchChat" [Playlist]="Playlist" [nav]="nav" [IsHost]="IsHost" [menuHidden]="fullscreen" [isPlaying]="isPlaying" [UniqueId]="UniqueId" [Username]="Username" [Members]="Members"
+        [playerComp]="playerComp" (goBack)="refresh()" (usernameChange)="Username=$event" (toggleDreckChat)="twitchChat=!twitchChat" (menuEnter)="menuEnter($event)" (Draw)="DrawWhiteboard()"></app-side-nav>
     <div class="row">
         <div [ngClass]="{'col-3': nav}">
             <div class="sidenav" [class.width-25]="nav">
@@ -14,7 +14,7 @@
         <div [ngClass]="{'col-9': nav, 'col-12': !nav}">
             <!--<app-player [nav]="nav" [logout]="logout" [Username]="Username" (toggleChat)="twitchChat=!twitchChat" [fullscreen]="fullscreen" [twitchChat]="twitchChat" [currentTime]="currentTime" [UniqueId]="UniqueId" [IsHost]="IsHost" [Threshhold]="Threshhold" (threshholdChange)="Threshhold=$event" (isPlayingEvent)="isPlaying=$event"
                 (playlistChange)="Playlist=$event"></app-player>-->
-                <app-media [UniqueId]="UniqueId" [Privileges]="Privileges" [IsHost]="IsHost" [Threshhold]="Threshhold" [logout]="logout" [Username]="Username" [twitchChat]="twitchChat" (hideChat)="externalChat=$event" (threshholdChange)="Threshhold=$event" (isPlayingEvent)="isPlayingEvent($event)" (playlistChange)="Playlist=$event"></app-media>
+                <app-media [UniqueId]="UniqueId" [Privileges]="Privileges" [IsHost]="IsHost" [logout]="logout" [Username]="Username" [twitchChat]="twitchChat" (hideChat)="externalChat=$event" (isPlayingEvent)="isPlayingEvent($event)" (playlistChange)="Playlist=$event"></app-media>
         </div>
     </div>
 

@@ -6,6 +6,8 @@ import { PlayerService } from '../../player/player-service/player.service';
 import { PlayerType } from '../../player/player.component';
 import { PlaylistService } from '../../playlist/playlist-service/playlist.service';
 import { MediaService } from '../media-service/media.service';
+import { PlaybackSyncService } from '../../media/sync/playback-sync.service';
+import { TwitchTarget } from '../../media/sync/playback-target';
 
 @Component({
   selector: 'app-twitch',
@@ -14,12 +16,10 @@ import { MediaService } from '../media-service/media.service';
 })
 export class TwitchComponent implements OnInit, OnChanges, OnDestroy, AfterViewInit {
 
-  constructor(private playerService: PlayerService, private mediaService: MediaService, private playlistService: PlaylistService) { }
+  constructor(private playerService: PlayerService, private mediaService: MediaService, private playlistService: PlaylistService, private playbackSync: PlaybackSyncService) { }
   @Input() CurrentPlayerType = PlayerType.Nothing;
   @Input() IsHost = false;
   @Input() UniqueId = "";
-  @Input() CurrentPing = 0;
-  @Input() Threshhold = .5;
   PlayerType = PlayerType;
   IsPlaying = false;
   IsReady = false;
@@ -113,14 +113,11 @@ export class TwitchComponent implements OnInit, OnChanges, OnDestroy, AfterViewI
 
   AddSubscriptions() {
     //Time update from server
-    this.ServerTimeUpdate = this.playerService.currentTime.subscribe(t => {
-      if (!this.IsReady || !t || this.IsHost || this.CurrentPlayerType != PlayerType.Twitch) {
+    this.ServerTimeUpdate = this.playerService.currentTime.subscribe(sync => {
+      if (!this.IsReady || !sync || this.IsHost || this.CurrentPlayerType != PlayerType.Twitch) {
         return;
       }
-      let playerTime = this.player.getCurrentTime();
-      if (playerTime >= 0 && ((t > (playerTime + this.Threshhold) || t < (playerTime - this.Threshhold)))) {
-          this.player.seek(t + this.CurrentPing);
-      }
+      this.playbackSync.apply(new TwitchTarget(this.player), sync);
     });
     //Play/Pause update from server
     this.IsPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {

@@ -36,21 +36,16 @@
       <div [class.none]="CurrentPlayerType!=PlayerType.Nothing" class="nothing-playing vh-big">
         <span><i class="fa fa-pause-circle" aria-hidden="true"></i> Nothing playing</span>
       </div>
-      <app-mpegts-player *ngIf="CurrentPlayerType==PlayerType.Live" [CurrentPing]="CurrentPing"
-                         [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"
-                         [Threshhold]="Threshhold"></app-mpegts-player>
-      <app-youtube *ngIf="CurrentPlayerType==PlayerType.YouTube" [CurrentPing]="CurrentPing"
-                   [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"
-                   [Threshhold]="Threshhold"></app-youtube>
-      <app-videojs-player *ngIf="CurrentPlayerType==PlayerType.External" [CurrentPing]="CurrentPing"
-                          [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"
-                          [Threshhold]="Threshhold"></app-videojs-player>
-      <app-plyr-player *ngIf="CurrentPlayerType==PlayerType.Vimeo" [CurrentPing]="CurrentPing"
-                       [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"
-                       [Threshhold]="Threshhold"></app-plyr-player>
-      <app-twitch *ngIf="CurrentPlayerType==PlayerType.Twitch" [CurrentPing]="CurrentPing"
-                  [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"
-                  [Threshhold]="Threshhold"></app-twitch>
+      <app-mpegts-player *ngIf="CurrentPlayerType==PlayerType.Live"
+                         [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"></app-mpegts-player>
+      <app-youtube *ngIf="CurrentPlayerType==PlayerType.YouTube"
+                   [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"></app-youtube>
+      <app-videojs-player *ngIf="CurrentPlayerType==PlayerType.External"
+                          [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"></app-videojs-player>
+      <app-plyr-player *ngIf="CurrentPlayerType==PlayerType.Vimeo"
+                       [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"></app-plyr-player>
+      <app-twitch *ngIf="CurrentPlayerType==PlayerType.Twitch"
+                  [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"></app-twitch>
     </div>
     <div *ngIf="CurrentPlayerType==PlayerType.WhiteBoard" class="CanvasStyle bg-canvas">
       <app-whiteboard [UniqueId]="UniqueId" [IsDrawing]="IsHost" [class.vh-90]="!nav" [GallowWord]="GallowWord" [Username]="Username">

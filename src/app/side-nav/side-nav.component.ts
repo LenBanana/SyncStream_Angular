@@ -66,17 +66,14 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   @Input() Members: Member[];
   @Input() Playlist: VideoDTO[] = [];
   @Input() playerComp: PlayerComponent;
-  @Input() ThreshholdNumber: number = 0.5;
   @Input() Privileges: number;
   @Input() BrowserSettings: BrowserSettings;
   @Input() ChatOpen: boolean;
-  @Output() threshholdChange = new EventEmitter();
   @Output() usernameChange = new EventEmitter();
   @Output() toggleDreckChat = new EventEmitter();
   @Output() menuEnter = new EventEmitter();
   @Output() Draw = new EventEmitter();
   @Output() goBack = new EventEmitter();
-  Threshhold = false;
   showInput = false;
   showPlaylist = false;
   showYtApi = false;
@@ -227,13 +224,6 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
-    if (this.IsHost) {
-      this.ThreshholdNumber = 2;
-      this.threshholdChange.emit(this.ThreshholdNumber);
-    } else {
-      this.ThreshholdNumber = .5;
-      this.threshholdChange.emit(this.ThreshholdNumber);
-    }
     this.Subscriptions.push(this.playerService.playingGallows.subscribe(playGallows => {
       if (playGallows == null || !playGallows) {
         return;
@@ -387,15 +377,6 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  ToggleThreshhold() {
-    if (this.Threshhold) {
-      this.Threshhold = false;
-    } else {
-      this.ResetInputs();
-      this.Threshhold = true;
-    }
-  }
-
   ToggleUsername() {
     if (this.showUsername) {
       this.showUsername = false;
@@ -420,9 +401,6 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     if (this.showPlaylist) {
       this.TogglePlaylist();
-    }
-    if (this.Threshhold) {
-      this.ToggleThreshhold();
     }
     if (this.showUsername) {
       this.ToggleUsername();

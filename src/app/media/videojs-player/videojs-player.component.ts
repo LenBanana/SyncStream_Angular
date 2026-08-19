@@ -11,6 +11,9 @@ import { baseUrl } from '../../services/signal-r.service';
 import { MediaService } from '../media-service/media.service';
 import type Player from 'video.js/dist/types/player';
 import { DialogService } from '../../text-dialog/text-dialog-service/dialog-service.service';
+import { PlaybackSyncService } from '../../media/sync/playback-sync.service';
+import { VideoJsTarget } from '../../media/sync/playback-target';
+import { startPlayback } from '../../media/sync/playback-start';
 declare var $: any;
 
 @Component({
@@ -20,12 +23,10 @@ declare var $: any;
 })
 export class VideojsPlayerComponent implements AfterViewInit, OnDestroy, OnChanges {
 
-  constructor(private playlistService: PlaylistService, private playerService: PlayerService, private mediaService: MediaService, private dialogService: DialogService) { }
+  constructor(private playlistService: PlaylistService, private playerService: PlayerService, private mediaService: MediaService, private dialogService: DialogService, private playbackSync: PlaybackSyncService) { }
   @Input() CurrentPlayerType = PlayerType.Nothing;
   @Input() IsHost = false;
   @Input() UniqueId = "";
-  @Input() CurrentPing = 0;
-  @Input() Threshhold = .5;
   PlayerType = PlayerType;
   IsPlaying = false;
   IsReady = false;
@@ -81,14 +82,11 @@ export class VideojsPlayerComponent implements AfterViewInit, OnDestroy, OnChang
 
   AddSubscriptions() {
     //Time update from server
-    this.ServerTimeUpdate = this.playerService.currentTime.subscribe(t => {
-      if (!this.IsReady || !t || t == null || this.IsHost || this.CurrentPlayerType != PlayerType.External) {
+    this.ServerTimeUpdate = this.playerService.currentTime.subscribe(sync => {
+      if (!this.IsReady || !sync || this.IsHost || this.CurrentPlayerType != PlayerType.External) {
         return;
       }
-      let playerTime = this.videojsplayer.currentTime();
-      if (playerTime >= 0 && ((t > (playerTime + this.Threshhold) || t < (playerTime - this.Threshhold)))) {
-        this.videojsplayer.currentTime(t + this.CurrentPing);
-      }
+      this.playbackSync.apply(new VideoJsTarget(this.videojsplayer), sync);
     });
     //Play/Pause update from server
     this.IsPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {
@@ -99,7 +97,7 @@ export class VideojsPlayerComponent implements AfterViewInit, OnDestroy, OnChang
         return;
       }
       if (isplaying) {
-        this.videojsplayer.play();
+        startPlayback(() => this.videojsplayer.play());
       } else if (!isplaying) {
         this.videojsplayer.pause();
       }
@@ -171,8 +169,14 @@ export class VideojsPlayerComponent implements AfterViewInit, OnDestroy, OnChang
         this.playerService.PlayPause(false, this.UniqueId);
       } else {
         if (this.IsPlaying && this.CurrentPlayerType == PlayerType.External) {
-          this.videojsplayer.play();
+          startPlayback(() => this.videojsplayer.play());
         }
+      }
+    });
+    this.videojsplayer.on("seeked", () => {
+      // A host scrub is published at once; waiting for the next cadence tick makes the room look like it lags.
+      if (this.IsHost && this.CurrentPlayerType == PlayerType.External) {
+        this.mediaService.playerTimeImmediate.next(this.videojsplayer.currentTime());
       }
     });
     this.videojsplayer.on("timeupdate", timeupdated => {

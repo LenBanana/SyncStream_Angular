@@ -44,7 +44,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   isPlaying = false;
   twitchChat = false;
   Playlist: VideoDTO[] = [];
-  Threshhold: number = 0.5;
   currentTimeout;
   UserAdded = false;
   loginRequest;
@@ -129,11 +128,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
 
   ChangeHost(isHost: boolean) {
     this.IsHost = isHost;
-    if (this.IsHost) {
-      this.Threshhold = 2;
-    } else {
-      this.Threshhold = .5;
-    }
   }
 
   ngAfterViewChecked() {

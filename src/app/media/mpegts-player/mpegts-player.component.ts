@@ -22,8 +22,6 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
   @Input() CurrentPlayerType = PlayerType.Live;
   @Input() IsHost = true;
   @Input() UniqueId = "";
-  @Input() CurrentPing = 0;
-  @Input() Threshhold = .5;
   @Output() NetworkError = new EventEmitter();
   PlayerType = PlayerType;
   IsPlaying = false;

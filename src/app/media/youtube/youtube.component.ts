@@ -27,6 +27,9 @@ import { PlaylistService } from '../../playlist/playlist-service/playlist.servic
 import { MediaService } from '../media-service/media.service';
 import { SponsorBlockService } from './sponsor-block/sponsor-block.service';
 import { YoutubePlayerService } from './youtube-player.service';
+import { PlaybackSyncService } from '../../media/sync/playback-sync.service';
+import { PlyrTarget } from '../../media/sync/playback-target';
+import { startPlayback } from '../../media/sync/playback-start';
 
 @Component({
   selector: 'app-youtube',
@@ -40,7 +43,8 @@ export class YoutubeComponent implements AfterViewInit, OnDestroy, OnChanges {
     private playerService: PlayerService,
     private mediaService: MediaService,
     private youtubePlayerService: YoutubePlayerService,
-    private sponsorBlockService: SponsorBlockService
+    private sponsorBlockService: SponsorBlockService,
+    private playbackSync: PlaybackSyncService
   ) {
   }
 
@@ -48,8 +52,6 @@ export class YoutubeComponent implements AfterViewInit, OnDestroy, OnChanges {
   @Input() CurrentPlayerType = PlayerType.Nothing;
   @Input() IsHost = false;
   @Input() UniqueId = '';
-  @Input() CurrentPing = 0;
-  @Input() Threshhold = .5;
   @Output() PlayerReady = new EventEmitter<void>();
 
   PlayerType = PlayerType;
@@ -110,7 +112,7 @@ export class YoutubeComponent implements AfterViewInit, OnDestroy, OnChanges {
       return;
     }
     if (this.IsPlaying) {
-      this.player.play();
+      startPlayback(() => this.player.play());
     }
   };
 
@@ -130,6 +132,13 @@ export class YoutubeComponent implements AfterViewInit, OnDestroy, OnChanges {
     if (currentTime > 0) {
       this.mediaService.playerTime.next(currentTime);
     }
+  };
+
+  private readonly onSeeked = () => {
+    if (!this.IsHost || this.CurrentPlayerType !== PlayerType.YouTube) {
+      return;
+    }
+    this.mediaService.playerTimeImmediate.next(this.player?.currentTime ?? 0);
   };
 
   private readonly onEnded = () => {
@@ -171,6 +180,7 @@ export class YoutubeComponent implements AfterViewInit, OnDestroy, OnChanges {
     this.player.off('play', this.onPlay);
     this.player.off('pause', this.onPause);
     this.player.off('timeupdate', this.onTimeUpdate);
+    this.player.off('seeked', this.onSeeked);
     this.player.off('ended', this.onEnded);
     this.player.destroy();
   }
@@ -202,18 +212,16 @@ export class YoutubeComponent implements AfterViewInit, OnDestroy, OnChanges {
     this.player.on('play', this.onPlay);
     this.player.on('pause', this.onPause);
     this.player.on('timeupdate', this.onTimeUpdate);
+    this.player.on('seeked', this.onSeeked);
     this.player.on('ended', this.onEnded);
   }
 
   private addSubscriptions() {
-    this.ServerTimeUpdate = this.playerService.currentTime.subscribe(t => {
-      if (!this.player || !this.IsReady || t == null || this.IsHost || this.CurrentPlayerType !== PlayerType.YouTube) {
+    this.ServerTimeUpdate = this.playerService.currentTime.subscribe(sync => {
+      if (!this.player || !this.IsReady || !sync || this.IsHost || this.CurrentPlayerType !== PlayerType.YouTube) {
         return;
       }
-      const playerTime = this.player.currentTime || 0;
-      if (playerTime >= 0 && (t > (playerTime + this.Threshhold) || t < (playerTime - this.Threshhold))) {
-        this.player.currentTime = t + this.CurrentPing;
-      }
+      this.playbackSync.apply(new PlyrTarget(this.player), sync);
     });
 
     this.IsPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {
@@ -224,7 +232,7 @@ export class YoutubeComponent implements AfterViewInit, OnDestroy, OnChanges {
         return;
       }
       if (isplaying) {
-        this.player.play();
+        startPlayback(() => this.player.play());
       } else if (!isplaying) {
         this.player.pause();
       }
@@ -299,7 +307,7 @@ export class YoutubeComponent implements AfterViewInit, OnDestroy, OnChanges {
       if (!this.player || this.CurrentPlayerType !== PlayerType.YouTube) {
         return;
       }
-      this.player.play();
+      startPlayback(() => this.player.play());
     }, 0);
   }
 
