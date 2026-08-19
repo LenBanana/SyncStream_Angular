@@ -145,19 +145,21 @@ export class RoomsComponent implements OnInit {
   }
 
   private async signalR() {
-    // Learn who we are before rendering. The hub handshake carries the session cookie either way, so
-    // this is not what authenticates the connection; it is how the UI knows whether it is signed in.
-    // Replaces the old ValidateToken round trip over the hub.
-    const restored = await this.authService.restore().toPromise();
-    if (restored) {
-      this.SaveLogin(restored, true);
-    }
-
     await this.signalRService.startConnection().finally(() => {
       this.SignalR = true;
       this.liveStreamService.GetLiveUsers();
       this.cdRef.detectChanges();
     });
+
+    // Restored only once the connection exists. Anything that reacts to the profile arriving is free to
+    // call the hub, and this used to run first, so on a reload the admin view invoked a hub method while
+    // hubConnection was still undefined. The handshake carries the session cookie either way, so this
+    // ordering costs nothing: it is how the UI learns who it is, not what authenticates it.
+    // Replaces the old ValidateToken round trip over the hub.
+    const restored = await this.authService.restore().toPromise();
+    if (restored) {
+      this.SaveLogin(restored, true);
+    }
 
     this.signalRService.connectionClosed.subscribe(con => {
       if (con === false) {

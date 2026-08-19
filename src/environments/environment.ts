@@ -6,13 +6,18 @@ export const environment = {
   production: false,
 
   /**
-   * Explicit API origin. In development the page and the API sit on different ports, which is still
-   * same-site for cookie purposes because SameSite ignores the port.
+   * Same-origin in development, via the dev-server proxy in proxy.conf.json.
    *
-   * Leave this null in production so the origin is derived from the page's own hostname. See
-   * `src/app/core/api-origin.ts` for why that matters.
+   * This is not a convenience. The session is a SameSite=Lax cookie, and under schemeful same-site
+   * `http://localhost:4200` and `https://localhost:44371` count as different sites, so the cookie would be
+   * set on login and then never sent again: signing in would appear to work and every following request
+   * would be anonymous. Going through the proxy makes the API same-origin, which sidesteps scheme, port
+   * and CORS entirely.
+   *
+   * Change the target in proxy.conf.json if the API runs somewhere other than
+   * https://localhost:44371.
    */
-  apiUrlOverride: 'https://localhost:44371/' as string | null
+  apiUrlOverride: '/' as string | null
 };
 
 /*
