@@ -24,6 +24,7 @@ import {WebrtcVoipService} from "../media/webrtc-voip/webrtc-voip-service/webrtc
 import {LiveStreamService} from "../live-stream-view/live-stream-service/live-stream.service";
 import {WebrtcService} from "../media/webrtc/webrtc-service/webrtc.service";
 import { AuthService } from '../services/auth.service';
+import { MainUser } from '../helper/Globals';
 declare var $: any
 
 @Component({
@@ -42,6 +43,7 @@ export class RoomsComponent implements OnInit {
   currentRoom: string;
   currentTime: number;
   delInterval: boolean;
+  identityUpdate;
   SignalR: boolean = false;
   user: User = { username: "", password: "", id: 0, approved: 0, userprivileges: 0, streamToken: "", apiKey: "" };
   logout;
@@ -145,6 +147,8 @@ export class RoomsComponent implements OnInit {
   }
 
   private async signalR() {
+    this.watchIdentity();
+
     await this.signalRService.startConnection().finally(() => {
       this.SignalR = true;
       this.cdRef.detectChanges();
@@ -159,9 +163,12 @@ export class RoomsComponent implements OnInit {
     if (restored) {
       this.SaveLogin(restored, true);
 
-      // The live stream list requires an approved account, so asking for it before knowing whether we have
-      // one is what blanked the page for a signed-out visitor: the refusal was an unhandled rejection.
-      this.liveStreamService.GetLiveUsers();
+      // Asked for only when we hold the privilege the hub requires. Calling it regardless is what blanked
+      // the page for a signed-out visitor, and gating on capability rather than on "is there a session"
+      // keeps that true if the requirement ever changes.
+      if (this.authService.hasAtLeast(UserPrivileges.Approved)) {
+        this.liveStreamService.GetLiveUsers();
+      }
     }
 
     this.signalRService.connectionClosed.subscribe(con => {
@@ -184,11 +191,40 @@ export class RoomsComponent implements OnInit {
 
   public Logout() {
     // Server-side too, so the session is revoked rather than just forgotten by this tab. The cookie is
-    // HttpOnly, so clearing it is the server's job now.
-    this.authService.logout().subscribe(() => {
-      this.user.username = 'Anon' + "#" + randomIntFromInterval(100, 10000);
-      this.user.id = 0;
-      this.logout = false;
+    // HttpOnly, so clearing it is the server's job now. The identity subscription below does the resetting:
+    // clearing fields by hand here is what left privileges behind after signing out.
+    this.authService.logout().subscribe();
+  }
+
+  /**
+   * Keeps the view's idea of who we are in step with the session.
+   *
+   * Logout used to clear the username and id but not approval or privileges, so the UI went on offering
+   * actions the server would refuse: the room delete button guards on privileges alone and stayed visible
+   * to a signed-out visitor. Deriving all of it from one place means a sign-out, a privilege change or an
+   * expired session revokes capability everywhere at once.
+   */
+  private watchIdentity() {
+    this.identityUpdate = this.authService.user.subscribe(profile => {
+      if (profile && profile.approved > 0) {
+        this.user = profile;
+        this.logout = true;
+      } else {
+        this.user = {
+          username: 'Anon' + "#" + randomIntFromInterval(100, 10000),
+          password: "",
+          id: 0,
+          approved: profile?.approved ?? 0,
+          userprivileges: UserPrivileges.NotApproved,
+          streamToken: "",
+          apiKey: ""
+        };
+        this.logout = false;
+      }
+
+      MainUser.username = this.user.username;
+      MainUser.approved = this.user.approved;
+      MainUser.userprivileges = this.user.userprivileges;
       this.cdRef.detectChanges();
     });
   }
@@ -201,15 +237,12 @@ export class RoomsComponent implements OnInit {
     if (user && user.approved == 0) {
       $('#registerModal').modal('show');
     }
-    if (user && user.approved > 0) {
-      this.user = user;
-      this.logout = true;
+    if (user && user.approved > 0)
+      // Identity itself is applied by watchIdentity; this is only what signing in should kick off.
       if (user.userprivileges >= UserPrivileges.Administrator) {
         this.downloadService.GetDownloads();
         this.downloadService.GetFolders();
       }
-      this.cdRef.detectChanges();
-    }
   }
 
   public ResetView() {

@@ -43,8 +43,27 @@ export var hubConnection: signalR.HubConnection = new signalR.HubConnectionBuild
  * failure, since for those a refusal usually needs to be shown to the person.
  */
 export function logHubFailure(error: unknown): undefined {
-  console.warn('Hub invocation failed:', error);
+  // "Not allowed" and "something broke" are different things and were being logged identically. A refusal
+  // is an expected answer for a guest, so it is informational; anything else is a genuine failure worth
+  // noticing, and lumping the two together is how a real fault hides behind routine noise.
+  if (isAuthorizationRefusal(error)) {
+    console.info('Hub refused the call, which needs an account:', describeHubError(error));
+    return undefined;
+  }
+
+  console.error('Hub invocation failed:', error);
   return undefined;
+}
+
+/** Whether the hub refused a call for lack of privilege, rather than failing. */
+export function isAuthorizationRefusal(error: unknown): boolean {
+  return /because user is unauthorized/i.test(describeHubError(error));
+}
+
+function describeHubError(error: unknown): string {
+  if (typeof error === 'string') return error;
+  if (error instanceof Error) return error.message;
+  return String(error);
 }
 
 @Injectable({

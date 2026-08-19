@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, of } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
 import { User } from '../Interfaces/User';
+import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
 import { resolveApiBaseUrl } from '../core/api-origin';
 
 export interface AuthResult {
@@ -28,6 +29,23 @@ export class AuthService {
   private readonly base = resolveApiBaseUrl() + 'api/auth/';
 
   constructor(private http: HttpClient) {}
+
+  /**
+   * What the signed-in account is allowed to do, or NotApproved when signed out.
+   *
+   * The single place the client answers "can I". Privileges used to be copied into component inputs and a
+   * module-global at login and never revised, so signing out left the UI offering actions the server would
+   * refuse, and an admin granting a privilege mid-session had no effect until a reload.
+   */
+  get privileges(): UserPrivileges {
+    const profile = this.user.value;
+    return profile && profile.approved > 0 ? profile.userprivileges : UserPrivileges.NotApproved;
+  }
+
+  /** Whether the caller holds at least this level. Unapproved accounts hold nothing, as on the server. */
+  hasAtLeast(level: UserPrivileges): boolean {
+    return this.privileges >= level;
+  }
 
   /** Restores the session on page load. Resolves to null when there is no valid cookie. */
   restore(): Observable<User | null> {
