@@ -82,6 +82,24 @@ export class AuthService {
     );
   }
 
+  /**
+   * Issues a fresh API key and pushes the updated profile.
+   *
+   * Was a hub call answered by a `userlogin` event. Nothing listened for that event once login moved off
+   * the hub, so the key was created server-side and never appeared in the UI.
+   */
+  generateApiKey(): Observable<AuthResult> {
+    return this.http.post<User>(this.base + 'api-key', {}).pipe(
+      map(user => {
+        this.user.next(user);
+        return { ok: true } as AuthResult;
+      }),
+      catchError((error: HttpErrorResponse) =>
+        of({ ok: false, message: messageFrom(error, 'Could not generate an API key') })
+      )
+    );
+  }
+
   /** Changes username and/or password. Both hashes are SHA512, computed by the caller. */
   changeUser(
     username: string | null,

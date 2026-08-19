@@ -4,7 +4,6 @@ import { BehaviorSubject } from 'rxjs';
 import { CreateRoomRequest, RoomSummary } from '../Interfaces/Room';
 import { resolveApiBaseUrl } from '../core/api-origin';
 
-export var hubConnection: signalR.HubConnection;
 export var CurrentPing: number = 0.5;
 
 /**
@@ -12,6 +11,25 @@ export var CurrentPing: number = 0.5;
  * Exported because much of the app builds URLs from it.
  */
 export var baseUrl: string = resolveApiBaseUrl();
+
+/**
+ * Built eagerly, so it is never undefined.
+ *
+ * Constructing a HubConnection does not open anything, so there is no cost to doing it at module load.
+ * It used to be created inside startConnection, which left a window where any service reaching for it
+ * crashed with "cannot access property invoke of undefined" instead of simply failing to send. That
+ * window was real: on a reload the admin view called the hub before the connection existed.
+ *
+ * Invoking before the connection is up now rejects the returned promise, which callers can handle, and
+ * two components calling startConnection no longer build two connections and clobber this reference.
+ */
+export var hubConnection: signalR.HubConnection = new signalR.HubConnectionBuilder()
+  // withCredentials sends the session cookie on the negotiate request and the socket handshake.
+  // Anonymous connections are allowed: guests can watch without an account.
+  .withUrl(baseUrl + 'server', { withCredentials: true })
+  // Replaces a hand-rolled setTimeout loop. Retries at 0s, 2s, 10s, 30s, then gives up.
+  .withAutomaticReconnect()
+  .build();
 
 @Injectable({
   providedIn: 'root'
@@ -30,14 +48,18 @@ export class SignalRService {
 
   pingStream: BehaviorSubject<number> = new BehaviorSubject(CurrentPing);
 
+  private lifecycleWired = false;
+
   public async startConnection() {
-    hubConnection = new signalR.HubConnectionBuilder()
-      // withCredentials sends the session cookie on the negotiate request and the socket handshake.
-      // Anonymous connections are allowed: guests can watch without an account.
-      .withUrl(baseUrl + 'server', { withCredentials: true })
-      // Replaces a hand-rolled setTimeout loop. Retries at 0s, 2s, 10s, 30s, then gives up.
-      .withAutomaticReconnect()
-      .build();
+    this.wireLifecycle();
+    await this.connect();
+  }
+
+  private wireLifecycle() {
+    if (this.lifecycleWired) {
+      return;
+    }
+    this.lifecycleWired = true;
 
     hubConnection.onreconnecting(() => {
       console.log('Connection lost, reconnecting');
@@ -55,11 +77,17 @@ export class SignalRService {
       this.connectionClosed.next(true);
       setTimeout(() => this.connect(), 5000);
     });
-
-    await this.connect();
   }
 
   public async connect() {
+    // Called from more than one component, and again by the retry paths, so only start when idle.
+    if (hubConnection.state !== signalR.HubConnectionState.Disconnected) {
+      if (hubConnection.state === signalR.HubConnectionState.Connected) {
+        this.connectionClosed.next(false);
+      }
+      return;
+    }
+
     try {
       await hubConnection.start();
       console.log('Connection started');

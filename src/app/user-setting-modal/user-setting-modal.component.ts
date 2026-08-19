@@ -1,7 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { User } from '../Interfaces/User';
 import * as sha512 from 'js-sha512';
-import { UserSettingService } from './user-setting-service/user-setting.service';
 import { BrowserSettings, changeSettings } from '../Interfaces/BrowserSettings';
 import { sponsorBlockCategoryLabels, sponsorBlockCategoryOrder } from '../Interfaces/SponsorBlock';
 import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
@@ -17,7 +16,7 @@ declare var $: any;
 })
 export class UserSettingModalComponent implements OnInit {
 
-  constructor(public userSettingService: UserSettingService, private authService: AuthService, private dialogService: DialogService) { }
+  constructor(private authService: AuthService, private dialogService: DialogService) { }
   @Input() User: User;
   @Input() BrowserSettings: BrowserSettings;
   Password = "";
@@ -122,7 +121,14 @@ export class UserSettingModalComponent implements OnInit {
   }
 
   GenerateApiKey() {
-    this.userSettingService.GenerateApiKey();
+    this.authService.generateApiKey().subscribe(result => {
+      if (!result.ok) {
+        this.dialogService.PushDefaultDialog(result.message, "Error", AlertType.Danger);
+        return;
+      }
+      // The bound User is this component's input, so copy the new key across for immediate display.
+      this.User.apiKey = this.authService.user.value?.apiKey;
+    });
   }
 
 }
