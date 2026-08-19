@@ -59,8 +59,8 @@ export class AuthService {
     );
   }
 
-  login(username: string, passwordHash: string): Observable<AuthResult> {
-    return this.http.post<User>(this.base + 'login', { username, password: passwordHash }).pipe(
+  login(username: string, password: string): Observable<AuthResult> {
+    return this.http.post<User>(this.base + 'login', { username, password }).pipe(
       map(user => {
         this.user.next(user);
         return { ok: true } as AuthResult;
@@ -76,8 +76,8 @@ export class AuthService {
     );
   }
 
-  register(username: string, passwordHash: string): Observable<AuthResult> {
-    return this.http.post<User>(this.base + 'register', { username, password: passwordHash }).pipe(
+  register(username: string, password: string): Observable<AuthResult> {
+    return this.http.post<User>(this.base + 'register', { username, password }).pipe(
       // Registration deliberately does not sign you in: the account is unapproved until an admin says so.
       map(() => ({ ok: true, awaitingApproval: true } as AuthResult)),
       catchError((error: HttpErrorResponse) =>
@@ -118,7 +118,7 @@ export class AuthService {
     );
   }
 
-  /** Changes username and/or password. Both hashes are SHA512, computed by the caller. */
+  /** Changes username and/or password. Both are sent as typed; the server hashes them. */
   changeUser(
     username: string | null,
     newPasswordHash: string | null,
