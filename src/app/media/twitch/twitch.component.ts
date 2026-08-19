@@ -3,7 +3,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { TwitchPlayer, TwitchPlayerEvent } from 'twitch-player';
 import { PlayerService } from '../../player/player-service/player.service';
-import { PlayerType } from '../../player/player.component';
+import { PlayerType } from '../../Interfaces/PlayerType';
 import { PlaylistService } from '../../playlist/playlist-service/playlist.service';
 import { PlaybackSyncService } from '../../media/sync/playback-sync.service';
 import { TwitchTarget } from '../../media/sync/playback-target';

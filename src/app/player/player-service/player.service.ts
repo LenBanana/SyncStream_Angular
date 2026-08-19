@@ -4,7 +4,7 @@ import { VideoDTO } from '../../Interfaces/VideoDTO';
 import { hubConnection, baseUrl, SignalRService , logHubFailure} from '../../services/signal-r.service';
 import { BehaviorSubject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { PlayerType } from '../player.component';
+import { PlayerType } from '../../Interfaces/PlayerType';
 import { TimeSync } from '../../media/sync/time-sync';
 
 @Injectable({

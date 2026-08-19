@@ -2,7 +2,7 @@ import {AfterContentInit, Component, EventEmitter, Input, OnDestroy, OnInit, Out
 import {Subject, Subscription} from 'rxjs';
 import {VideoDTO} from '../Interfaces/VideoDTO';
 import {PlayerService} from '../player/player-service/player.service';
-import {PlayerType} from '../player/player.component';
+import { PlayerType } from '../Interfaces/PlayerType';
 import {PlaylistService} from '../playlist/playlist-service/playlist.service';
 import {PingService} from '../services/pingservice.service';
 import {PlaybackSyncService} from './sync/playback-sync.service';

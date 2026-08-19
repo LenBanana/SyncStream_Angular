@@ -4,7 +4,7 @@ import $ from 'jquery';
 import { SignalRService } from '../services/signal-r.service';
 import { PlaylistService } from '../playlist/playlist-service/playlist.service';
 import { UserlistService } from '../userlist/userlist-service/userlist.service';
-import { PlayerComponent } from '../player/player.component';
+
 import { Location } from '@angular/common';
 import { Member } from '../Interfaces/Member';
 import { VideoDTO } from '../Interfaces/VideoDTO';
@@ -19,7 +19,6 @@ import { BrowserSettings, changeSettings, GeneralSettings } from '../Interfaces/
 })
 export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnChanges {
 
-  @ViewChild(PlayerComponent) playerComp;
   constructor(private route: ActivatedRoute, public datepipe: DatePipe, private router: Router, public signalRService: SignalRService, public dialogService: DialogService, public playlistService: PlaylistService, public userService: UserlistService, private cdRef: ChangeDetectorRef, private location: Location) {
 
   }
@@ -67,10 +66,6 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
   }
 
   ngOnChanges() {
-  }
-
-  DrawWhiteboard() {
-    this.playerComp.DrawWhiteboard();
   }
 
   userIntervalOff() {

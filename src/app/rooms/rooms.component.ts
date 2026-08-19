@@ -19,7 +19,7 @@ import { PlayerService } from '../player/player-service/player.service';
 import { LiveUser } from '../Interfaces/liveStream';
 import { MatMenuTrigger } from '@angular/material/menu';
 import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
-import { PlayerType } from '../player/player.component';
+import { PlayerType } from '../Interfaces/PlayerType';
 import {WebrtcVoipService} from "../media/webrtc-voip/webrtc-voip-service/webrtc-voip.service";
 import {LiveStreamService} from "../live-stream-view/live-stream-service/live-stream.service";
 import {WebrtcService} from "../media/webrtc/webrtc-service/webrtc.service";
