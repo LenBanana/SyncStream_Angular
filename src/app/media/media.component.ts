@@ -76,6 +76,9 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
   ngOnInit(): void {
     // Keeps PlaybackSyncService supplied with round-trip samples. Nothing here reads the ping itself; the
     // sync service takes the smallest of the recent ones to estimate how stale a host report is on arrival.
+    // Measured at once as well as on the interval: waiting for the first tick left the first five seconds in a
+    // room, which is exactly when a joining viewer is furthest out of step, with no measurement at all.
+    this.pingService.GetPing();
     this.PingInterval = setInterval(() => {
       this.pingService.GetPing();
     }, 5000);
@@ -220,7 +223,7 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
 
     this.lastReportMs = now;
     this.LastTime = currentTime;
-    this.playerService.SetTime(currentTime, this.UniqueId);
+    this.playerService.SetTime(currentTime, this.UniqueId, this.playbackSync.oneWayLatencySeconds);
   }
 
   /** Reports the current position at once, for a seek or a play state change. */

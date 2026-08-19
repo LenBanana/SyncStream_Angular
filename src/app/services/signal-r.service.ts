@@ -81,7 +81,14 @@ export class SignalRService {
    */
   connectionClosed: BehaviorSubject<boolean> = new BehaviorSubject(null);
 
-  pingStream: BehaviorSubject<number> = new BehaviorSubject(CurrentPing);
+  /**
+   * Round trips in seconds, as measured.
+   *
+   * Starts empty rather than on CurrentPing's initial value: the latency estimate takes the smallest sample it
+   * has seen, so a made-up figure published before anything was measured would stand as the estimate for as
+   * long as it undercut the real round trips.
+   */
+  pingStream: BehaviorSubject<number> = new BehaviorSubject(null);
 
   private lifecycleWired = false;
 

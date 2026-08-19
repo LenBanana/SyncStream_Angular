@@ -147,6 +147,10 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
     player.on("play", event => {
       if (this.IsHost) {
         this.playerService.PlayPause(true, this.UniqueId);
+        // Publish the exact frame the host stopped or resumed on. No timeupdate fires while paused, so
+        // without this every viewer sits wherever the last cadence tick left them, up to a second away,
+        // and nothing arrives afterwards to correct it.
+        this.mediaService.playerTimeImmediate.next(player.currentTime);
       } else {
         if (!this.IsPlaying && this.CurrentPlayerType == PlayerType.Vimeo) {
           player.pause();
@@ -156,6 +160,10 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
     player.on("pause", event => {
       if (this.IsHost) {
         this.playerService.PlayPause(false, this.UniqueId);
+        // Publish the exact frame the host stopped or resumed on. No timeupdate fires while paused, so
+        // without this every viewer sits wherever the last cadence tick left them, up to a second away,
+        // and nothing arrives afterwards to correct it.
+        this.mediaService.playerTimeImmediate.next(player.currentTime);
       } else {
         if (this.IsPlaying && this.CurrentPlayerType == PlayerType.Vimeo) {
           startPlayback(() => player.play());

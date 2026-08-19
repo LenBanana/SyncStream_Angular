@@ -48,6 +48,10 @@ export class TwitchComponent implements OnInit, OnChanges, OnDestroy, AfterViewI
     this.player.addEventListener(TwitchPlayerEvent.PLAY, () => {
       if (this.IsHost) {
         this.playerService.PlayPause(true, this.UniqueId);
+        // Publish the exact frame the host stopped or resumed on. No timeupdate fires while paused, so
+        // without this every viewer sits wherever the last cadence tick left them, up to a second away,
+        // and nothing arrives afterwards to correct it.
+        this.mediaService.playerTimeImmediate.next(this.player.getCurrentTime());
       } else {
         if (!this.IsPlaying && (this.CurrentPlayerType == PlayerType.External || this.CurrentPlayerType == PlayerType.Vimeo)) {
           this.player.pause();
@@ -57,6 +61,10 @@ export class TwitchComponent implements OnInit, OnChanges, OnDestroy, AfterViewI
     this.player.addEventListener(TwitchPlayerEvent.PAUSE, () => {
       if (this.IsHost) {
         this.playerService.PlayPause(false, this.UniqueId);
+        // Publish the exact frame the host stopped or resumed on. No timeupdate fires while paused, so
+        // without this every viewer sits wherever the last cadence tick left them, up to a second away,
+        // and nothing arrives afterwards to correct it.
+        this.mediaService.playerTimeImmediate.next(this.player.getCurrentTime());
       } else {
         if (this.IsPlaying && (this.CurrentPlayerType == PlayerType.External || this.CurrentPlayerType == PlayerType.Vimeo)) {
           this.player.play();

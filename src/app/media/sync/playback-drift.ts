@@ -24,8 +24,15 @@ export const DriftLimits = {
   /** Largest rate change, as a fraction. 8% is inaudible once browsers correct pitch. */
   maxRateAdjust: 0.08,
 
-  /** How aggressively drift converts into a rate change. */
-  rateGain: 0.5,
+  /**
+   * How aggressively drift converts into a rate change.
+   *
+   * Chosen with maxRateAdjust so the rate saturates at 0.4s of drift: below that the correction is
+   * proportional and a small error gets a small, inaudible nudge, above it the full 8% is used to close the
+   * gap. A much higher gain saturates almost immediately, which corrects a 0.2s error as hard as a 0.9s one
+   * and turns the band into on-off control with an audible sawtooth.
+   */
+  rateGain: 0.2,
 
   /**
    * Quiet period after a seek.
@@ -34,7 +41,19 @@ export const DriftLimits = {
    * pause afterwards the next report sees the new gap and seeks again, and the loop sustains itself. This is
    * the single most important number here for mobile.
    */
-  seekCooldownMs: 2000
+  seekCooldownMs: 2000,
+
+  /**
+   * How many times the quiet period doubles while corrections keep being needed.
+   *
+   * A player that cannot keep up stalls, falls behind, gets seeked, stalls again. The quiet period caps that
+   * at one seek per period, but on a connection that is simply too slow it would go on capped at that rate for
+   * as long as the video lasts. Doubling backs off to an occasional resync instead, which is what someone on a
+   * bad link actually wants: a little behind and watchable, rather than jumping every couple of seconds.
+   *
+   * Four doublings takes the period from 2s to 32s.
+   */
+  maxCooldownDoublings: 4
 } as const;
 
 export type DriftAction =
@@ -63,6 +82,25 @@ export interface DriftInput {
 
   /** Milliseconds left of the post-seek quiet period. */
   cooldownRemainingMs: number;
+
+  /**
+   * Whether the room is playing.
+   *
+   * A rate change only moves a player that is running, so when the room is paused the target is a fixed
+   * point and the rate has nothing to converge on: the only correction that does anything is a seek. Nudging
+   * a paused room meant the drift at the moment of pausing stayed exactly as it was, and reappeared the
+   * instant playback resumed.
+   */
+  roomPlaying: boolean;
+
+  /**
+   * Whether this player is paused.
+   *
+   * When the room is playing and this player is not, no correction helps: the target advances a second every
+   * second and the player cannot follow it. Chasing it would seek repeatedly for as long as the viewer stays
+   * paused. The position is corrected once they resume, which is the first moment it can be held.
+   */
+  localPaused: boolean;
 }
 
 /**
@@ -83,27 +121,35 @@ export function decideDriftAction(input: DriftInput): DriftAction {
   const drift = input.targetSeconds - input.currentSeconds;
   const distance = Math.abs(drift);
 
+  const tolerance = input.canNudgeRate ? DriftLimits.holdSeconds : DriftLimits.coarseHoldSeconds;
+
+  // Checked before anything else, including the buffer. A position a few frames away is as good as correct,
+  // and seeking to it because the buffer happens not to cover it yet, which is ordinary at the live edge of a
+  // stream, causes exactly the stall the seek was meant to avoid.
+  if (distance < tolerance) {
+    return { kind: 'hold' };
+  }
+
   // No amount of rate adjustment crosses a gap in the buffer.
   if (!input.targetBuffered) {
     return { kind: 'seek', toSeconds: input.targetSeconds };
   }
 
-  if (!input.canNudgeRate) {
-    return distance < DriftLimits.coarseHoldSeconds
-      ? { kind: 'hold' }
-      : { kind: 'seek', toSeconds: input.targetSeconds };
+  // A rate change needs both ends running: a paused player does not move, and a paused room does not either.
+  if (!input.roomPlaying) {
+    return { kind: 'seek', toSeconds: input.targetSeconds };
   }
 
-  if (distance < DriftLimits.holdSeconds) {
+  if (input.localPaused) {
     return { kind: 'hold' };
   }
 
-  if (distance < DriftLimits.nudgeSeconds) {
-    const adjust = clamp(drift * DriftLimits.rateGain, -DriftLimits.maxRateAdjust, DriftLimits.maxRateAdjust);
-    return { kind: 'nudge', playbackRate: 1 + adjust };
+  if (!input.canNudgeRate || distance >= DriftLimits.nudgeSeconds) {
+    return { kind: 'seek', toSeconds: input.targetSeconds };
   }
 
-  return { kind: 'seek', toSeconds: input.targetSeconds };
+  const adjust = clamp(drift * DriftLimits.rateGain, -DriftLimits.maxRateAdjust, DriftLimits.maxRateAdjust);
+  return { kind: 'nudge', playbackRate: 1 + adjust };
 }
 
 /**

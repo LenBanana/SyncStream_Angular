@@ -54,7 +54,8 @@ export class TwitchPlayerComponent implements OnChanges, OnInit, OnDestroy {
         if (this.player && this.IsHost) {
           const time = this.player.getCurrentTime();
           if (time !== this.CurrentTime) {
-            this.playerService.SetTime(time, this.UniqueId);
+            // 0: this superseded player measures no latency, so nothing is credited, as before.
+            this.playerService.SetTime(time, this.UniqueId, 0);
           }
         }
     }, 500);

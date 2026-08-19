@@ -62,7 +62,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
   @Output() isPlayingEvent = new EventEmitter();
   @Output() playlistChange = new EventEmitter();
   @Output() toggleChat = new EventEmitter();
-  @Output() threshholdChange = new EventEmitter();
   GallowWord = "";
   playingGallows;
   playingChess;
@@ -81,7 +80,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
   IsPlaying: boolean = false;
   TimeUpdate: any;
   playlistUpdate;
-  pingUpdate;
   playerUpdate;
   isPlayingUpdate;
   twitchChannel = "";
@@ -92,7 +90,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
   LastAddedExternalSource = "";
   LatestGuess = "";
   Init = false;
-  CurrentPing = 0;
   PingInterval;
   newMessage = false;
 
@@ -133,7 +130,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
     this.playingChess.unsubscribe();
     this.endChess.unsubscribe();
     this.playlistUpdate.unsubscribe();
-    this.pingUpdate.unsubscribe();
     this.playingBlackjack.unsubscribe();
     this.playerService.playingBlackjack.next(null);
   }
@@ -213,20 +209,6 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
       this.Playlist = result;
       if (result && result.length > 0) {
         this.CurrentVideo = result[0];
-      }
-    });
-    this.pingUpdate = this.signalrService.pingStream.subscribe(ping => {
-      if (!ping) {
-        return;
-      }
-      this.CurrentPing = Number.parseFloat(ping.toFixed(2));
-      if (this.Threshhold < this.CurrentPing || (this.IsHost && this.Threshhold > 2 && this.CurrentPing < 2) || (!this.IsHost && this.Threshhold > .5 && this.CurrentPing < .5)) {
-        if (!this.IsHost) {
-          this.Threshhold = this.CurrentPing < .5 ? .5 : Number.parseFloat(ping.toFixed(2));
-        } else {
-          this.Threshhold = (this.CurrentPing < 2 ? 2 : Number.parseFloat(ping.toFixed(2))) * 2;
-        }
-        this.threshholdChange.emit(this.Threshhold);
       }
     });
     //Listener for chess games
@@ -636,7 +618,8 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
   private async SetTime(currentTime: number) {
     if ((currentTime > (this.lastTime + this.Threshhold) || currentTime < (this.lastTime - this.Threshhold))) {
       this.lastTime = currentTime;
-      await this.playerService.SetTime(currentTime, this.UniqueId);
+      // 0: this superseded player measures no latency, so nothing is credited, as before.
+      await this.playerService.SetTime(currentTime, this.UniqueId, 0);
     }
   }
 

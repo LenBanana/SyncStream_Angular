@@ -14,7 +14,9 @@ describe('decideDriftAction', () => {
     canNudgeRate: true,
     targetBuffered: true,
     busy: false,
-    cooldownRemainingMs: 0
+    cooldownRemainingMs: 0,
+    roomPlaying: true,
+    localPaused: false
   };
 
   it('does nothing while the drift is within the noise floor', () => {
@@ -42,6 +44,30 @@ describe('decideDriftAction', () => {
     }
   });
 
+  it('scales the rate change to how far out of step the player is', () => {
+    // Proportional, not on-off. A gain high enough to saturate immediately corrects a barely-noticeable error
+    // as hard as a large one, which is both audible and prone to overshooting back out of the hold zone.
+    const small = decideDriftAction({ ...base, currentSeconds: 99.8 });
+    const large = decideDriftAction({ ...base, currentSeconds: 99.2 });
+
+    if (small.kind !== 'nudge' || large.kind !== 'nudge') {
+      fail('expected both to nudge');
+      return;
+    }
+    expect(small.playbackRate - 1).toBeLessThan(large.playbackRate - 1);
+    expect(small.playbackRate - 1).toBeLessThan(DriftLimits.maxRateAdjust);
+  });
+
+  it('uses the full rate change once the gap is large enough to warrant it', () => {
+    const action = decideDriftAction({ ...base, currentSeconds: 100 - DriftLimits.nudgeSeconds + 0.01 });
+
+    if (action.kind !== 'nudge') {
+      fail('expected a nudge just inside the threshold');
+      return;
+    }
+    expect(action.playbackRate - 1).toBeCloseTo(DriftLimits.maxRateAdjust, 9);
+  });
+
   it('never asks for a rate change large enough to hear', () => {
     const action = decideDriftAction({ ...base, currentSeconds: 100 - DriftLimits.nudgeSeconds + 0.01 });
 
@@ -63,10 +89,46 @@ describe('decideDriftAction', () => {
     }
   });
 
-  it('seeks when the target is not buffered, however small the gap', () => {
+  it('seeks when the target is not buffered, rather than trying to play its way there', () => {
     // No amount of rate adjustment crosses a hole in the buffer.
     const action = decideDriftAction({ ...base, currentSeconds: 100.2, targetBuffered: false });
     expect(action.kind).toBe('seek');
+  });
+
+  it('leaves an in-step player alone even when the target reads as unbuffered', () => {
+    // At the live edge of a stream the buffer routinely ends a few frames short of where the room is. Seeking
+    // there to correct a gap smaller than the tolerance causes the stall the seek was supposed to prevent.
+    const action = decideDriftAction({ ...base, currentSeconds: 100.05, targetBuffered: false });
+    expect(action.kind).toBe('hold');
+  });
+
+  describe('when the room is paused', () => {
+    const paused = { ...base, roomPlaying: false };
+
+    it('seeks instead of nudging, because a rate change cannot move a fixed target', () => {
+      // The rate only closes a gap while both ends are running. Nudging a paused room left the drift at the
+      // moment of pausing exactly where it was, and it reappeared the instant playback resumed. Reports stop
+      // arriving while paused, so there is no later correction to rely on either.
+      const action = decideDriftAction({ ...paused, currentSeconds: 99.6 });
+
+      expect(action.kind).toBe('seek');
+      if (action.kind === 'seek') {
+        expect(action.toSeconds).toBe(100);
+      }
+    });
+
+    it('still leaves a player alone that is already on the right frame', () => {
+      const action = decideDriftAction({ ...paused, currentSeconds: 100.05 });
+      expect(action.kind).toBe('hold');
+    });
+  });
+
+  it('does not chase the room while this player is paused', () => {
+    // The target advances a second every second and a paused player cannot follow it, so correcting would
+    // seek again on every report for as long as the viewer stays paused. Their position is corrected on the
+    // resume, which is the first moment it can be held.
+    const action = decideDriftAction({ ...base, currentSeconds: 90, localPaused: true });
+    expect(action.kind).toBe('hold');
   });
 
   it('holds during the quiet period after a seek', () => {

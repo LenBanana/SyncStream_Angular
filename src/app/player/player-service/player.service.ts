@@ -118,8 +118,13 @@ export class PlayerService {
     hubConnection.invoke('PlayPause', isplaying, UniqueId).catch(logHubFailure);
   }
 
-  public SetTime(time: number, UniqueId: string) {
-    hubConnection.invoke('SetTime', time, UniqueId).catch(logHubFailure);
+  /**
+   * @param oneWayLatencySeconds The host's own transit time to the server, so the server can date the report
+   *   from when the position was read rather than from when it arrived. Without it every viewer sits behind
+   *   the host by exactly this much, permanently.
+   */
+  public SetTime(time: number, UniqueId: string, oneWayLatencySeconds: number) {
+    hubConnection.invoke('SetTime', time, UniqueId, oneWayLatencySeconds).catch(logHubFailure);
   }
 
   public GetYTInfo(url: string) {

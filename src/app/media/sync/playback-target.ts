@@ -34,6 +34,18 @@ export interface PlaybackTarget {
 
   /** Whether a position is inside a buffered range. True when it cannot be determined. */
   buffered(seconds: number): boolean;
+
+  /** Whether the player is paused. False when it cannot be determined. */
+  paused(): boolean;
+
+  /**
+   * Length in seconds, or null when it is not known.
+   *
+   * Used to keep an extrapolated target inside the video. Near the end, adding the report's age and the
+   * latency to the position can land past the last frame, and seeking there ends the video and advances the
+   * playlist while the host still has a second to go.
+   */
+  duration(): number | null;
 }
 
 /** Wraps a Plyr instance, which backs the YouTube, Vimeo and direct-file players. */
@@ -76,6 +88,14 @@ export class PlyrTarget implements PlaybackTarget {
     const media = this.player?.media;
     return isPositionBuffered(media?.buffered, seconds);
   }
+
+  paused(): boolean {
+    return this.player?.paused === true;
+  }
+
+  duration(): number | null {
+    return finiteDuration(this.player?.duration);
+  }
 }
 
 /** Wraps a video.js player, which backs the external and HLS sources. */
@@ -115,6 +135,14 @@ export class VideoJsTarget implements PlaybackTarget {
   buffered(seconds: number): boolean {
     return isPositionBuffered(this.player?.buffered?.(), seconds);
   }
+
+  paused(): boolean {
+    return this.player?.paused?.() === true;
+  }
+
+  duration(): number | null {
+    return finiteDuration(this.player?.duration?.());
+  }
 }
 
 /**
@@ -123,6 +151,11 @@ export class VideoJsTarget implements PlaybackTarget {
  * Unknown counts as buffered: guessing "not buffered" would force a seek, and seeking unnecessarily is the
  * behaviour being removed.
  */
+/** A duration only counts if it is a real number: a live stream reports Infinity and a fresh player 0 or NaN. */
+function finiteDuration(value: any): number | null {
+  return typeof value === 'number' && isFinite(value) && value > 0 ? value : null;
+}
+
 function isPositionBuffered(ranges: any, seconds: number): boolean {
   if (!ranges || typeof ranges.length !== 'number' || ranges.length === 0) {
     return true;
@@ -175,6 +208,14 @@ export class MediaElementTarget implements PlaybackTarget {
   buffered(seconds: number): boolean {
     return isPositionBuffered(this.media?.buffered, seconds);
   }
+
+  paused(): boolean {
+    return this.media.paused;
+  }
+
+  duration(): number | null {
+    return finiteDuration(this.media?.duration);
+  }
 }
 
 /**
@@ -213,5 +254,16 @@ export class TwitchTarget implements PlaybackTarget {
 
   buffered(): boolean {
     return true;
+  }
+
+  paused(): boolean {
+    // The embed reports a state rather than a flag, and only for a live channel; treating a VOD as playing is
+    // the safe answer because the decision only uses this to skip a correction it cannot make.
+    return false;
+  }
+
+  duration(): number | null {
+    const duration = this.player?.getDuration?.();
+    return finiteDuration(duration);
   }
 }

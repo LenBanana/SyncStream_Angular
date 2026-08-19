@@ -11,6 +11,8 @@ class FakeTarget implements PlaybackTarget {
   fineRate = true;
   isBusy = false;
   hasBuffer = true;
+  isPaused = false;
+  length: number | null = null;
 
   currentTime(): number | null { return this.position; }
   seekTo(seconds: number): void { this.seeks.push(seconds); this.position = seconds; }
@@ -19,6 +21,8 @@ class FakeTarget implements PlaybackTarget {
   canNudgeRate(): boolean { return this.fineRate; }
   busy(): boolean { return this.isBusy; }
   buffered(): boolean { return this.hasBuffer; }
+  paused(): boolean { return this.isPaused; }
+  duration(): number | null { return this.length; }
 }
 
 function sync(mediaTime: number, ageMs = 0, isPlaying = true): TimeSync {
@@ -74,13 +78,15 @@ describe('PlaybackSyncService', () => {
     service.apply(target, sync(100), 1000);
     expect(target.seeks).toEqual([100]);
 
-    // Still far out immediately afterwards, because a real seek takes time to settle. Correcting again here
-    // is what turned one seek into a cascade.
-    target.position = 60;
+    // Still out of step immediately afterwards, because a real seek takes time to settle. Correcting again
+    // here is what turned one seek into a cascade. The gap is seek-worthy but small enough to be drift, which
+    // is what the quiet period is for.
+    target.position = 98.5;
     service.apply(target, sync(100), 1000 + DriftLimits.seekCooldownMs - 1);
     expect(target.seeks).toEqual([100]);
 
     // Once the quiet period is over it may act again.
+    target.position = 98.5;
     service.apply(target, sync(100), 1000 + DriftLimits.seekCooldownMs + 1);
     expect(target.seeks.length).toBe(2);
   });
@@ -135,6 +141,129 @@ describe('PlaybackSyncService', () => {
     service.apply(replacement, sync(100), 2000);
 
     expect(replacement.rate).toBeCloseTo(nudged, 5);
+  });
+
+  it('keeps an extrapolated target inside the video', () => {
+    // Near the end, the age plus the latency can push the target past the last frame. Seeking there raises
+    // 'ended', which advances the playlist for this one viewer while everyone else still has a second to go.
+    target.length = 100;
+    target.position = 90;
+    service.apply(target, sync(99.8, 900), 1000);
+
+    expect(target.seeks.length).toBe(1);
+    expect(target.seeks[0]).toBeLessThan(100);
+  });
+
+  it('never seeks to a negative position', () => {
+    target.position = 50;
+    service.apply(target, sync(0.1, 0, false), 1000);
+
+    expect(target.seeks.every(at => at >= 0)).toBe(true);
+  });
+
+  it('holds a large gap during the quiet period too', () => {
+    // Tempting to treat a large gap as a host scrub and correct at once, but a player that stalled and
+    // recovered looks exactly the same from the position alone, and seeking straight away is what makes it
+    // stall again. The scrub is honoured when the period lapses instead.
+    target.position = 50;
+    service.apply(target, sync(100), 1000);
+    expect(target.seeks.length).toBe(1);
+
+    target.position = 40;
+    service.apply(target, sync(100), 1100);
+
+    expect(target.seeks.length).toBe(1);
+  });
+
+  it('backs off while a player keeps needing to be jumped', () => {
+    // A connection that simply cannot keep up would otherwise be seeked once per quiet period for the whole
+    // video. Each correction in a run doubles the wait that follows it, so it degrades to an occasional
+    // resync instead of jumping every couple of seconds forever.
+    let now = 1000;
+    const stillFarBehind = () => {
+      target.position = 10;
+      service.apply(target, sync(1000), now);
+    };
+
+    stillFarBehind();
+    expect(target.seeks.length).toBe(1);
+
+    // The first wait is the plain period.
+    now += DriftLimits.seekCooldownMs + 1;
+    stillFarBehind();
+    expect(target.seeks.length).toBe(2);
+
+    // The second correction in the run doubled it, so the same wait is no longer enough.
+    now += DriftLimits.seekCooldownMs + 1;
+    stillFarBehind();
+    expect(target.seeks.length).toBe(2);
+
+    now += DriftLimits.seekCooldownMs;
+    stillFarBehind();
+    expect(target.seeks.length).toBe(3);
+  });
+
+  it('stops backing off once the player is keeping up again', () => {
+    let now = 1000;
+    target.position = 10;
+    service.apply(target, sync(1000), now);
+    expect(target.seeks.length).toBe(1);
+
+    // In step: this is the evidence that the run is over.
+    now += DriftLimits.seekCooldownMs + 1;
+    target.position = 1000;
+    service.apply(target, sync(1000), now);
+
+    // So the next correction waits one plain period rather than a doubled one.
+    now += 1;
+    target.position = 10;
+    service.apply(target, sync(1000), now);
+    expect(target.seeks.length).toBe(2);
+
+    now += DriftLimits.seekCooldownMs + 1;
+    target.position = 10;
+    service.apply(target, sync(1000), now);
+    expect(target.seeks.length).toBe(3);
+  });
+
+  it('does not count a hold it was forced into as the player keeping up', () => {
+    // A hold returned because the player was mid-seek says nothing about whether it is in step, so it must not
+    // clear the backoff the way an in-step report does.
+    let now = 1000;
+    target.position = 10;
+    service.apply(target, sync(1000), now);
+    expect(target.seeks.length).toBe(1);
+
+    // Mid-seek, so no assessment was made.
+    now += DriftLimits.seekCooldownMs + 1;
+    target.isBusy = true;
+    target.position = 10;
+    service.apply(target, sync(1000), now);
+    expect(target.seeks.length).toBe(1);
+
+    target.isBusy = false;
+    now += 1;
+    target.position = 10;
+    service.apply(target, sync(1000), now);
+    expect(target.seeks.length).toBe(2);
+
+    // Doubled, because the run was never broken. Had the busy hold cleared it, this would seek again.
+    now += DriftLimits.seekCooldownMs + 1;
+    target.position = 10;
+    service.apply(target, sync(1000), now);
+    expect(target.seeks.length).toBe(2);
+  });
+
+  it('takes only real round trips as samples', () => {
+    // The estimate is a minimum, so one bogus low value would set the latency for the rest of the session.
+    // pingStream carries whatever the hub listener publishes and starts before anything has been measured.
+    pings.next(null);
+    pings.next(0);
+    pings.next(-1);
+    expect(service.oneWayLatencySeconds).toBe(0);
+
+    pings.next(0.06);
+    expect(service.oneWayLatencySeconds).toBeCloseTo(0.03, 5);
   });
 
   it('forgets its seek history when the source changes', () => {
