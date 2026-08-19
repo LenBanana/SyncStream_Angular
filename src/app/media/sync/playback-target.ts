@@ -257,9 +257,8 @@ export class TwitchTarget implements PlaybackTarget {
   }
 
   paused(): boolean {
-    // The embed reports a state rather than a flag, and only for a live channel; treating a VOD as playing is
-    // the safe answer because the decision only uses this to skip a correction it cannot make.
-    return false;
+    // Reported as undefined until the embed is ready, which is not the same as paused.
+    return this.player?.isPaused?.() === true;
   }
 
   duration(): number | null {

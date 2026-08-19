@@ -1,1 +1,21 @@
-<div id="twitchMediaPlayer" class="media-player"></div>
+<!--
+  The container stays in the document even while a clip is showing, because the interactive player is attached
+  to it by element id and cannot be handed a different element later.
+-->
+<div id="twitchMediaPlayer" class="media-player" [class.none]="ClipEmbedUrl !== null"></div>
+
+<!--
+  Clips are not the interactive player. Twitch serves them as a bare frame with no scripting interface, so
+  there is nothing here to read a position from, seek, or detect the end of.
+-->
+<iframe *ngIf="ClipEmbedUrl !== null"
+        class="media-player"
+        [src]="ClipEmbedUrl"
+        frameborder="0"
+        allowfullscreen
+        scrolling="no"
+        title="Twitch clip"></iframe>
+
+<div *ngIf="Unplayable" class="media-player d-flex align-items-center justify-content-center">
+  <span><i class="fa fa-exclamation-triangle mr-2" aria-hidden="true"></i>That Twitch link cannot be played</span>
+</div>

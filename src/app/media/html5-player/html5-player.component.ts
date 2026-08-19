@@ -110,15 +110,16 @@ export class Html5PlayerComponent implements OnInit, AfterViewInit, OnDestroy, O
   InitPlayer() {
     this.html5player.addEventListener("play", event => {
       if (this.IsHost) {
-        this.playerService.PlayPause(true, this.UniqueId);
-        // Publish the exact frame the host stopped or resumed on. No timeupdate fires while paused, so
-        // without this every viewer sits wherever the last cadence tick left them, up to a second away,
-        // and nothing arrives afterwards to correct it. Guarded on the player type because tearing this
-        // component down raises pause, and an outgoing player must not publish a position for the video
-        // that replaced it.
-        if (this.CurrentPlayerType == PlayerType.External) {
-          this.mediaService.playerTimeImmediate.next(this.html5player.currentTime);
+        // Tearing this component down raises pause, so without the player-type check an outgoing player
+        // announces a state change and a position for the video that replaced it.
+        if (this.CurrentPlayerType != PlayerType.External) {
+          return;
         }
+        this.playerService.PlayPause(true, this.UniqueId);
+        // Publish the exact frame the host stopped or resumed on. No timeupdate fires while paused,
+        // so without this every viewer sits wherever the last cadence tick left them, up to a
+        // second away, and nothing arrives afterwards to correct it.
+        this.mediaService.playerTimeImmediate.next(this.html5player.currentTime);
       } else {
         if (!this.IsPlaying && this.CurrentPlayerType == PlayerType.External) {
           this.html5player.pause();
@@ -127,15 +128,16 @@ export class Html5PlayerComponent implements OnInit, AfterViewInit, OnDestroy, O
     });
     this.html5player.addEventListener("pause", event => {
       if (this.IsHost) {
-        this.playerService.PlayPause(false, this.UniqueId);
-        // Publish the exact frame the host stopped or resumed on. No timeupdate fires while paused, so
-        // without this every viewer sits wherever the last cadence tick left them, up to a second away,
-        // and nothing arrives afterwards to correct it. Guarded on the player type because tearing this
-        // component down raises pause, and an outgoing player must not publish a position for the video
-        // that replaced it.
-        if (this.CurrentPlayerType == PlayerType.External) {
-          this.mediaService.playerTimeImmediate.next(this.html5player.currentTime);
+        // Tearing this component down raises pause, so without the player-type check an outgoing player
+        // announces a state change and a position for the video that replaced it.
+        if (this.CurrentPlayerType != PlayerType.External) {
+          return;
         }
+        this.playerService.PlayPause(false, this.UniqueId);
+        // Publish the exact frame the host stopped or resumed on. No timeupdate fires while paused,
+        // so without this every viewer sits wherever the last cadence tick left them, up to a
+        // second away, and nothing arrives afterwards to correct it.
+        this.mediaService.playerTimeImmediate.next(this.html5player.currentTime);
       } else {
         if (this.IsPlaying && this.CurrentPlayerType == PlayerType.External) {
           startPlayback(() => this.html5player.play());
