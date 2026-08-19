@@ -147,7 +147,6 @@ export class RoomsComponent implements OnInit {
   private async signalR() {
     await this.signalRService.startConnection().finally(() => {
       this.SignalR = true;
-      this.liveStreamService.GetLiveUsers();
       this.cdRef.detectChanges();
     });
 
@@ -159,6 +158,10 @@ export class RoomsComponent implements OnInit {
     const restored = await this.authService.restore().toPromise();
     if (restored) {
       this.SaveLogin(restored, true);
+
+      // The live stream list requires an approved account, so asking for it before knowing whether we have
+      // one is what blanked the page for a signed-out visitor: the refusal was an unhandled rejection.
+      this.liveStreamService.GetLiveUsers();
     }
 
     this.signalRService.connectionClosed.subscribe(con => {

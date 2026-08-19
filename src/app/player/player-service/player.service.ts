@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import * as signalR from "@microsoft/signalr";
 import { VideoDTO } from '../../Interfaces/VideoDTO';
-import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
+import { hubConnection, baseUrl, SignalRService , logHubFailure} from '../../services/signal-r.service';
 import { BehaviorSubject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { PlayerType } from '../player.component';
@@ -114,11 +114,11 @@ export class PlayerService {
   }
 
   public PlayPause(isplaying: boolean, UniqueId: string) {
-    hubConnection.invoke('PlayPause', isplaying, UniqueId);
+    hubConnection.invoke('PlayPause', isplaying, UniqueId).catch(logHubFailure);
   }
 
   public SetTime(time: number, UniqueId: string) {
-    hubConnection.invoke('SetTime', time, UniqueId);
+    hubConnection.invoke('SetTime', time, UniqueId).catch(logHubFailure);
   }
 
   public GetYTInfo(url: string) {

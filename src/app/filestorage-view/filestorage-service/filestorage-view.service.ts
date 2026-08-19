@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 
 import { HttpClient } from '@angular/common/http';
-import { SignalRService, hubConnection } from '../../services/signal-r.service';
+import { SignalRService, hubConnection , logHubFailure} from '../../services/signal-r.service';
 import { BehaviorSubject } from 'rxjs';
 import { AuthenticationType, UserPrivileges } from '../../user-admin-modal/user-admin-modal.component';
 
@@ -33,7 +33,7 @@ export class FilestorageViewService {
    }
 
   public GetStorageInfo() {
-    hubConnection.invoke('GetStorageInfo');
+    hubConnection.invoke('GetStorageInfo').catch(logHubFailure);
   }
 }
 

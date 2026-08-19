@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
+import { hubConnection, baseUrl, SignalRService , logHubFailure} from '../../services/signal-r.service';
 import { BehaviorSubject, from } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { User, UserSummary } from '../../Interfaces/User';
@@ -31,24 +31,24 @@ export class UserAdminService {
   }
 
   public PublicAnnouncement(message: string, alertType: AlertType) {
-    hubConnection.invoke('PublicAnnouncement', message, alertType);
+    hubConnection.invoke('PublicAnnouncement', message, alertType).catch(logHubFailure);
   }
 
   public GetUsers() {
-    hubConnection.invoke('GetUsers');
+    hubConnection.invoke('GetUsers').catch(logHubFailure);
   }
 
   // The acting user is the connection's own identity, so only the target is passed.
   public DeleteUser(removeID: number) {
-    hubConnection.invoke('DeleteUser', removeID);
+    hubConnection.invoke('DeleteUser', removeID).catch(logHubFailure);
   }
 
   public ApproveUser(approveID: number, prove: boolean) {
-    hubConnection.invoke('ApproveUser', approveID, prove);
+    hubConnection.invoke('ApproveUser', approveID, prove).catch(logHubFailure);
   }
 
   public SetUserPrivileges(changeID: number, privileges: number) {
-    hubConnection.invoke('SetUserPrivileges', changeID, privileges);
+    hubConnection.invoke('SetUserPrivileges', changeID, privileges).catch(logHubFailure);
   }
 
   public addUserListener() {

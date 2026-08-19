@@ -1,6 +1,6 @@
 import {Injectable, OnDestroy} from '@angular/core';
 import {BehaviorSubject} from 'rxjs';
-import {SignalRService, hubConnection} from '../../../services/signal-r.service';
+import {SignalRService, hubConnection, logHubFailure} from '../../../services/signal-r.service';
 
 import {WebrtcService} from "../../webrtc/webrtc-service/webrtc.service";
 import {WebRtcSettings} from "../../../Interfaces/BrowserSettings";
@@ -151,9 +151,9 @@ export class WebrtcVoipService implements OnDestroy {
     };
 
     pc.onicecandidate = event => {
-      if (event.candidate ) {
+      if (event.candidate) {
         try {
-          hubConnection.invoke('SendIceCandidateToParticipant', participant.participantId, event.candidate);
+          hubConnection.invoke('SendIceCandidateToParticipant', participant.participantId, event.candidate).catch(logHubFailure);
         } catch (error) {
           console.error('Error sending ICE candidate:', error);
         }

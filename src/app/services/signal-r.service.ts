@@ -31,6 +31,22 @@ export var hubConnection: signalR.HubConnection = new signalR.HubConnectionBuild
   .withAutomaticReconnect()
   .build();
 
+/**
+ * Logs a failed hub invocation instead of letting it kill the page.
+ *
+ * A hub invocation returns a promise, and the server now rejects one the caller is not allowed to make.
+ * Under the old privilege aspect a refusal came back as a completed task, so denial was silent; an
+ * unhandled rejection is a fatal zone error, which blanked the whole app for a signed-out visitor the
+ * moment anything privileged was attempted.
+ *
+ * Attach this to fire-and-forget invocations. Calls whose result is actually used should handle their own
+ * failure, since for those a refusal usually needs to be shown to the person.
+ */
+export function logHubFailure(error: unknown): undefined {
+  console.warn('Hub invocation failed:', error);
+  return undefined;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -122,11 +138,11 @@ export class SignalRService {
   }
 
   public addRoom(room: CreateRoomRequest) {
-    hubConnection.invoke('AddRoom', room);
+    hubConnection.invoke('AddRoom', room).catch(logHubFailure);
   }
 
   public removeRoom(UniqueId: string) {
-    hubConnection.invoke('RemoveRoom', UniqueId);
+    hubConnection.invoke('RemoveRoom', UniqueId).catch(logHubFailure);
   }
 
   public AddPingListener() {

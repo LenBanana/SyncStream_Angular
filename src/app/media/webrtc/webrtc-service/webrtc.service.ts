@@ -1,6 +1,6 @@
 ﻿import {Injectable, OnDestroy} from '@angular/core';
 import {BehaviorSubject, Subject} from 'rxjs';
-import {SignalRService, hubConnection, baseUrl} from '../../../services/signal-r.service';
+import {SignalRService, hubConnection, baseUrl, logHubFailure} from '../../../services/signal-r.service';
 
 import {HttpClient} from "@angular/common/http";
 import * as mediasoupClient from 'mediasoup-client';
@@ -1157,7 +1157,7 @@ export class WebrtcService implements OnDestroy {
     this.localStream?.getTracks().forEach(track => pc.addTrack(track, this.localStream!));
 
     pc.onicecandidate = event => {
-      if (event.candidate ) {
+      if (event.candidate) {
         hubConnection.invoke('SendIceCandidateToViewer', viewerId, event.candidate)
           .catch(err => console.error('Error sending ICE candidate to viewer:', err));
       }
@@ -1403,7 +1403,7 @@ export class WebrtcService implements OnDestroy {
     this.watchSfuRecvTransport?.close();
     this.watchSfuRecvTransport = null;
     if (this.watchSfuRoomId) {
-      hubConnection.invoke('LeaveSfuRoom', this.watchSfuRoomId).catch(() => {});
+      hubConnection.invoke('LeaveSfuRoom', this.watchSfuRoomId).catch(() => {}).catch(logHubFailure);
     }
     this.watchSfuRoomId = null;
     this.currentRoomId = null;
@@ -1467,7 +1467,7 @@ export class WebrtcService implements OnDestroy {
     this.streamerPc = pc;
 
     pc.onicecandidate = event => {
-      if (event.candidate  && this.currentRoomId && this.currentViewingStreamerId) {
+      if (event.candidate && this.currentRoomId && this.currentViewingStreamerId) {
         hubConnection.invoke(
           'SendIceCandidate', this.currentRoomId, this.currentViewingStreamerId, event.candidate
         ).catch(err => console.error('Error sending ICE candidate to streamer:', err));

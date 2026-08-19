@@ -4,7 +4,7 @@ import { BehaviorSubject } from 'rxjs';
 
 import { AlertType } from '../../Interfaces/Dialog';
 import { DownloadFile, DownloadInfo, FileFolder } from '../../Interfaces/DownloadInfo';
-import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
+import { hubConnection, baseUrl, SignalRService , logHubFailure} from '../../services/signal-r.service';
 import { DialogService } from '../../text-dialog/text-dialog-service/dialog-service.service';
 import { User } from '../../Interfaces/User';
 
@@ -73,7 +73,7 @@ export class DownloadManagerService {
   }
 
   public CleanUpFiles(remove: boolean = false) {
-    hubConnection.invoke('CleanUpFiles', remove);
+    hubConnection.invoke('CleanUpFiles', remove).catch(logHubFailure);
   }
 
   public UploadFile(file: File) {
@@ -263,11 +263,11 @@ export class DownloadManagerService {
   }
 
   public DownloadFile(url: string, name: string, preset: ConversionPreset) {
-    hubConnection.invoke('DownloadFile', url, name, preset);
+    hubConnection.invoke('DownloadFile', url, name, preset).catch(logHubFailure);
   }
 
   public DownloadYtFile(url: string, quality: string, audioOnly: boolean, downloadSubtitles: boolean) {
-    hubConnection.invoke('DownloadYtVideo', url, quality, audioOnly, downloadSubtitles);
+    hubConnection.invoke('DownloadYtVideo', url, quality, audioOnly, downloadSubtitles).catch(logHubFailure);
   }
 
   public GetYtQuality(url: string) {
@@ -275,63 +275,63 @@ export class DownloadManagerService {
   }
 
   public ChangeDownload(fileId: number, fileName: string) {
-    hubConnection.invoke('ChangeDownload', fileId, fileName);
+    hubConnection.invoke('ChangeDownload', fileId, fileName).catch(logHubFailure);
   }
 
   public GetDownloads() {
-    hubConnection.invoke('GetDownloads');
+    hubConnection.invoke('GetDownloads').catch(logHubFailure);
   }
 
   public GetFolders(folderId: number = 1) {
-    hubConnection.invoke('GetFolders', folderId);
+    hubConnection.invoke('GetFolders', folderId).catch(logHubFailure);
   }
 
   public AddFolder(folderId: number) {
-    hubConnection.invoke('AddFolder', folderId);
+    hubConnection.invoke('AddFolder', folderId).catch(logHubFailure);
   }
 
   public ShareFolder(folderId: number, userId: number) {
-    hubConnection.invoke('ShareFolder', folderId, userId);
+    hubConnection.invoke('ShareFolder', folderId, userId).catch(logHubFailure);
   }
 
   public GetFolderUsers(folderId: number) {
-    hubConnection.invoke('GetFolderUsers', folderId);
+    hubConnection.invoke('GetFolderUsers', folderId).catch(logHubFailure);
   }
 
   public DeleteFolder(folderId: number) {
-    hubConnection.invoke('DeleteFolder', folderId);
+    hubConnection.invoke('DeleteFolder', folderId).catch(logHubFailure);
   }
 
   public ChangeFolderName(folderId: number, folderName: string) {
-    hubConnection.invoke('ChangeFolderName', folderId, folderName);
+    hubConnection.invoke('ChangeFolderName', folderId, folderName).catch(logHubFailure);
   }
 
   public GetFolderFiles(folderId: number) {
-    hubConnection.invoke('GetFolderFiles', folderId);
+    hubConnection.invoke('GetFolderFiles', folderId).catch(logHubFailure);
   }
 
   public ChangeFolder(fileId: number, folderId: number) {
-    hubConnection.invoke('ChangeFolder', fileId, folderId);
+    hubConnection.invoke('ChangeFolder', fileId, folderId).catch(logHubFailure);
   }
 
   public CancelM3U8Download(downloadId: string) {
-    hubConnection.invoke('CancelConversion', downloadId);
+    hubConnection.invoke('CancelConversion', downloadId).catch(logHubFailure);
   }
 
   public GetFileInfo(id: number) {
-    hubConnection.invoke('GetFileInfo', id);
+    hubConnection.invoke('GetFileInfo', id).catch(logHubFailure);
   }
 
   public RemoveFile(id: number) {
-    hubConnection.invoke('RemoveFile', id);
+    hubConnection.invoke('RemoveFile', id).catch(logHubFailure);
   }
 
   public MakeFilePermanent(id: number) {
-    hubConnection.invoke('MakeFilePermanent', id);
+    hubConnection.invoke('MakeFilePermanent', id).catch(logHubFailure);
   }
 
   public ToggleFilePublic(id: number) {
-    hubConnection.invoke('ToggleFilePublic', id);
+    hubConnection.invoke('ToggleFilePublic', id).catch(logHubFailure);
   }
 
   public addgetFolderUsersListener() {

@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { hubConnection, baseUrl } from '../../services/signal-r.service';
+import { hubConnection, baseUrl , logHubFailure} from '../../services/signal-r.service';
 import { BehaviorSubject, from } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 
@@ -13,6 +13,6 @@ export class RoomService {
   constructor(private http: HttpClient) { }
 
   public GetRooms() {
-    hubConnection.invoke('GetRooms');
+    hubConnection.invoke('GetRooms').catch(logHubFailure);
   }
 }

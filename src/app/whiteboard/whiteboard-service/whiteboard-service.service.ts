@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { CanvasWhiteboardUpdate } from 'ng2-canvas-whiteboard';
 import { BehaviorSubject } from 'rxjs';
 import { Member } from '../../Interfaces/Member';
-import { hubConnection, SignalRService } from '../../services/signal-r.service';
+import { hubConnection, SignalRService , logHubFailure} from '../../services/signal-r.service';
 
 @Injectable({
   providedIn: 'root'
@@ -53,27 +53,27 @@ export class WhiteboardService {
   }
 
   public getWhiteBoard(UniqueId: string) {
-    hubConnection.invoke('WhiteBoardJoin', UniqueId);
+    hubConnection.invoke('WhiteBoardJoin', UniqueId).catch(logHubFailure);
   }
 
   public NewGallow(UniqueId: string) {
-    hubConnection.invoke('NewGallow', UniqueId);
+    hubConnection.invoke('NewGallow', UniqueId).catch(logHubFailure);
   }
 
   public updateWhiteBoard(update, UniqueId: string) {
-    hubConnection.invoke('WhiteBoardUpdate', update, UniqueId);
+    hubConnection.invoke('WhiteBoardUpdate', update, UniqueId).catch(logHubFailure);
   }
 
   public clearWhiteBoard(UniqueId: string) {
-    hubConnection.invoke('WhiteBoardClear', UniqueId);
+    hubConnection.invoke('WhiteBoardClear', UniqueId).catch(logHubFailure);
   }
 
   public undoWhiteBoard(UniqueId: string, uuid: string) {
-    hubConnection.invoke('WhiteBoardUndo', UniqueId, uuid);
+    hubConnection.invoke('WhiteBoardUndo', UniqueId, uuid).catch(logHubFailure);
   }
 
   public redoWhiteBoard(UniqueId: string, uuid: string) {
-    hubConnection.invoke('WhiteBoardUndo', UniqueId, uuid);
+    hubConnection.invoke('WhiteBoardUndo', UniqueId, uuid).catch(logHubFailure);
   }
 
   public addGallowUserListener() {

@@ -3,7 +3,7 @@ import { BehaviorSubject } from 'rxjs';
 
 import { LiveUser } from '../../Interfaces/liveStream';
 import { User } from '../../Interfaces/User';
-import { hubConnection, SignalRService } from '../../services/signal-r.service';
+import { hubConnection, SignalRService , logHubFailure} from '../../services/signal-r.service';
 
 @Injectable({
   providedIn: 'root'
@@ -48,10 +48,10 @@ export class LiveStreamService {
   }
 
   public GetUsersWatching(userName: string) {
-    hubConnection.invoke('GetUsersWatching', userName);
+    hubConnection.invoke('GetUsersWatching', userName).catch(logHubFailure);
   }
 
   public GetLiveUsers() {
-    hubConnection.invoke('GetLiveUsers');
+    hubConnection.invoke('GetLiveUsers').catch(logHubFailure);
   }
 }

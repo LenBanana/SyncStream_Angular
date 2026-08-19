@@ -3,7 +3,7 @@ import {
   } from '@angular/core';
 import { Subject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { baseUrl, hubConnection } from './signal-r.service';
+import { baseUrl, hubConnection , logHubFailure} from './signal-r.service';
 @Injectable({
     providedIn: 'root'
   })
@@ -14,6 +14,6 @@ export class PingService {
 
   public GetPing() {      
     let timeStart: number = performance.now();
-    hubConnection.invoke('Ping', new Date());
+    hubConnection.invoke('Ping', new Date()).catch(logHubFailure);
   }
 }
