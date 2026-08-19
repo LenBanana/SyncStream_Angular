@@ -6,7 +6,11 @@ import { VideoDTO } from '../../Interfaces/VideoDTO';
   providedIn: 'root'
 })
 export class YoutubePlayerService {
-  createPlayer(target: HTMLElement, videoId?: string): Plyr {
+  /**
+   * @param captionsEnabled Whether the video should start with captions showing. Passed to the embed at
+   *   creation, because YouTube offers no dependable way to change it in a running player.
+   */
+  createPlayer(target: HTMLElement, videoId?: string, captionsEnabled = false): Plyr {
     target.setAttribute('data-plyr-provider', 'youtube');
     if (videoId) {
       target.setAttribute('data-plyr-embed-id', videoId);
@@ -23,12 +27,23 @@ export class YoutubePlayerService {
       },
       invertTime: false,
       ratio: '16:9',
+
+      // Plyr only really handles captions for HTML5 sources; for YouTube it leaves them to the embed. Saying so
+      // here stops Plyr from showing a captions control that does not drive anything.
+      captions: {
+        active: captionsEnabled,
+        update: false
+      },
       youtube: {
         noCookie: false,
         playsinline: 1,
         rel: 0,
         iv_load_policy: 3,
-        modestbranding: 1
+        modestbranding: 1,
+
+        // Stated in both directions. Unset, YouTube falls back to the viewer's own preference, which is how
+        // captions switched themselves on with nothing here asking for them.
+        cc_load_policy: captionsEnabled ? 1 : 0
       }
     } as any);
   }

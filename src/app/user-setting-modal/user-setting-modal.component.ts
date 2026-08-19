@@ -1,7 +1,8 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { User } from '../Interfaces/User';
 import { BrowserSettings, changeSettings } from '../Interfaces/BrowserSettings';
-import { sponsorBlockCategoryLabels, sponsorBlockCategoryOrder } from '../Interfaces/SponsorBlock';
+import { SponsorBlockCategory, sponsorBlockCategoryLabels, sponsorBlockCategoryOrder } from '../Interfaces/SponsorBlock';
+import { SponsorBlockService } from '../media/youtube/sponsor-block/sponsor-block.service';
 import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
 import { AuthService } from '../services/auth.service';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
@@ -15,7 +16,7 @@ declare var $: any;
 })
 export class UserSettingModalComponent implements OnInit {
 
-  constructor(private authService: AuthService, private dialogService: DialogService) { }
+  constructor(private authService: AuthService, private dialogService: DialogService, private sponsorBlockService: SponsorBlockService) { }
   @Input() User: User;
   @Input() BrowserSettings: BrowserSettings;
   Password = "";
@@ -27,8 +28,48 @@ export class UserSettingModalComponent implements OnInit {
   UserPrivileges = UserPrivileges;
   SponsorBlockCategoryOrder = sponsorBlockCategoryOrder;
   SponsorBlockCategoryLabels = sponsorBlockCategoryLabels;
+
+  /**
+   * The categories the server skips, which an administrator edits here.
+   *
+   * Separate from the per-browser settings beside it because a skip is performed by the host and followed by
+   * everybody, so it is one decision for the site rather than a preference each viewer holds.
+   */
+  SkipCategories: SponsorBlockCategory[] = [];
+  SavingSkipPolicy = false;
+
   ngOnInit(): void {
     this.User.password = "";
+    this.sponsorBlockService.policy.subscribe(policy => {
+      this.SkipCategories = [...policy.skipCategories];
+    });
+    this.sponsorBlockService.loadPolicy();
+  }
+
+  IsSkipped(category: SponsorBlockCategory): boolean {
+    return this.SkipCategories.includes(category);
+  }
+
+  ToggleSkipped(category: SponsorBlockCategory, skip: boolean) {
+    this.SkipCategories = skip
+      ? [...this.SkipCategories, category]
+      : this.SkipCategories.filter(existing => existing !== category);
+  }
+
+  SaveSkipPolicy() {
+    this.SavingSkipPolicy = true;
+    this.sponsorBlockService.savePolicy(this.SkipCategories).subscribe({
+      next: () => {
+        this.SavingSkipPolicy = false;
+        this.dialogService.PushDefaultDialog(
+          "Auto-skip categories saved for everyone", "Success", AlertType.Success);
+      },
+      error: () => {
+        this.SavingSkipPolicy = false;
+        this.dialogService.PushDefaultDialog(
+          "Could not save the auto-skip categories", "Error", AlertType.Danger);
+      }
+    });
   }
 
   ChangeSettings() {

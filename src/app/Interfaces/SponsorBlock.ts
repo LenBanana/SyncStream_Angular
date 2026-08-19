@@ -51,6 +51,27 @@ export const sponsorBlockCategoryColors: Record<SponsorBlockCategory, string> = 
   exclusive_access: '#ef4444'
 };
 
+/**
+ * Which categories the server skips, and everything it could skip.
+ *
+ * Set once for the whole site rather than per browser, because only the host's client performs a skip and the
+ * position it jumps to is what everyone else follows. Held per browser, the choice belonged to whoever happened
+ * to be host and a viewer's own toggles changed nothing.
+ */
+export interface SponsorBlockPolicy {
+  skipCategories: SponsorBlockCategory[];
+  availableCategories: SponsorBlockCategory[];
+}
+
+/**
+ * What is skipped until the server says otherwise.
+ *
+ * Matches the server's own default, so the moment before the policy arrives behaves the same as the moment
+ * after. Two categories, where this used to be every one except filler: skipping intros, outros, greetings and
+ * recaps by default removes a lot that people want to watch, and it is more than SponsorBlock itself does.
+ */
+export const defaultSponsorBlockSkipCategories: SponsorBlockCategory[] = ['sponsor', 'selfpromo'];
+
 export function createDefaultSponsorBlockCategoryMap(): SponsorBlockCategorySettingsMap {
   return {
     sponsor: true,

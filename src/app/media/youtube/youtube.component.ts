@@ -159,6 +159,10 @@ export class YoutubeComponent implements AfterViewInit, OnDestroy, OnChanges {
 
   ngAfterViewInit(): void {
     this.addSubscriptions();
+
+    // Fetched per player rather than once at start-up, so an administrator's change reaches a long-running room
+    // at the next video instead of only after a reload.
+    this.sponsorBlockService.loadPolicy();
     this.SettingsUpdate = settingsUpdate.subscribe(() => {
       this.BrowserSettings = loadBrowserSettings();
       this.refreshSponsorBlockState();
@@ -275,7 +279,10 @@ export class YoutubeComponent implements AfterViewInit, OnDestroy, OnChanges {
     this.CurrentVideoId = videoId;
     if (!this.player) {
       this.suppressStateSync = true;
-      this.player = this.youtubePlayerService.createPlayer(this.youtubePlayerHost.nativeElement, videoId);
+      this.player = this.youtubePlayerService.createPlayer(
+        this.youtubePlayerHost.nativeElement,
+        videoId,
+        this.BrowserSettings.playbackSettings.youtubeCaptions);
       this.registerPlayerEvents();
       this.fetchSponsorBlockSegments(videoId);
       return;
@@ -361,7 +368,7 @@ export class YoutubeComponent implements AfterViewInit, OnDestroy, OnChanges {
     }
     const activeSegments = this.Segments
       .filter(segment => segment.actionType === 'skip')
-      .filter(segment => this.isCategoryEnabled(segment.category))
+      .filter(segment => this.isSkipped(segment.category))
       .filter(segment => currentTime >= segment.startTime && currentTime < segment.endTime)
       .filter(segment => !this.skippedSegments.has(segment.id))
       .filter(segment => !this.suppressedSegments.has(segment.id))
@@ -438,7 +445,7 @@ export class YoutubeComponent implements AfterViewInit, OnDestroy, OnChanges {
       return;
     }
 
-    const visibleSegments = this.Segments.filter(segment => this.isCategoryEnabled(segment.category));
+    const visibleSegments = this.Segments.filter(segment => this.isMarkerVisible(segment.category));
     if (visibleSegments.length === 0) {
       return;
     }
@@ -537,7 +544,23 @@ export class YoutubeComponent implements AfterViewInit, OnDestroy, OnChanges {
     return sponsorBlockCategoryOrder.includes(category as SponsorBlockCategory);
   }
 
-  private isCategoryEnabled(category: SponsorBlockCategory): boolean {
+  /**
+   * Whether the room skips this category.
+   *
+   * From the server, not from this browser. Only the host performs a skip and the position it jumps to is what
+   * everyone follows, so the choice was effectively made by whoever happened to be host, out of settings they
+   * had picked for themselves, and no viewer's own toggles affected it.
+   */
+  private isSkipped(category: SponsorBlockCategory): boolean {
+    return this.sponsorBlockService.skipCategories.includes(category);
+  }
+
+  /**
+   * Whether to draw a marker for this category.
+   *
+   * Still a personal setting, because a marker is drawn in each viewer's own player and affects nobody else.
+   */
+  private isMarkerVisible(category: SponsorBlockCategory): boolean {
     return this.BrowserSettings.playbackSettings.sponsorBlock.categories[category] !== false;
   }
 }

@@ -64,11 +64,23 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
     this.IsPlayingUpdate?.unsubscribe();
     this.VideoUpdate?.unsubscribe();
     this.ServerTimeUpdate?.unsubscribe();
-    player.off("play", () => {});
-    player.off("pause", () => {});
-    player.off("timeupdate", () => {});
-    player.off("ended", () => {});
-    player.off("ready", () => {});
+
+    // Destroyed and cleared, so the next mount builds its own.
+    //
+    // The instance lives in a module variable and was only created when that variable was still undefined, so
+    // leaving it behind meant the next component to mount skipped InitPlayer entirely: it never attached its own
+    // handlers, never called AddSubscriptions, and left IsReady false, so it did not follow the room's position
+    // at all. Meanwhile the handlers from this component stayed attached to the shared instance and kept
+    // reporting with whatever IsHost and CurrentPlayerType it had when it was torn down.
+    //
+    // The off calls this replaces removed nothing: each passed a freshly created function, and removing a
+    // listener needs the same reference that was added.
+    try {
+      player?.destroy();
+    } catch {
+      // A player whose element has already gone is nothing to clean up.
+    }
+    player = undefined;
   }
 
   AddSubscriptions() {

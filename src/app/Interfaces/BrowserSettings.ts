@@ -74,8 +74,21 @@ export class SponsorBlockSettings {
 export class PlaybackSettings {
   sponsorBlock: SponsorBlockSettings;
 
+  /**
+   * Whether a YouTube video starts with captions showing.
+   *
+   * Off by default, and set explicitly either way. Left unset, YouTube decides from the viewer's own Google
+   * preference, including automatic translation, which is why captions appeared on their own with nothing in
+   * this app asking for them.
+   *
+   * Applies from the next video: it is passed to the embed when one is built, and YouTube offers no dependable
+   * way to turn captions on or off in a player that is already running.
+   */
+  youtubeCaptions: boolean;
+
   constructor() {
     this.sponsorBlock = new SponsorBlockSettings();
+    this.youtubeCaptions = false;
   }
 }
 
@@ -125,6 +138,7 @@ function normalizePlaybackSettings(settings?: Partial<PlaybackSettings>): Playba
     return normalized;
   }
   normalized.sponsorBlock = normalizeSponsorBlockSettings(settings.sponsorBlock);
+  normalized.youtubeCaptions = settings.youtubeCaptions ?? normalized.youtubeCaptions;
   return normalized;
 }
 

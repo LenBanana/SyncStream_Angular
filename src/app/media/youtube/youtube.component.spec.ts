@@ -54,6 +54,11 @@ describe('YoutubeComponent', () => {
     playerTime: BehaviorSubject<number>;
     playerTimeImmediate: BehaviorSubject<number>;
   };
+  let sponsorBlockServiceMock: {
+    getSegments: jasmine.Spy;
+    loadPolicy: jasmine.Spy;
+    skipCategories: string[];
+  };
 
   beforeEach(async () => {
     playerServiceMock = {
@@ -68,6 +73,14 @@ describe('YoutubeComponent', () => {
     mediaServiceMock = {
       playerTime: new BehaviorSubject<number>(null),
       playerTimeImmediate: new BehaviorSubject<number>(null)
+    };
+    // The categories the server skips. Held here rather than in browser settings, because only the host
+    // performs a skip and the room follows the position it jumps to.
+    sponsorBlockServiceMock = {
+      getSegments: jasmine.createSpy('getSegments').and.returnValue(
+        of({ videoId: 'abc123def45', fetchedAtUtc: new Date().toISOString(), segments: [] })),
+      loadPolicy: jasmine.createSpy('loadPolicy'),
+      skipCategories: ['sponsor', 'selfpromo']
     };
     youtubePlayerServiceMock = {
       createPlayer: jasmine.createSpy('createPlayer').and.callFake(() => new PlyrStub()),
@@ -96,9 +109,7 @@ describe('YoutubeComponent', () => {
         },
         {
           provide: SponsorBlockService,
-          useValue: {
-            getSegments: () => of({ videoId: 'abc123def45', fetchedAtUtc: new Date().toISOString(), segments: [] })
-          }
+          useValue: sponsorBlockServiceMock
         }
       ]
     })
@@ -169,6 +180,31 @@ describe('YoutubeComponent', () => {
     playerServiceMock.currentTime.next(null);
 
     expect(component['player'].currentTime).toBe(5);
+  });
+
+  it('does not skip a category the server does not list', () => {
+    // The browser's own settings used to decide this, which meant whoever happened to be host chose for the whole
+    // room out of preferences they had set for themselves.
+    sponsorBlockServiceMock.skipCategories = ['sponsor'];
+
+    component.CurrentPlayerType = PlayerType.YouTube;
+    component.IsHost = true;
+    component['player'] = new PlyrStub() as any;
+    component['player'].currentTime = 12;
+    component['Segments'] = [{
+      id: 'segment-1',
+      category: 'intro',
+      actionType: 'skip',
+      startTime: 10,
+      endTime: 15,
+      votes: 1,
+      locked: false,
+      description: ''
+    }];
+
+    component['onTimeUpdate']();
+
+    expect(component['player'].currentTime).toBe(12);
   });
 
   it('should skip enabled SponsorBlock segments for hosts', () => {
