@@ -19,19 +19,20 @@ export class BlackjackMember {
 export class BlackjackDealer {
     name: string;
     cards: PlayingCard[];
+    /** Total of the face-up cards only. */
     pointsDTO: number;
-    blackjack: boolean;
     money: number;
 }
 
 export class PlayingCard {
-    Id: string;
-    suitS: string;
-    rankS: string;
-    cardName: string;
-    suit: PlayingCardSuit;
-    rank: PlayingCardRank;
     faceUp: boolean;
+    /** Null while the card is face down: a hidden card reveals nothing. */
+    id?: string;
+    suitS?: string;
+    rankS?: string;
+    cardName?: string;
+    suit?: PlayingCardSuit;
+    rank?: PlayingCardRank;
 }
 
 export enum PlayingCardSuit {
