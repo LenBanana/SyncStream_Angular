@@ -81,16 +81,19 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
     });
     //Play/Pause update from server
     this.IsPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {
-      if (isplaying != null) {
-        this.IsPlaying = isplaying;
+      // Null means the state is not known rather than not playing, and the subject is reset to it. Falling
+      // through to the pause branch on it answers "no idea" by pausing.
+      if (isplaying == null) {
+        return;
       }
+      this.IsPlaying = isplaying;
       if (!this.IsReady || this.IsHost || this.CurrentPlayerType != PlayerType.Vimeo) {
         return;
       }
       if (player.buffered > 0) {
         if (isplaying) {
           startPlayback(() => player.play());
-        } else if (!isplaying) {
+        } else {
           player.pause();
         }
       }

@@ -64,7 +64,12 @@ export function parseTwitchSource(rawUrl: string | null | undefined): TwitchSour
     }
 
     const onHost = ClipHostPath.exec(path);
-    return onHost ? { kind: 'clip', id: onHost[1], startSeconds: 0 } : null;
+    if (!onHost || onHost[1].toLowerCase() === 'embed') {
+      // /embed is the frame itself, so without the clip parameter above there is no clip named at all and
+      // taking the path segment would produce a source called "embed".
+      return null;
+    }
+    return { kind: 'clip', id: onHost[1], startSeconds: 0 };
   }
 
   if (host !== 'twitch.tv') {

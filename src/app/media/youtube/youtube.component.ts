@@ -233,15 +233,18 @@ export class YoutubeComponent implements AfterViewInit, OnDestroy, OnChanges {
     });
 
     this.IsPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {
-      if (isplaying != null) {
-        this.IsPlaying = isplaying;
+      // Null means the state is not known rather than not playing, and the subject is reset to it. Falling
+      // through to the pause branch on it answers "no idea" by pausing.
+      if (isplaying == null) {
+        return;
       }
+      this.IsPlaying = isplaying;
       if (!this.player || !this.IsReady || this.IsHost || this.CurrentPlayerType !== PlayerType.YouTube) {
         return;
       }
       if (isplaying) {
         startPlayback(() => this.player.play());
-      } else if (!isplaying) {
+      } else {
         this.player.pause();
       }
     });

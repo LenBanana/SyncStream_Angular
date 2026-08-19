@@ -49,6 +49,11 @@ describe('parseTwitchSource', () => {
       .toEqual({ kind: 'clip', id: 'TastySlugName', startSeconds: 0 });
   });
 
+  it('refuses the clip frame with no clip named', () => {
+    // Taking the path segment here produces a source called "embed", which the frame then fails to load.
+    expect(parseTwitchSource('https://clips.twitch.tv/embed')).toBeNull();
+  });
+
   it('accepts a link with no scheme', () => {
     // Which is how they arrive when someone copies from an address bar that hides it.
     expect(parseTwitchSource('twitch.tv/somestreamer'))

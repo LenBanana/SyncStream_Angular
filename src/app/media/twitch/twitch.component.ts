@@ -240,9 +240,13 @@ export class TwitchComponent implements AfterViewInit, OnChanges, OnDestroy {
     });
 
     this.IsPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {
-      if (isplaying != null) {
-        this.IsPlaying = isplaying;
+      // Null means the state is not known rather than not playing, and the subject is reset to it. Falling
+      // through to the else branch on it, as this did, answers "no idea" by pausing.
+      if (isplaying == null) {
+        return;
       }
+      this.IsPlaying = isplaying;
+
       if (this.IsHost || this.CurrentPlayerType != PlayerType.Twitch || !this.usesInteractivePlayer) {
         return;
       }

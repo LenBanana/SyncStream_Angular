@@ -73,15 +73,18 @@ export class Html5PlayerComponent implements OnInit, AfterViewInit, OnDestroy, O
     });
     //Play/Pause update from server
     this.IsPlayingUpdate = this.playerService.isplaying.subscribe(isplaying => {
-      if (isplaying != null) {
-        this.IsPlaying = isplaying;
+      // Null means the state is not known rather than not playing, and the subject is reset to it. Falling
+      // through to the pause branch on it answers "no idea" by pausing.
+      if (isplaying == null) {
+        return;
       }
+      this.IsPlaying = isplaying;
       if (!this.IsReady || this.IsHost || this.CurrentPlayerType != PlayerType.External) {
         return;
       }
       if (isplaying) {
         startPlayback(() => this.html5player.play());
-      } else if (!isplaying) {
+      } else {
         this.html5player.pause();
       }
     });
