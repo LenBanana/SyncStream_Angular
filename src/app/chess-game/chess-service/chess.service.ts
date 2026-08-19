@@ -80,7 +80,6 @@ export class ChessService {
     this.chessMove.next(null);
   }
 
-
   public moveChessPiece(UniqueId: string, move: ChessMove) {
     hubConnection.invoke('MoveChessPiece', UniqueId, move);
   }

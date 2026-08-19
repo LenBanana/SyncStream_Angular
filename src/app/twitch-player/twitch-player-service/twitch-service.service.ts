@@ -27,7 +27,6 @@ export class TwitchService {
     this.Time.next(null);
   }
 
-
   public addPlayingListener() {
     hubConnection.on('twitchPlaying', (data) => {
       this.Playing.next(data);

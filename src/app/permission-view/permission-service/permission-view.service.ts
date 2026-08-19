@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { token } from '../../global.settings';
+
 import { HttpClient } from '@angular/common/http';
 import { SignalRService, hubConnection } from '../../services/signal-r.service';
 import { BehaviorSubject } from 'rxjs';
@@ -33,12 +33,9 @@ export class PermissionViewService {
    }
 
   public GetPermissions() {
-    if (token) {
-      hubConnection.invoke('GetPermissions', token);
-    }
+    hubConnection.invoke('GetPermissions');
   }
 }
-
 
 export interface PrivilegeInfo {
   methodName: string,

@@ -10,7 +10,7 @@ import {
   RtmpSubtitleMode,
   WebrtcService
 } from '../webrtc/webrtc-service/webrtc.service';
-import { getCookie } from '../../global.settings';
+
 import mpegts from 'mpegts.js';
 import type Player from 'video.js/dist/types/player';
 
@@ -1174,20 +1174,19 @@ export class RtmpFileSharePlayerComponent implements OnInit, AfterViewInit, OnDe
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
+  /**
+   * Adds the transport parameters the live proxy expects.
+   *
+   * This used to append the session token read from a cookie, which is no longer readable and was never
+   * the right value: /api/rtmp/liveProxy forwards its whole query string upstream, so that was our
+   * session credential being handed to the streaming server. If the upstream does require a credential,
+   * liveProxy should attach it server-side from the authenticated caller rather than trusting the client
+   * to carry one.
+   */
   private buildAuthedUrl(baseUrl: string): string {
-    const token = getCookie('login-token');
-    if (!token) {
-      return baseUrl;
-    }
-
     if ((baseUrl.includes('/api/rtmp/liveProxy') || baseUrl.includes('live.drecktu.be')) && !/[?&]token=/.test(baseUrl)) {
-      let url = this.appendQueryParam(baseUrl, 'app', 'live');
-      url = this.appendQueryParam(url, 'port', '1935');
-      return this.appendQueryParam(url, 'token', token);
-    }
-
-    if ((baseUrl.includes('/api/video/fileByToken') || baseUrl.includes('/api/video/roomUploadByToken')) && !/[?&]token=/.test(baseUrl)) {
-      return this.appendQueryParam(baseUrl, 'token', token);
+      const url = this.appendQueryParam(baseUrl, 'app', 'live');
+      return this.appendQueryParam(url, 'port', '1935');
     }
 
     return baseUrl;

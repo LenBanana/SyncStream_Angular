@@ -19,7 +19,6 @@ import { BrowserSettings, changeSettings, GeneralSettings } from '../Interfaces/
 })
 export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnChanges {
 
-
   @ViewChild(PlayerComponent) playerComp;
   constructor(private route: ActivatedRoute, public datepipe: DatePipe, private router: Router, public signalRService: SignalRService, public dialogService: DialogService, public playlistService: PlaylistService, public userService: UserlistService, private cdRef: ChangeDetectorRef, private location: Location) {
 
@@ -153,14 +152,5 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewChecked, OnCha
     }
   }
 
-
 }
-
-
-
-
-
-
-
-
 

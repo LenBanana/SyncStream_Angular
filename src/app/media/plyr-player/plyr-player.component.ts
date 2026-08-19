@@ -1,7 +1,7 @@
 import { AfterViewInit, Component, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
 import Plyr from 'plyr';
 import { Subscription } from 'rxjs';
-import { getCookie } from '../../global.settings';
+
 import { delay } from '../../helper/generic';
 import { VideoDTO } from '../../Interfaces/VideoDTO';
 import { PlayerService } from '../../player/player-service/player.service';
@@ -51,7 +51,6 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
 
   ngAfterViewInit(): void {
   }
-
 
   ngOnChanges() {
     if (this.IsReady && this.CurrentPlayerType != PlayerType.Vimeo) {
@@ -108,13 +107,6 @@ export class PlyrPlayerComponent implements OnInit, AfterViewInit, OnDestroy, On
         return;
       }
       if (vid.url.startsWith(baseUrl)) {
-        var Token = getCookie("login-token");
-        if (Token) {
-          vid.url += "&token=" + Token;
-        } else {
-          this.dialogService.PushPermissionDialog();
-          return;
-        }
       }
       this.setVideo(vid);
     });

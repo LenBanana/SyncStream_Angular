@@ -6,7 +6,7 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { HomeComponent } from './home/home.component';
 import { RoomsComponent } from './rooms/rooms.component';
-import {HttpClientJsonpModule, HttpClientModule} from '@angular/common/http';
+import {HTTP_INTERCEPTORS, HttpClientJsonpModule, HttpClientModule} from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { SafePipe } from './pipes/safe-urlpipe.pipe';
 import { PlaylistComponent } from './playlist/playlist.component';
@@ -64,6 +64,7 @@ import { StreamStartDialogComponent } from './media/webrtc/stream-start-dialog/s
 import { SourceLabelPipe } from './media/webrtc/stream-start-dialog/source-label.pipe';
 import { FileSharePlayerComponent } from './media/file-share-player/file-share-player.component';
 import { RtmpFileSharePlayerComponent } from './media/rtmp-file-share-player/rtmp-file-share-player.component';
+import { ApiCredentialsInterceptor } from './core/api-credentials.interceptor';
 const DragConfig = {
   dragStartThreshold: 0,
   pointerDirectionChangeThreshold: 5,
@@ -140,7 +141,13 @@ const DragConfig = {
     NoopAnimationsModule,
     NgbdSortableHeader
   ],
-  providers: [DatePipe,{  provide: CDK_DRAG_CONFIG, useValue: DragConfig }],
+  providers: [
+    DatePipe,
+    { provide: CDK_DRAG_CONFIG, useValue: DragConfig },
+    // Sends the session cookie with API requests. Without this every authenticated HTTP call is
+    // anonymous, because cross-origin requests omit cookies unless asked.
+    { provide: HTTP_INTERCEPTORS, useClass: ApiCredentialsInterceptor, multi: true }
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

@@ -10,7 +10,7 @@ import {
 import {Subscription} from 'rxjs';
 import {filter} from 'rxjs/operators';
 import {SfuRecordingInfo, WebrtcService} from './webrtc-service/webrtc.service';
-import {token} from '../../global.settings';
+
 import {StreamStartConfig} from './stream-start-dialog/stream-start-dialog.component';
 import {BrowserSettings, loadBrowserSettings} from '../../Interfaces/BrowserSettings';
 

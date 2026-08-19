@@ -144,18 +144,14 @@ export class MediaEditorComponent implements OnInit, OnDestroy {
   }
 
   processMedia(file: File, method: string) {
-    if (!this.User.apiKey || this.User.apiKey.length == 0) {
-      this.dialogService.PushDefaultDialog(`Please create an API-Key in 'Settings' to be able to use this feature.`, "Not allowed", AlertType.Warning);
-      return;
-    }
     this.converting = true;
     this.currentSelection = null;
     this.fileSelectView.nativeElement.value = '';
     var upload;
     if (method === 'ConvertMedia') {
-      upload = this.mediaService.ConvertMedia(file, this.User.apiKey, this.mediaType);
+      upload = this.mediaService.ConvertMedia(file, this.mediaType);
     } else if (method === 'CutMedia') {
-      upload = this.mediaService.CutMedia(file, this.User.apiKey, this.sliderMinValue(), this.sliderMaxValue());
+      upload = this.mediaService.CutMedia(file, this.sliderMinValue(), this.sliderMaxValue());
     }
     var id = 'default';
     this.mediaStates.push({Id: id, text: 'Uploading...', alertType: AlertType.Info, progress: 0 });

@@ -1,7 +1,7 @@
 import { AfterViewInit, Component, ElementRef, Input, OnChanges, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import videojs from 'video.js';
 import { Subscription } from 'rxjs';
-import { getCookie } from '../../global.settings';
+
 import { delay } from '../../helper/generic';
 import { VideoDTO } from '../../Interfaces/VideoDTO';
 import { PlayerService } from '../../player/player-service/player.service';
@@ -12,7 +12,6 @@ import { MediaService } from '../media-service/media.service';
 import type Player from 'video.js/dist/types/player';
 import { DialogService } from '../../text-dialog/text-dialog-service/dialog-service.service';
 declare var $: any;
-
 
 @Component({
   selector: 'app-videojs-player',
@@ -112,13 +111,6 @@ export class VideojsPlayerComponent implements AfterViewInit, OnDestroy, OnChang
         return;
       }
       if (vid.url.startsWith(baseUrl)) {
-        var Token = getCookie("login-token");
-        if (Token) {
-          vid.url += "&token=" + Token;
-        } else {
-          this.dialogService.PushPermissionDialog();
-          return;
-        }
       }
       this.setVideo(vid);
     });

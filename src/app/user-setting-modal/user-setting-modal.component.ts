@@ -5,6 +5,9 @@ import { UserSettingService } from './user-setting-service/user-setting.service'
 import { BrowserSettings, changeSettings } from '../Interfaces/BrowserSettings';
 import { sponsorBlockCategoryLabels, sponsorBlockCategoryOrder } from '../Interfaces/SponsorBlock';
 import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
+import { AuthService } from '../services/auth.service';
+import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
+import { AlertType } from '../Interfaces/Dialog';
 declare var $: any;
 
 @Component({
@@ -14,7 +17,7 @@ declare var $: any;
 })
 export class UserSettingModalComponent implements OnInit {
 
-  constructor(public userSettingService: UserSettingService) { }
+  constructor(public userSettingService: UserSettingService, private authService: AuthService, private dialogService: DialogService) { }
   @Input() User: User;
   @Input() BrowserSettings: BrowserSettings;
   Password = "";
@@ -57,12 +60,21 @@ export class UserSettingModalComponent implements OnInit {
     if (this.User.password !== this.RepeatPassword || this.Password.length === 0 || this.RepeatPassword.length === 0 || this.User.password.length === 0  || this.User.username.length === 0 ) {
       return;
     }
-    let dtoUser: User = {
-      ...this.User,
-      password: this.User.password.length > 2 ? this.GetSha512(this.User.password) : ""
-    }
-    let pw = this.Password.length > 2 ? this.GetSha512(this.Password) : "";
-    this.userSettingService.ChangeUser(dtoUser, pw);
+    const newPassword = this.User.password.length > 2 ? this.GetSha512(this.User.password) : null;
+    const currentPassword = this.GetSha512(this.Password);
+
+    this.authService.changeUser(this.User.username, newPassword, currentPassword).subscribe(result => {
+      this.dialogService.PushDefaultDialog(
+        result.message,
+        result.ok ? "Success" : "Error",
+        result.ok ? AlertType.Success : AlertType.Danger);
+
+      if (result.ok) {
+        // A password change revokes other sessions server-side, so refresh what we know about ourselves.
+        this.authService.restore().subscribe();
+      }
+    });
+
     this.User.password = "";
     this.RepeatPassword = "";
     this.Password = "";

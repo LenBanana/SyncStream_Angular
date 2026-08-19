@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import * as signalR from "@aspnet/signalr";
+import * as signalR from "@microsoft/signalr";
 import { ChatMessage } from '../../Interfaces/Chatmessage';
 import { BehaviorSubject } from 'rxjs';
 import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';

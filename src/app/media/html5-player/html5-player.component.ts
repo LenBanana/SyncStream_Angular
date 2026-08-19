@@ -1,7 +1,7 @@
 import { AfterViewInit, Component, Input, OnChanges, OnDestroy, OnInit } from '@angular/core';
 import Plyr from 'plyr';
 import { Subscription } from 'rxjs';
-import { getCookie } from '../../global.settings';
+
 import { delay } from '../../helper/generic';
 import { VideoDTO } from '../../Interfaces/VideoDTO';
 import { PlayerService } from '../../player/player-service/player.service';
@@ -42,7 +42,6 @@ export class Html5PlayerComponent implements OnInit, AfterViewInit, OnDestroy, O
     this.html5player = document.getElementById('HTML5VideoPlayer') as HTMLVideoElement;
     this.InitPlayer();
   }
-
 
   ngOnChanges() {
     if (this.IsReady && this.CurrentPlayerType != PlayerType.External) {
@@ -93,13 +92,6 @@ export class Html5PlayerComponent implements OnInit, AfterViewInit, OnDestroy, O
         return;
       }
       if (vid.url.startsWith(baseUrl)) {
-        var Token = getCookie("login-token");
-        if (Token) {
-          vid.url += "&token=" + Token;
-        } else {
-          this.dialogService.PushPermissionDialog();
-          return;
-        }
       }
       this.setVideo(vid);
     });

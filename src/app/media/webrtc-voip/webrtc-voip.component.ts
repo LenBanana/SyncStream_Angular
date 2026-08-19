@@ -241,7 +241,6 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
     });
   }
 
-
   async getMediaStream(constraints) {
     try {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -325,7 +324,6 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
       console.error("An error occurred:", err);
     }
   }
-
 
   async leaveRoom() {
     await this.voipService.leaveAudioRoom(this.UniqueId);

@@ -3,7 +3,6 @@ import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.
 import { BehaviorSubject, from } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { User, UserSummary } from '../../Interfaces/User';
-import { RememberToken } from '../../Interfaces/RememberToken';
 import { AlertType } from '../../Interfaces/Dialog';
 import { ServerHealth } from '../../Interfaces/ServerHealth';
 
@@ -31,24 +30,25 @@ export class UserAdminService {
     this.Users.next(null);
   }
 
-  public PublicAnnouncement(token: string, message: string, alertType: AlertType) {
-    hubConnection.invoke('PublicAnnouncement', token, message, alertType);
+  public PublicAnnouncement(message: string, alertType: AlertType) {
+    hubConnection.invoke('PublicAnnouncement', message, alertType);
   }
 
-  public GetUsers(token: string, userID: number) {
-    hubConnection.invoke('GetUsers', token, userID);
+  public GetUsers() {
+    hubConnection.invoke('GetUsers');
   }
 
-  public DeleteUser(token: string, userID: number, removeID: number) {
-    hubConnection.invoke('DeleteUser', token, userID, removeID);
-  }//SetUserPrivileges
-
-  public ApproveUser(token: string, userID: number, approveID: number, prove: boolean) {
-    hubConnection.invoke('ApproveUser', token, userID, approveID, prove);
+  // The acting user is the connection's own identity, so only the target is passed.
+  public DeleteUser(removeID: number) {
+    hubConnection.invoke('DeleteUser', removeID);
   }
 
-  public SetUserPrivileges(token: string, userID: number, changeID: number, privileges: number) {
-    hubConnection.invoke('SetUserPrivileges', token, userID, changeID, privileges);
+  public ApproveUser(approveID: number, prove: boolean) {
+    hubConnection.invoke('ApproveUser', approveID, prove);
+  }
+
+  public SetUserPrivileges(changeID: number, privileges: number) {
+    hubConnection.invoke('SetUserPrivileges', changeID, privileges);
   }
 
   public addUserListener() {

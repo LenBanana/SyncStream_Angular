@@ -76,6 +76,16 @@ export class UserlistComponent implements OnInit, OnDestroy {
       if (room == null) {
         return;
       }
+      if (room == UserUpdate.NameNotAllowed) {
+        // The server decides the display name: a guest's choice must be well formed and must not be a
+        // registered account's name.
+        const dialog: Dialog = { id: "name-not-allowed", header: "Name not available", question: "Pick a different display name. It must be 2 to 20 characters and cannot be a registered account's name.", answer1: null, answer2: null, yes: null, no: null, alertType: AlertType.Warning };
+        this.dialogService.newDialog.next(dialog);
+        setTimeout(() => {
+          this.goBack.emit();
+        }, 2500);
+        return;
+      }
       if (room == UserUpdate.Banned) {
         const dialog: Dialog = { id: "banned-user", header: "Access restricted", question: "You have been removed from this room.", answer1: null, answer2: null, yes: null, no: null, alertType: AlertType.Danger };
         this.dialogService.newDialog.next(dialog);

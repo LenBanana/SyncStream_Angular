@@ -79,7 +79,6 @@ export class PlaybackSettings {
   }
 }
 
-
 export class BrowserSettings {
   layoutSettings: LayoutSettings;
   generalSettings: GeneralSettings;
@@ -93,7 +92,6 @@ export class BrowserSettings {
     this.playbackSettings = new PlaybackSettings();
   }
 }
-
 
 export function IsYt(url: string) {
   return (url.includes('youtube') && (url.includes("?v=") || url.includes("/playlist?list="))) || url.includes('youtu.be');

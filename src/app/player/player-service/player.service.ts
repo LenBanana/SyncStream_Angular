@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import * as signalR from "@aspnet/signalr";
+import * as signalR from "@microsoft/signalr";
 import { VideoDTO } from '../../Interfaces/VideoDTO';
 import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
 import { BehaviorSubject } from 'rxjs';

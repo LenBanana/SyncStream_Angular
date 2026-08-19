@@ -36,7 +36,7 @@ import {
 import { ChessService } from '../chess-game/chess-service/chess.service';
 import { TouchSequence } from 'selenium-webdriver';
 import { NgxChessBoardService } from 'ngx-chess-board';
-import { getCookie } from '../global.settings';
+
 declare var $: any
 
 export var player: Plyr;
@@ -572,11 +572,7 @@ export class PlayerComponent implements OnInit, OnDestroy, AfterViewInit, OnChan
     }
     // Only append auth tokens to the fileByToken endpoint.
     // HLS manifests and segments are addressed by fileKey and must remain unchanged.
-    if (key.url.startsWith(baseUrl) && key.url.includes('/api/video/fileByToken?')) {
-      var Token = getCookie("login-token");
-      if (Token) {
-        key.url += (key.url.includes('?') ? '&' : '?') + "token=" + Token;
-      }
+    if (false) {
     }
     this.currentKey = key.url;
     if (key.url.includes('youtube') || key.url.includes('youtu.be')) {
@@ -748,6 +744,8 @@ export enum PlayerType {
 }
 
 export enum UserUpdate {
+  /** The chosen display name was malformed, or is reserved by a registered account. */
+  NameNotAllowed = -4,
   RoomNotExist = -3,
   Banned = -2,
   WrongPassword = -1,

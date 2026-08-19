@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject } from 'rxjs';
-import { token } from '../../global.settings';
+
 import { LiveUser } from '../../Interfaces/liveStream';
 import { User } from '../../Interfaces/User';
 import { hubConnection, SignalRService } from '../../services/signal-r.service';
@@ -48,14 +48,10 @@ export class LiveStreamService {
   }
 
   public GetUsersWatching(userName: string) {
-    if (token) {
-      hubConnection.invoke('GetUsersWatching', token, userName);
-    }
+    hubConnection.invoke('GetUsersWatching', userName);
   }
 
   public GetLiveUsers() {
-    if (token) {
-      hubConnection.invoke('GetLiveUsers', token);
-    }
+    hubConnection.invoke('GetLiveUsers');
   }
 }

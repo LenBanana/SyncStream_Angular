@@ -3,7 +3,16 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+
+  /**
+   * Explicit API origin. In development the page and the API sit on different ports, which is still
+   * same-site for cookie purposes because SameSite ignores the port.
+   *
+   * Leave this null in production so the origin is derived from the page's own hostname. See
+   * `src/app/core/api-origin.ts` for why that matters.
+   */
+  apiUrlOverride: 'https://localhost:44371/' as string | null
 };
 
 /*

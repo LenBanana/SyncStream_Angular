@@ -1,10 +1,11 @@
 import { Component, Input, OnDestroy, OnInit, QueryList, ViewChildren } from '@angular/core';
-import { getCookie, token, userId } from '../global.settings';
+
 import { User, UserSummary } from '../Interfaces/User';
 import { SignalRService } from '../services/signal-r.service';
 import { UserAdminService } from './user-admin-service/user-admin.service';
 import { NgbdSortableHeader, SortEvent, compare } from '../Interfaces/SortableHeader';
 import { AlertType } from '../Interfaces/Dialog';
+import { AuthService } from '../services/auth.service';
 declare var $:any
 
 @Component({
@@ -14,7 +15,7 @@ declare var $:any
 })
 export class UserAdminModalComponent implements OnInit, OnDestroy {
 
-  constructor(public userAdminService: UserAdminService, public signalRService: SignalRService) { }
+  constructor(public userAdminService: UserAdminService, private authService: AuthService) { }
   @Input() user: User;
   CurrentSettings: AdminSettingsMenu = AdminSettingsMenu.User;
   AnnouncementAlertType = AlertType.Info;
@@ -45,27 +46,18 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
       this.FilteredUsers = [...this.Users];
       this.Filter();
     });
-    this.loginUpdate = this.signalRService.loginRequest.subscribe(result => {
-      if (!result) {
-        return;
+    // One subscription instead of two: the profile arrives once from the auth service rather than as a
+    // login event plus a separate token event.
+    this.loginUpdate = this.authService.user.subscribe(user => {
+      if (user && user.approved > 0 && user.userprivileges > 2) {
+        this.userAdminService.GetUsers();
       }
-      if (result.approved && result.userprivileges > 2) {
-        if (token && userId) {
-          this.userAdminService.GetUsers(token, userId);
-        }
-      }
-    })
-    this.tokenUpdate = this.signalRService.tokenUpdate.subscribe(result => {
-      if (!result) {
-        return;
-      }
-      this.userAdminService.GetUsers(token, userId);
     })
   }
 
   ngOnDestroy() {
     this.userUpdate.unsubscribe();
-    this.tokenUpdate.unsubscribe();
+    this.loginUpdate.unsubscribe();
     this.userAdminService.NullAllSubs();
   }
 
@@ -95,20 +87,20 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
 
   MakeAnnouncement() {
     if (this.Announcement.length > 5) {
-      this.userAdminService.PublicAnnouncement(token, this.Announcement, this.AnnouncementAlertType);
+      this.userAdminService.PublicAnnouncement(this.Announcement, this.AnnouncementAlertType);
     }
   }
 
   DeleteUser() {
-    this.userAdminService.DeleteUser(token, userId, this.LastSelectedUser.id);
+    this.userAdminService.DeleteUser(this.LastSelectedUser.id);
   }
 
   ApproveUser(user: User, approve: boolean) {
-    this.userAdminService.ApproveUser(token, userId, user.id, approve);
+    this.userAdminService.ApproveUser(user.id, approve);
   }
 
   SetUserPrivileges(user: User, privileges: number) {
-    this.userAdminService.SetUserPrivileges(token, userId, user.id, privileges);
+    this.userAdminService.SetUserPrivileges(user.id, privileges);
   }
 
   GetEnumInt(name) {
@@ -116,10 +108,6 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
   }
 
   DeleteUserQuestion(user: User) {
-    if (!token || !userId) {
-      alert("Please wait until fully logged in and try again");
-      return;
-    }
     this.LastSelectedUser = user;
     this.DialogQuestion = "Are you sure you want to delete the user " + user.username + "?";
     this.DialogHeader = "Delete User";

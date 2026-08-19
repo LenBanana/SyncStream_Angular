@@ -1,6 +1,6 @@
 import { AfterViewInit, Component, OnInit } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { token } from '../../global.settings';
+
 import { DialogService } from '../../text-dialog/text-dialog-service/dialog-service.service';
 import { LiveStreamService } from '../../live-stream-view/live-stream-service/live-stream.service';
 import { SignalRService } from '../../services/signal-r.service';

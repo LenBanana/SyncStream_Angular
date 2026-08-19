@@ -1,6 +1,6 @@
 import {AfterViewInit, Component, EventEmitter, Input, OnChanges, OnDestroy, OnInit, Output} from '@angular/core';
 import { Subscription } from 'rxjs';
-import { getCookie } from '../../global.settings';
+
 import { delay } from '../../helper/generic';
 import { VideoDTO } from '../../Interfaces/VideoDTO';
 import { PlayerService } from '../../player/player-service/player.service';
@@ -51,7 +51,6 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
     this.AddSubscriptions();
   }
 
-
   ngOnChanges() {
     if (this.IsReady && this.CurrentPlayerType != PlayerType.Live) {
       this.player.pause();
@@ -79,13 +78,7 @@ export class MpegtsPlayerComponent implements OnInit, AfterViewInit, OnDestroy, 
         return;
       }
       if (vid.url.includes('//drecktu.be:8088/live') || vid.url.includes('live.drecktu.be')) {
-        var Token = getCookie("login-token");
-        if (Token) {
-          vid.url += "&app=live&port=1935&token=" + Token;
-        } else {
-          this.dialogService.PushPermissionDialog();
-          return;
-        }
+        vid.url += "&app=live&port=1935";
       }
       this.setVideo(vid);
     });

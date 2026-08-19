@@ -178,7 +178,6 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
     if (top === 0 && left === 0) menu.css('transform', '');
   }
 
-
   getRelativePosition(position) {
     const x = position.left;
     const y = position.top;
@@ -344,7 +343,6 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
     $('.badge-dreck').toggleClass('text-left');
     changeSettings(this.BrowserSettings);
   }
-
 
   hideMenu() {
     setTimeout(() => {

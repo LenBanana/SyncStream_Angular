@@ -1,7 +1,7 @@
 import {Injectable, OnDestroy} from '@angular/core';
 import {BehaviorSubject} from 'rxjs';
 import {SignalRService, hubConnection} from '../../../services/signal-r.service';
-import {token} from '../../../global.settings';
+
 import {WebrtcService} from "../../webrtc/webrtc-service/webrtc.service";
 import {WebRtcSettings} from "../../../Interfaces/BrowserSettings";
 
@@ -103,10 +103,8 @@ export class WebrtcVoipService implements OnDestroy {
 
   async joinAudioRoom(roomName: string, localStream: MediaStream) {
     try {
-      if (token) {
-        this.localStream = localStream;
-        await hubConnection.invoke('JoinAudioRoom', token, roomName);
-      }
+      this.localStream = localStream;
+      await hubConnection.invoke('JoinAudioRoom', roomName);
     } catch (error) {
       console.error('Error joining audio room:', error);
     }
@@ -114,9 +112,7 @@ export class WebrtcVoipService implements OnDestroy {
 
   async leaveAudioRoom(roomName: string) {
     try {
-      if (token) {
-        await hubConnection.invoke('LeaveAudioRoom', token, roomName);
-      }
+      await hubConnection.invoke('LeaveAudioRoom', roomName);
       // Close all peer connections
       this.peerConnections.forEach(pc => pc.close());
       this.peerConnections.clear();
@@ -126,23 +122,19 @@ export class WebrtcVoipService implements OnDestroy {
   }
 
   async sendStatus(participant: VoipParticipantDTO, roomName: string) {
-    if (token) {
-      await hubConnection.invoke('SendStatusToParticipant', token, participant, roomName);
-    }
+    await hubConnection.invoke('SendStatusToParticipant', participant, roomName);
   }
 
   async createAndSendOffer(pc: RTCPeerConnection, participant: string) {
     try {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      if (token) {
-        const voipOffer: VoipOffer = {
-          participantName: participant,
-          type: pc.localDescription.type,
-          sdp: pc.localDescription.sdp
-        };
-        await hubConnection.invoke('SendOfferToParticipant', token, participant, voipOffer);
-      }
+      const voipOffer: VoipOffer = {
+        participantName: participant,
+        type: pc.localDescription.type,
+        sdp: pc.localDescription.sdp
+      };
+      await hubConnection.invoke('SendOfferToParticipant', participant, voipOffer);
     } catch (error) {
       console.error('Error creating and sending offer:', error);
     }
@@ -159,9 +151,9 @@ export class WebrtcVoipService implements OnDestroy {
     };
 
     pc.onicecandidate = event => {
-      if (event.candidate && token) {
+      if (event.candidate ) {
         try {
-          hubConnection.invoke('SendIceCandidateToParticipant', token, participant.participantId, event.candidate);
+          hubConnection.invoke('SendIceCandidateToParticipant', participant.participantId, event.candidate);
         } catch (error) {
           console.error('Error sending ICE candidate:', error);
         }
@@ -182,7 +174,7 @@ export class WebrtcVoipService implements OnDestroy {
               type: pc.localDescription.type,
               sdp: pc.localDescription.sdp
             };
-            await hubConnection.invoke('SendOfferToParticipant', token, participant.participantId, voipOffer);
+            await hubConnection.invoke('SendOfferToParticipant', participant.participantId, voipOffer);
             return;
           } catch (restartError) {
             console.error('ICE restart failed, disconnecting peer:', restartError);
@@ -310,19 +302,16 @@ export class WebrtcVoipService implements OnDestroy {
     try {
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      if (token) {
-        const voipOffer: VoipOffer = {
-          participantName: offer.participantName,
-          type: answer.type,
-          sdp: answer.sdp
-        };
-        await hubConnection.invoke('SendAnswerToParticipant', token, participantId, voipOffer);
-      }
+      const voipOffer: VoipOffer = {
+        participantName: offer.participantName,
+        type: answer.type,
+        sdp: answer.sdp
+      };
+      await hubConnection.invoke('SendAnswerToParticipant', participantId, voipOffer);
     } catch (error) {
       console.error('Error creating and sending answer:', error);
     }
   }
-
 
   async handleIncomingIceCandidate(participantId: string, candidate) {
     let pc = this.peerConnections.get(participantId);

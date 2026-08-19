@@ -1,177 +1,108 @@
-import {
-  Injectable
-} from '@angular/core';
-import * as signalR from "@aspnet/signalr";
-import {
-  BehaviorSubject
-} from 'rxjs';
-import { RememberToken } from '../Interfaces/RememberToken';
-import { randomIntFromInterval } from '../helper/generic';
-import { User } from '../Interfaces/User';
+import { Injectable } from '@angular/core';
+import * as signalR from '@microsoft/signalr';
+import { BehaviorSubject } from 'rxjs';
 import { CreateRoomRequest, RoomSummary } from '../Interfaces/Room';
-import { Token } from '../helper/Globals';
-import { getCookie, token } from '../global.settings';
+import { resolveApiBaseUrl } from '../core/api-origin';
+
 export var hubConnection: signalR.HubConnection;
 export var CurrentPing: number = 0.5;
-export var baseUrl: string = "https://sync.dreckbu.de/";
-//export var baseUrl: string = "https://sync.drecktu.be/";
-//export var baseUrl: string = "https://localhost:44371/";
-//export var baseUrl: string = "https://localhost:32780/";
+
+/**
+ * API origin, derived from the page's hostname so the session cookie stays same-site.
+ * Exported because much of the app builds URLs from it.
+ */
+export var baseUrl: string = resolveApiBaseUrl();
+
 @Injectable({
   providedIn: 'root'
 })
-
 export class SignalRService {
-  room: BehaviorSubject <RoomSummary[]> = new BehaviorSubject([]);
-  tokenUpdate: BehaviorSubject<RememberToken> = new BehaviorSubject(null);
-  connectionClosed: BehaviorSubject < boolean > = new BehaviorSubject(null);
-  loginRequest: BehaviorSubject<User> = new BehaviorSubject(null);
-  registerRequest: BehaviorSubject<User> = new BehaviorSubject(null);
+  room: BehaviorSubject<RoomSummary[]> = new BehaviorSubject([]);
+
+  /**
+   * False while the connection is usable, true while it is not.
+   *
+   * Feature services key their handler registration off this: they add handlers on false and remove
+   * them on true. It must therefore go true before it goes false again, or `.on()` would stack a second
+   * handler onto the same event and every message would arrive twice.
+   */
+  connectionClosed: BehaviorSubject<boolean> = new BehaviorSubject(null);
+
   pingStream: BehaviorSubject<number> = new BehaviorSubject(CurrentPing);
 
-  public AddLoginListener() {
-    hubConnection.on('userlogin', (data) => {
-      this.loginRequest.next(data);
-    });
-  }
-
-  public RemoveLoginListener() {
-    hubConnection.off('userlogin');
-    this.loginRequest.next(null);
-  }
-
-  public AddRegisterListener() {
-    hubConnection.on('userRegister', (data) => {
-      this.registerRequest.next(data);
-    });
-  }
-
-  public RemoveRegisterListener() {
-    hubConnection.off('userRegister');
-    this.registerRequest.next(null);
-  }
-
-  public LoginRequest(user: User, userInfo: string) {
-    hubConnection.invoke('LoginRequest', user, userInfo);
-  }
-
-  public RegisterRequest(user: User) {
-    hubConnection.invoke('RegisterRequest', user);
-  }
-
   public async startConnection() {
-    this.tokenUpdate.subscribe(result => {
-      if (result==null) {
-        return;
-      }
-      const curDate = new Date();
-      curDate.setDate(curDate.getDate() + 30);
-      document.cookie = "login-token=" + result.token + "; expires=" + curDate.toUTCString() + "; path=/";
-      document.cookie = "user-id=" + result.userID + "; expires=" + curDate.toUTCString() + "; path=/";
-    });
-
-
     hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl(baseUrl + 'server')
+      // withCredentials sends the session cookie on the negotiate request and the socket handshake.
+      // Anonymous connections are allowed: guests can watch without an account.
+      .withUrl(baseUrl + 'server', { withCredentials: true })
+      // Replaces a hand-rolled setTimeout loop. Retries at 0s, 2s, 10s, 30s, then gives up.
+      .withAutomaticReconnect()
       .build();
 
-    await this.connect().finally(() => {
-      hubConnection.onclose(() => {
-        console.log("Connection closed... Attempting to reconnect");
-        this.connectionClosed.next(true);
-        this.removeRoomListener();
-        this.RemoveLoginListener();
-        this.RemoveRegisterListener();
-        this.RemovePingListener();
-        this.RemoveTokenListener();
-        setTimeout(() => {
-          this.connect();
-        }, 1000);
-      });
+    hubConnection.onreconnecting(() => {
+      console.log('Connection lost, reconnecting');
+      this.connectionClosed.next(true);
     });
+
+    hubConnection.onreconnected(() => {
+      console.log('Reconnected');
+      this.connectionClosed.next(false);
+    });
+
+    hubConnection.onclose(() => {
+      // Reached only once automatic reconnect has exhausted its attempts.
+      console.log('Connection closed, retrying from scratch');
+      this.connectionClosed.next(true);
+      setTimeout(() => this.connect(), 5000);
+    });
+
+    await this.connect();
   }
 
   public async connect() {
-    await hubConnection
-      .start()
-      .then(() => {
-        console.log('Connection started');
-        this.addRoomListener();
-        this.AddLoginListener();
-        this.AddRegisterListener();
-        this.AddPingListener();
-        this.AddTokenListener();
-        this.connectionClosed.next(false);
-
-        let token = getCookie("login-token");
-        let userId = getCookie("user-id");
-        if (token==undefined) {
-          token = "";
-        }
-        let userNo = Number.parseInt(userId);
-        if (!userId || userId == undefined || isNaN(userNo)) {
-          userId = "-1";
-        }
-        let numberId = Number.parseInt(userId);
-        this.ValidateToken(token, numberId);
-      })
-      .catch(async err => {
-        console.log('Error while starting connection: ' + err + '... Attempting to reconnect');
-        await hubConnection
-          .stop()
-          .then(() => {
-            console.log('Connection stopped');
-            setTimeout(() => {
-              this.connect();
-            }, 1000);
-          })
-          .catch(err => console.log('Error while stopping connection: ' + err))
-      });
+    try {
+      await hubConnection.start();
+      console.log('Connection started');
+      this.addRoomListener();
+      this.AddPingListener();
+      this.connectionClosed.next(false);
+    } catch (error) {
+      console.log('Error while starting connection: ' + error + ', retrying');
+      setTimeout(() => this.connect(), 2000);
+    }
   }
 
   public async stopConnection() {
-    await hubConnection
-      .stop()
-      .then(() => console.log('Connection stopped'))
-      .catch(err => console.log('Error while stopping connection: ' + err))
+    try {
+      await hubConnection.stop();
+      console.log('Connection stopped');
+    } catch (error) {
+      console.log('Error while stopping connection: ' + error);
+    }
   }
 
   public addRoomListener() {
+    hubConnection.off('getrooms');
     hubConnection.on('getrooms', (data) => {
       this.room.next(data);
     });
   }
 
   public removeRoomListener() {
-    hubConnection.off('getrooms', (data) => {});
+    hubConnection.off('getrooms');
     this.room.next(null);
   }
 
   public addRoom(room: CreateRoomRequest) {
-    let tk = "";
-    if (token) {
-      tk = token;
-    }
-    hubConnection.invoke('AddRoom', room, tk);
+    hubConnection.invoke('AddRoom', room);
   }
 
   public removeRoom(UniqueId: string) {
-    if (token) {
-      hubConnection.invoke('RemoveRoom', UniqueId, token);
-    }
-  }
-
-  public AddTokenListener() {
-    hubConnection.on('rememberToken', (data) => {
-      let token = data as RememberToken;
-      Token.token = token.token;
-      Token.id = token.id;
-      Token.userID = token.userID;
-      this.tokenUpdate.next(data);
-    });
+    hubConnection.invoke('RemoveRoom', UniqueId);
   }
 
   public AddPingListener() {
+    hubConnection.off('PingTest');
     hubConnection.on('PingTest', (date: Date) => {
       let diff = new Date().getTime() - new Date(date).getTime();
       CurrentPing = (diff / 1000);
@@ -180,16 +111,6 @@ export class SignalRService {
   }
 
   public RemovePingListener() {
-    hubConnection.off('PingTest', (date) => {
-    });
-  }
-
-  public RemoveTokenListener() {
-    hubConnection.off('rememberToken');
-    this.tokenUpdate.next(null);
-  }
-
-  public ValidateToken(token: string, userId: number) {
-    hubConnection.invoke('ValidateToken', token, userId);
+    hubConnection.off('PingTest');
   }
 }

@@ -13,7 +13,7 @@ import { UserlistService } from '../userlist/userlist-service/userlist.service';
 import { BrowserSettings, IsTwitch, IsYt, loadBrowserSettings, settingsUpdate } from '../Interfaces/BrowserSettings';
 import { ChessService } from '../chess-game/chess-service/chess.service';
 import { NgxChessBoardService } from 'ngx-chess-board';
-import { resetToken } from '../global.settings';
+
 import { DownloadManagerService } from '../download-manager/download-manger-service/download-manager.service';
 import { PlayerService } from '../player/player-service/player.service';
 import { LiveUser } from '../Interfaces/liveStream';
@@ -23,8 +23,8 @@ import { PlayerType } from '../player/player.component';
 import {WebrtcVoipService} from "../media/webrtc-voip/webrtc-voip-service/webrtc-voip.service";
 import {LiveStreamService} from "../live-stream-view/live-stream-service/live-stream.service";
 import {WebrtcService} from "../media/webrtc/webrtc-service/webrtc.service";
+import { AuthService } from '../services/auth.service';
 declare var $: any
-
 
 @Component({
   selector: 'app-rooms',
@@ -79,6 +79,7 @@ export class RoomsComponent implements OnInit {
     public dialogService: DialogService,
     public liveStreamService: LiveStreamService,
     private cdRef: ChangeDetectorRef,
+    private authService: AuthService,
     private loc: Location,
     private webrtcService: WebrtcService) {
     this.onResize();
@@ -95,7 +96,6 @@ export class RoomsComponent implements OnInit {
     }, 10);
   }
 
-
   getEvent() {
     setTimeout(() => {
       $('.cdk-overlay-container').bind('contextmenu', (e) => {
@@ -104,7 +104,6 @@ export class RoomsComponent implements OnInit {
       });
     }, 10);
   }
-
 
   Filter() {
     if (this.FilterTerm) {
@@ -146,6 +145,14 @@ export class RoomsComponent implements OnInit {
   }
 
   private async signalR() {
+    // Learn who we are before rendering. The hub handshake carries the session cookie either way, so
+    // this is not what authenticates the connection; it is how the UI knows whether it is signed in.
+    // Replaces the old ValidateToken round trip over the hub.
+    const restored = await this.authService.restore().toPromise();
+    if (restored) {
+      this.SaveLogin(restored, true);
+    }
+
     await this.signalRService.startConnection().finally(() => {
       this.SignalR = true;
       this.liveStreamService.GetLiveUsers();
@@ -171,13 +178,14 @@ export class RoomsComponent implements OnInit {
   IsTwitch(room: RoomSummary) { return room.playlist.length > 0 && IsTwitch(room.playlist[0]?.url) };
 
   public Logout() {
-    this.user.username = 'Anon' + "#" + randomIntFromInterval(100, 10000);
-    this.user.id = 0;
-    const curDate = new Date();
-    curDate.setDate(curDate.getDate() - 30);
-    document.cookie = "login-token=none; expires=" + curDate.toUTCString() + ";path=/;";
-    this.logout = false;
-    resetToken();
+    // Server-side too, so the session is revoked rather than just forgotten by this tab. The cookie is
+    // HttpOnly, so clearing it is the server's job now.
+    this.authService.logout().subscribe(() => {
+      this.user.username = 'Anon' + "#" + randomIntFromInterval(100, 10000);
+      this.user.id = 0;
+      this.logout = false;
+      this.cdRef.detectChanges();
+    });
   }
 
   public SaveLogin(user: User, logout: boolean) {
@@ -189,7 +197,6 @@ export class RoomsComponent implements OnInit {
       $('#registerModal').modal('show');
     }
     if (user && user.approved > 0) {
-      resetToken();
       this.user = user;
       this.logout = true;
       if (user.userprivileges >= UserPrivileges.Administrator) {
@@ -197,9 +204,6 @@ export class RoomsComponent implements OnInit {
         this.downloadService.GetFolders();
       }
       this.cdRef.detectChanges();
-    }
-    if (!logout && user.approved > 0) {
-      this.roomService.GenerateRememberToken(user, navigator.appVersion);
     }
   }
 

@@ -1,6 +1,6 @@
 import { Component, OnInit, Input, OnChanges, ViewChild, ElementRef, Output, EventEmitter, OnDestroy } from '@angular/core';
 import { User } from '../Interfaces/User';
-import { SignalRService } from '../services/signal-r.service';
+import { AuthService } from '../services/auth.service';
 import { MainUser } from '../helper/Globals';
 import { randomIntFromInterval } from '../helper/generic';
 import * as sha512 from 'js-sha512';
@@ -13,7 +13,7 @@ declare var $:any
 })
 export class LoginModalComponent implements OnInit, OnDestroy {
 
-  constructor(public signalRService: SignalRService) { }
+  constructor(private authService: AuthService) { }
   @ViewChild('userLoginInput') userLoginElement: ElementRef;
   @ViewChild('pwLoginInput') pwLoginElement: ElementRef;
   @Output() SaveLogin = new EventEmitter();
@@ -24,80 +24,77 @@ export class LoginModalComponent implements OnInit, OnDestroy {
   loginErrorString = "Username error";
   pwError = false;
   pwErrorString = "Password error";
-  loginRequest;
-  registerRequest;
   loginInvalid = false;
   pwInvalid = false;
   regExStringUsername = /^\w(?:\w|[.-](?=\w)){2,31}$/;
 
   ngOnInit(): void {
-    this.loginRequest = this.signalRService.loginRequest.subscribe(result => {
-      if (result == null) {
-        return;
-      }
-      if ( result.approved == -1) {
-        this.SaveLogin.emit(null);
-        return;
-      }
-      if (result.username == null) {
-        this.SaveLogin.emit(result);
-        this.loginErrorString = "User does not exist";
+  }
+
+  ngOnDestroy() {
+  }
+
+  LoginRequest() {
+    const credentials = this.validateUserRequest();
+    if (!credentials) {
+      return;
+    }
+
+    this.authService.login(credentials.username, credentials.password).subscribe(result => {
+      if (!result.ok) {
+        this.loginErrorString = result.message;
         this.loginError = true;
         setTimeout(() => {
           this.loginError = false;
         }, 3000);
+
+        // An account waiting for approval is a real account, so say so rather than showing it as a
+        // failed sign-in.
+        if (result.awaitingApproval) {
+          $('#loginModal').modal('hide');
+          $('#registerModal').modal('show');
+        }
         return;
       }
-      this.SaveLogin.emit(result);
-      this.user = result;
-      MainUser.approved = result.approved;
-      MainUser.userprivileges = result.userprivileges;
-      MainUser.username = result.username;
+
+      const user = this.authService.user.value;
+      this.SaveLogin.emit(user);
+      this.user = user;
+      MainUser.approved = user.approved;
+      MainUser.userprivileges = user.userprivileges;
+      MainUser.username = user.username;
       this.logout = true;
-      this.userLoginElement.nativeElement.value = "";
-      this.pwLoginElement.nativeElement.value = "";
+      this.clearInputs();
       $('#loginModal').modal('hide');
     });
+  }
 
-    this.registerRequest = this.signalRService.registerRequest.subscribe(result => {
-      if (result == null || result.approved == -1) {
-        return;
-      }
-      if (result.username == null) {
-        this.loginErrorString = "User already exists";
+  RegisterRequest() {
+    const credentials = this.validateUserRequest();
+    if (!credentials) {
+      return;
+    }
+
+    this.authService.register(credentials.username, credentials.password).subscribe(result => {
+      if (!result.ok) {
+        this.loginErrorString = result.message;
         this.loginError = true;
         setTimeout(() => {
           this.loginError = false;
         }, 3000);
         return;
       }
-      this.SaveLogin.emit(result);
-      this.user = result;
-      this.logout = true;
-      this.userLoginElement.nativeElement.value = "";
-      this.pwLoginElement.nativeElement.value = "";
+
+      // Registration does not sign you in: the account is unapproved until an admin approves it.
+      this.clearInputs();
       $('#loginModal').modal('hide');
       $('#registerModal').modal('show');
     });
   }
 
-  ngOnDestroy() {
-    this.loginRequest.unsubscribe();
-    this.registerRequest.unsubscribe();
-  }
-
-  LoginRequest() {
-    const user: User = this.validateUserRequest();
-    if (user) {
-      this.signalRService.LoginRequest(user, navigator.appVersion);
-    }
-  }
-
-  RegisterRequest() {
-    const user: User = this.validateUserRequest();
-    if (user) {
-      this.signalRService.RegisterRequest(user);
-    }
+  private clearInputs() {
+    this.userLoginElement.nativeElement.value = "";
+    this.pwLoginElement.nativeElement.value = "";
   }
 
   LoginInvalid() {

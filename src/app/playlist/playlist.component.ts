@@ -74,5 +74,4 @@ export class PlaylistComponent implements OnInit, OnDestroy {
     //moveItemInArray(this.Playlist, event.previousIndex, event.currentIndex);
   }
 
-
 }
