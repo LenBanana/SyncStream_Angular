@@ -25,17 +25,21 @@
                     <label class="mt-3">Username<span class="text-danger"> *</span></label>
                     <input [(ngModel)]="User.username" minlength="2" type="text" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Username" required>
                     <label class="mt-3">Password (new)<span class="text-danger"> *</span></label>
-                    <input [(ngModel)]="User.password" minlength="2" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
+                    <input [(ngModel)]="User.password" [minlength]="MinPasswordLength" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
                     <label class="mt-3">Password (repeat new)<span class="text-danger"> *</span></label>
-                    <input [(ngModel)]="RepeatPassword" minlength="2" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
+                    <input [(ngModel)]="RepeatPassword" [minlength]="MinPasswordLength" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
                     <div class="text-danger">
                         <div *ngIf="RepeatPassword!==User.password">
                             Make sure your password matches
                         </div>
+                        <div *ngIf="User.password && User.password.length < MinPasswordLength">
+                            Use at least {{MinPasswordLength}} characters
+                        </div>
                     </div>
                     <hr>
                     <label class="mt-3">Password (confirmation)<span class="text-danger"> *</span></label>
-                    <input [(ngModel)]="Password" minlength="2" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
+                    <!-- No minimum here: this is the password the account already has, which may predate the rule. -->
+                    <input [(ngModel)]="Password" type="password" class="form-control bg-dark text-light border-dark bg-secondary" placeholder="Password" required>
                   </div>
                   <div *ngIf="CurrentSettings==SettingsMenu.General" class="container-fluid py-3">
                     <h3>Layout</h3>

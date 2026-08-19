@@ -54,8 +54,19 @@ export class UserSettingModalComponent implements OnInit {
     return fSize;
   }
 
+  /**
+   * Matches the server's rule, so a password it will refuse is refused here with an explanation instead of
+   * being sent and coming back as an error. Only the new password is measured: the confirmation field holds the
+   * account's existing password, which may be shorter than the rule that now applies to new ones.
+   */
+  readonly MinPasswordLength = 8;
+
   Save() {
     if (this.User.password !== this.RepeatPassword || this.Password.length === 0 || this.RepeatPassword.length === 0 || this.User.password.length === 0  || this.User.username.length === 0 ) {
+      return;
+    }
+
+    if (this.User.password.length < this.MinPasswordLength) {
       return;
     }
     // Both as typed. The server hashes them; see the note in the login modal.

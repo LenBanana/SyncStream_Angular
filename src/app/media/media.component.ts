@@ -146,6 +146,13 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
         }
         this.syncedSourceUrl = url;
         this.playbackSync.reset();
+
+        // Drop the last position along with it. The room's position is published through a BehaviorSubject, so
+        // it hands its most recent value to whoever subscribes next, and a player component created for the new
+        // video sets IsReady immediately before subscribing. It therefore received the previous video's position
+        // and seeked the new one straight to it. Nulled here because null means "not known yet", which is the
+        // truth between a video changing and the host reporting where it has reached, about a second later.
+        this.playerService.currentTime.next(null);
       }),
       this.playerService.isplaying.subscribe(play => {
         if (play != null) {
