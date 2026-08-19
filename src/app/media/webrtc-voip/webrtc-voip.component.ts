@@ -3,7 +3,7 @@ import {VoipParticipant, WebrtcVoipService} from "./webrtc-voip-service/webrtc-v
 import {Subscription} from "rxjs";
 import {voipJoinAudio, voipLeaveAudio} from "../../Interfaces/Sounds";
 import {getRandomColor} from "../../global.settings";
-import {browserSettingName, BrowserSettings, changeSettings, WebRtcSettings} from "../../Interfaces/BrowserSettings";
+import {BrowserSettings, changeSettings, loadBrowserSettings, WebRtcSettings} from "../../Interfaces/BrowserSettings";
 import {RoomService} from "../../rooms/rooms-service/rooms.service";
 import {DreckchatService} from "../../dreckchat/dreckchat-service/dreckchat.service";
 import {MediaDeviceService} from "../webrtc/media-device-modal/media-device-service/media-device.service";
@@ -37,6 +37,7 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
     maxVideoBitrate: 300000, // 300 kbps
     idealResolution: Resolution.FHD,
     idealFrameRate: 60,
+    streamContentPreference: 'motion',
     playerWidth: window.screen.width,
     microphoneId: null,
     cameraId: null,
@@ -59,8 +60,7 @@ export class WebrtcVoipComponent implements OnInit, OnDestroy {
   browserSettings: BrowserSettings;
 
   fetchSettings() {
-    const itemBackup = localStorage.getItem(browserSettingName);
-    this.browserSettings = JSON.parse(itemBackup) as BrowserSettings;
+    this.browserSettings = loadBrowserSettings();
   }
 
   async getDevicePermission() {

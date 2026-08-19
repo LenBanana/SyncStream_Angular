@@ -4,6 +4,8 @@ import { filter } from 'rxjs/operators';
 import videojs from 'video.js';
 import {
   RtmpAudioLanguagePreference,
+  RtmpLocalMediaProbeResult,
+  RtmpLocalMediaTrack,
   RtmpPlaybackPreferences,
   RtmpSubtitleMode,
   WebrtcService
@@ -117,6 +119,11 @@ export class RtmpFileSharePlayerComponent implements OnInit, AfterViewInit, OnDe
   showPreferenceDialog: boolean = false;
   selectedSubtitleMode: RtmpSubtitleMode = 'auto';
   audioLanguagePriority: RtmpAudioLanguagePreference[] = ['japanese', 'english', 'german', 'other'];
+  rtmpMediaProbe: RtmpLocalMediaProbeResult | null = null;
+  isProbingRtmpMedia: boolean = false;
+  rtmpMediaProbeError: string | null = null;
+  selectedAudioOrdinal: number | null = null;
+  selectedSubtitleOrdinal: number | null = null;
 
   // Controls (host and viewer share the volume UI)
   hostPaused: boolean = false;
@@ -355,14 +362,19 @@ export class RtmpFileSharePlayerComponent implements OnInit, AfterViewInit, OnDe
     this.pendingHostFile = file;
     this.resetPreferenceForm();
     this.showPreferenceDialog = true;
+    this.beginLocalMediaProbe(file);
   }
 
   async confirmHostShareSettings(): Promise<void> {
     if (!this.pendingHostFile || this.isLoading || this.isStreamActive) return;
     const file = this.pendingHostFile;
+    const selectedSubtitleTrack = this.getSelectedSubtitleTrack();
     const playbackPreferences: RtmpPlaybackPreferences = {
       subtitleMode: this.selectedSubtitleMode,
-      audioLanguagePriority: [...this.audioLanguagePriority]
+      audioLanguagePriority: [...this.audioLanguagePriority],
+      selectedAudioOrdinal: this.selectedAudioOrdinal,
+      selectedSubtitleOrdinal: this.selectedSubtitleMode === 'never' ? null : this.selectedSubtitleOrdinal,
+      selectedSubtitleCodecName: this.selectedSubtitleMode === 'never' ? null : selectedSubtitleTrack?.codecName ?? null
     };
 
     this.pendingHostFile = null;
@@ -388,6 +400,57 @@ export class RtmpFileSharePlayerComponent implements OnInit, AfterViewInit, OnDe
 
   getAudioLanguageLabel(language: RtmpAudioLanguagePreference): string {
     return this.audioLanguageOptions.find(option => option.key === language)?.label ?? language;
+  }
+
+  selectDetectedAudioTrack(ordinal: number | null): void {
+    this.selectedAudioOrdinal = ordinal;
+  }
+
+  selectDetectedSubtitleTrack(track: RtmpLocalMediaTrack | null): void {
+    if (!track) {
+      this.selectedSubtitleOrdinal = null;
+      return;
+    }
+
+    if (!track.burnable) return;
+    this.selectedSubtitleOrdinal = track.ordinal;
+    if (this.selectedSubtitleMode === 'never') {
+      this.selectedSubtitleMode = 'always';
+    }
+  }
+
+  getSelectedSubtitleTrack(): RtmpLocalMediaTrack | null {
+    if (this.selectedSubtitleOrdinal == null) return null;
+    return this.rtmpMediaProbe?.subtitleTracks.find(track => track.ordinal === this.selectedSubtitleOrdinal) ?? null;
+  }
+
+  trackByRtmpTrackOrdinal(_index: number, track: RtmpLocalMediaTrack): number {
+    return track.ordinal;
+  }
+
+  private async beginLocalMediaProbe(file: File): Promise<void> {
+    this.isProbingRtmpMedia = true;
+    this.rtmpMediaProbeError = null;
+    this.rtmpMediaProbe = null;
+    this.selectedAudioOrdinal = null;
+    this.selectedSubtitleOrdinal = null;
+
+    try {
+      const result = await this.webrtcService.probeRtmpFileTracks(file);
+      if (this.pendingHostFile !== file || !this.showPreferenceDialog) return;
+
+      this.rtmpMediaProbe = result;
+      const firstBurnableSubtitle = result.subtitleTracks.find(track => track.burnable);
+      this.selectedSubtitleOrdinal = firstBurnableSubtitle?.ordinal ?? null;
+    } catch (err) {
+      if (this.pendingHostFile !== file || !this.showPreferenceDialog) return;
+      console.warn('[RtmpFileSharePlayer] local media probe failed:', err);
+      this.rtmpMediaProbeError = 'Track detection failed. The stream can still start with automatic server selection.';
+    } finally {
+      if (this.pendingHostFile === file && this.showPreferenceDialog) {
+        this.isProbingRtmpMedia = false;
+      }
+    }
   }
 
   private async startHostShare(file: File, playbackPreferences: RtmpPlaybackPreferences): Promise<void> {
@@ -948,6 +1011,11 @@ export class RtmpFileSharePlayerComponent implements OnInit, AfterViewInit, OnDe
   private resetPreferenceForm(): void {
     this.selectedSubtitleMode = 'auto';
     this.audioLanguagePriority = ['japanese', 'english', 'german', 'other'];
+    this.rtmpMediaProbe = null;
+    this.isProbingRtmpMedia = false;
+    this.rtmpMediaProbeError = null;
+    this.selectedAudioOrdinal = null;
+    this.selectedSubtitleOrdinal = null;
   }
 
   // ── Host controls ─────────────────────────────────────────────────────────

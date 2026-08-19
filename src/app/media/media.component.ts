@@ -9,7 +9,7 @@ import {SignalRService} from '../services/signal-r.service';
 import {MediaService} from './media-service/media.service';
 import {delay} from '../helper/generic';
 import {WebrtcService} from "./webrtc/webrtc-service/webrtc.service";
-import {browserSettingName, BrowserSettings} from "../Interfaces/BrowserSettings";
+import {loadBrowserSettings} from "../Interfaces/BrowserSettings";
 import {WebrtcVoipService} from "./webrtc-voip/webrtc-voip-service/webrtc-voip.service";
 import {DreckchatService} from "../dreckchat/dreckchat-service/dreckchat.service";
 import {UserPrivileges} from "../user-admin-modal/user-admin-modal.component";
@@ -174,8 +174,7 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
   }
 
   fetchSettings() {
-    const itemBackup = localStorage.getItem(browserSettingName);
-    const browserSettings = JSON.parse(itemBackup) as BrowserSettings;
+    const browserSettings = loadBrowserSettings();
     if (browserSettings && browserSettings.generalSettings.defaultVoip && !this.Voip) {
       this.chatService.joinVoice.next(this.UniqueId);
     }

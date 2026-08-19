@@ -179,6 +179,41 @@
         </button>
       </div>
 
+      <div class="ssd-priority-section">
+        <div class="ssd-priority-title">Stream priority</div>
+        <div class="ssd-priority-grid">
+          <button
+            type="button"
+            class="ssd-priority-card"
+            [class.selected]="contentPreference === 'detail'"
+            (click)="selectContentPreference('detail')">
+            <span class="ssd-priority-icon"><i class="fa fa-font" aria-hidden="true"></i></span>
+            <span class="ssd-priority-copy">
+              <span class="ssd-priority-name">Detail</span>
+              <span class="ssd-priority-hint">Sharper text and UI; may drop frames first.</span>
+            </span>
+            <span class="ssd-priority-check" *ngIf="contentPreference === 'detail'">
+              <i class="fa fa-check-circle text-main-color"></i>
+            </span>
+          </button>
+
+          <button
+            type="button"
+            class="ssd-priority-card"
+            [class.selected]="contentPreference === 'motion'"
+            (click)="selectContentPreference('motion')">
+            <span class="ssd-priority-icon"><i class="fa fa-gamepad" aria-hidden="true"></i></span>
+            <span class="ssd-priority-copy">
+              <span class="ssd-priority-name">Motion</span>
+              <span class="ssd-priority-hint">Smoother games and video; may soften detail first.</span>
+            </span>
+            <span class="ssd-priority-check" *ngIf="contentPreference === 'motion'">
+              <i class="fa fa-check-circle text-main-color"></i>
+            </span>
+          </button>
+        </div>
+      </div>
+
       <!-- Custom controls (only shown when Custom preset selected) -->
       <div class="ssd-custom-controls" *ngIf="isCustomPreset">
         <div class="row">
@@ -206,11 +241,11 @@
             <input type="range"
                    class="form-control-range ssd-range"
                    [(ngModel)]="customBitrateKbps"
-                   min="500" max="20000" step="250">
+                   min="500" max="50000" step="500">
             <div class="ssd-range-labels">
               <span>0.5 Mbps</span>
-              <span>10 Mbps</span>
-              <span>20 Mbps</span>
+              <span>25 Mbps</span>
+              <span>50 Mbps</span>
             </div>
           </div>
         </div>
@@ -221,6 +256,7 @@
         <span class="ssd-tag ssd-tag-lg">{{presets[selectedPresetIndex].resolution}}p</span>
         <span class="ssd-tag ssd-tag-lg">{{presets[selectedPresetIndex].frameRate}} fps</span>
         <span class="ssd-tag ssd-tag-lg">{{bitrateLabel}}</span>
+        <span class="ssd-tag ssd-tag-lg">{{contentPreferenceLabel}}</span>
       </div>
 
       <div *ngIf="errorMessage" class="ssd-error mt-3">
@@ -314,6 +350,10 @@
           <div class="ssd-summary-row">
             <span class="ssd-summary-key">Frame Rate</span>
             <span class="ssd-summary-val">{{isCustomPreset ? customFrameRate : presets[selectedPresetIndex].frameRate}} fps</span>
+          </div>
+          <div class="ssd-summary-row">
+            <span class="ssd-summary-key">Priority</span>
+            <span class="ssd-summary-val">{{contentPreferenceLabel}}</span>
           </div>
           <div class="ssd-summary-row">
             <span class="ssd-summary-key">Max Bitrate</span>

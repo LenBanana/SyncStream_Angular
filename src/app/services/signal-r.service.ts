@@ -8,7 +8,7 @@ import {
 import { RememberToken } from '../Interfaces/RememberToken';
 import { randomIntFromInterval } from '../helper/generic';
 import { User } from '../Interfaces/User';
-import { Room } from '../Interfaces/Room';
+import { CreateRoomRequest, RoomSummary } from '../Interfaces/Room';
 import { Token } from '../helper/Globals';
 import { getCookie, token } from '../global.settings';
 export var hubConnection: signalR.HubConnection;
@@ -22,7 +22,7 @@ export var baseUrl: string = "https://sync.dreckbu.de/";
 })
 
 export class SignalRService {
-  room: BehaviorSubject <Room[]> = new BehaviorSubject([]);
+  room: BehaviorSubject <RoomSummary[]> = new BehaviorSubject([]);
   tokenUpdate: BehaviorSubject<RememberToken> = new BehaviorSubject(null);
   connectionClosed: BehaviorSubject < boolean > = new BehaviorSubject(null);
   loginRequest: BehaviorSubject<User> = new BehaviorSubject(null);
@@ -147,7 +147,7 @@ export class SignalRService {
     this.room.next(null);
   }
 
-  public addRoom(room: Room) {
+  public addRoom(room: CreateRoomRequest) {
     let tk = "";
     if (token) {
       tk = token;

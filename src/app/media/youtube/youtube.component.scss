@@ -1,3 +1,119 @@
-.none {
-    opacity: 0 !important;
+.youtube-player {
+    position: relative;
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+.youtube-player__embed {
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+:host ::ng-deep .plyr__video-embed iframe, .plyr__video-wrapper--fixed-ratio video {
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+:host ::ng-deep .youtube-player .plyr,
+:host ::ng-deep .youtube-player .plyr__video-wrapper,
+:host ::ng-deep .youtube-player .plyr__video-embed {
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+:host ::ng-deep .youtube-player .plyr__progress {
+    position: relative;
+}
+
+:host ::ng-deep .youtube-sponsorblock-markers {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: var(--plyr-range-track-height, 5px);
+    transform: translateY(-50%);
+    border-radius: 999px;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 2;
+}
+
+:host ::ng-deep .youtube-sponsorblock-markers__segment {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 999px;
+    opacity: 0.72;
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.28);
+}
+
+:host ::ng-deep .youtube-sponsorblock-tooltip {
+    position: absolute;
+    top: -0.7rem;
+    transform: translate(-50%, -100%) scale(0.96);
+    padding: 0.22rem 0.48rem;
+    border-radius: 0.42rem;
+    background: rgba(15, 23, 42, 0.9);
+    color: rgba(248, 250, 252, 0.96);
+    font-size: 0.7rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s ease, transform 0.12s ease;
+    z-index: 3;
+}
+
+:host ::ng-deep .youtube-sponsorblock-tooltip--visible {
+    opacity: 1;
+    transform: translate(-50%, -100%) scale(1);
+}
+
+.youtube-skip-notice {
+    position: absolute;
+    right: 0.85rem;
+    bottom: 3.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.38rem 0.55rem 0.38rem 0.7rem;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    background: rgba(18, 20, 26, 0.72);
+    color: rgba(248, 250, 252, 0.92);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(6px);
+    z-index: 4;
+}
+
+.youtube-skip-notice__text {
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.youtube-skip-notice__button {
+    border: 0;
+    border-radius: 999px;
+    padding: 0.2rem 0.55rem;
+    background: rgba(249, 115, 22, 0.14);
+    color: #fdba74;
+    font-size: 0.74rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.youtube-skip-notice__button:hover {
+    background: rgba(249, 115, 22, 0.22);
+}
+
+@media (max-width: 800px) {
+    .youtube-skip-notice {
+        right: 0.75rem;
+        left: 0.75rem;
+        bottom: 3.6rem;
+        justify-content: space-between;
+    }
 }

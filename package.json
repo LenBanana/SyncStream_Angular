@@ -40,6 +40,7 @@
     "jquery": "^3.5.1",
     "jquery-ui": "^1.13.2",
     "js-sha512": "^0.8.0",
+    "mediainfo.js": "^0.3.7",
     "mediasoup-client": "^3.18.7",
     "mpegts.js": "^1.7.0",
     "ng2-canvas-whiteboard": "^4.0.2",

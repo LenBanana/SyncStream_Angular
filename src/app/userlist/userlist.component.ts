@@ -9,7 +9,7 @@ import { AlertType, Dialog } from '../Interfaces/Dialog';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
 import { WebrtcService } from '../media/webrtc/webrtc-service/webrtc.service';
 import { StreamAudience, StreamStartConfig } from '../media/webrtc/stream-start-dialog/stream-start-dialog.component';
-import { BrowserSettings, browserSettingName } from '../Interfaces/BrowserSettings';
+import { BrowserSettings, loadBrowserSettings } from '../Interfaces/BrowserSettings';
 import * as sha512 from 'js-sha512';
 declare var $:any
 
@@ -42,12 +42,7 @@ export class UserlistComponent implements OnInit, OnDestroy {
   browserSettings: BrowserSettings = this._loadSettings();
 
   private _loadSettings(): BrowserSettings {
-    try {
-      const raw = localStorage.getItem(browserSettingName);
-      return raw ? JSON.parse(raw) as BrowserSettings : new BrowserSettings();
-    } catch {
-      return new BrowserSettings();
-    }
+    return loadBrowserSettings();
   }
   UserUpdate;
   FailedPassword = false;
@@ -176,9 +171,9 @@ export class UserlistComponent implements OnInit, OnDestroy {
     this.showStreamDialog = false;
     try {
       if (config.audience === 'room') {
-        await this.webrtcService.startStreamingToRoom(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
+        await this.webrtcService.startStreamingToRoom(this.UniqueId, config.stream, config.maxBitrate, config.resolution, config.frameRate, config.contentPreference);
       } else {
-        await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
+        await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate, config.resolution, config.frameRate, config.contentPreference);
       }
       this.isStreaming = true;
       this.liveAudience = config.audience;

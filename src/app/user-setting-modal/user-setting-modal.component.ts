@@ -2,7 +2,8 @@ import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { User } from '../Interfaces/User';
 import * as sha512 from 'js-sha512';
 import { UserSettingService } from './user-setting-service/user-setting.service';
-import { browserSettingName, BrowserSettings, changeSettings } from '../Interfaces/BrowserSettings';
+import { BrowserSettings, changeSettings } from '../Interfaces/BrowserSettings';
+import { sponsorBlockCategoryLabels, sponsorBlockCategoryOrder } from '../Interfaces/SponsorBlock';
 import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
 declare var $: any;
 
@@ -23,6 +24,8 @@ export class UserSettingModalComponent implements OnInit {
   ShowStreamKey = false;
   ShowApiKey = false;
   UserPrivileges = UserPrivileges;
+  SponsorBlockCategoryOrder = sponsorBlockCategoryOrder;
+  SponsorBlockCategoryLabels = sponsorBlockCategoryLabels;
   ngOnInit(): void {
     this.User.password = "";
   }

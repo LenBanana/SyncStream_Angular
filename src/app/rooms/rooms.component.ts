@@ -6,11 +6,11 @@ import { Location } from '@angular/common';
 import { RoomService } from './rooms-service/rooms.service';
 import { User } from '../Interfaces/User';
 import { randomIntFromInterval } from '../helper/generic';
-import { Room } from '../Interfaces/Room';
+import { RoomSummary } from '../Interfaces/Room';
 import { DialogService } from '../text-dialog/text-dialog-service/dialog-service.service';
 import { AlertType, Dialog } from '../Interfaces/Dialog';
 import { UserlistService } from '../userlist/userlist-service/userlist.service';
-import { browserSettingName, BrowserSettings, IsTwitch, IsYt, settingsUpdate } from '../Interfaces/BrowserSettings';
+import { BrowserSettings, IsTwitch, IsYt, loadBrowserSettings, settingsUpdate } from '../Interfaces/BrowserSettings';
 import { ChessService } from '../chess-game/chess-service/chess.service';
 import { NgxChessBoardService } from 'ngx-chess-board';
 import { resetToken } from '../global.settings';
@@ -33,8 +33,8 @@ declare var $: any
 })
 export class RoomsComponent implements OnInit {
   @ViewChild('menuTrigger') menuTrigger: MatMenuTrigger;
-  rooms: Room[];
-  filterRooms: Room[];
+  rooms: RoomSummary[];
+  filterRooms: RoomSummary[];
   FilterTerm = "";
   logoutDialog: Dialog = { id: 'logout', header: 'Logout', question: 'Are you sure you want to logout?', answer1: 'Yes', answer2: 'No', yes: null, no: null, alertType: AlertType.Info }
   chessEndDialog: Dialog = { id: 'endchess', header: 'Checkmate', question: 'Chess game is over, reset now?', answer1: 'Yes', answer2: 'No', yes: null, no: null, alertType: AlertType.Info }
@@ -130,15 +130,10 @@ export class RoomsComponent implements OnInit {
   }
 
   fetchSettings() {
-    const itemBackup = localStorage.getItem(browserSettingName);
-    if (!itemBackup || itemBackup.length == 0) {
-      this.browserSettings = new BrowserSettings();
-      return;
-    }
-    this.browserSettings = JSON.parse(itemBackup) as BrowserSettings;
+    this.browserSettings = loadBrowserSettings();
   }
 
-  trackByFn(index, item: Room) {
+  trackByFn(index, item: RoomSummary) {
     return item.uniqueId;
   }
 
@@ -172,8 +167,8 @@ export class RoomsComponent implements OnInit {
     });
   }
 
-  IsYt(room: Room) { return room.server.playlist.length > 0 && IsYt(room.server.playlist[0]?.url) };
-  IsTwitch(room: Room) { return room.server.playlist.length > 0 && IsTwitch(room.server.playlist[0]?.url) };
+  IsYt(room: RoomSummary) { return room.playlist.length > 0 && IsYt(room.playlist[0]?.url) };
+  IsTwitch(room: RoomSummary) { return room.playlist.length > 0 && IsTwitch(room.playlist[0]?.url) };
 
   public Logout() {
     this.user.username = 'Anon' + "#" + randomIntFromInterval(100, 10000);
@@ -212,9 +207,9 @@ export class RoomsComponent implements OnInit {
     this.delInterval = true;
   }
 
-  async Join(room: Room) {
+  async Join(room: RoomSummary) {
     $('#join-animation-placeholder').css({ background: this.IsYt(room) || this.IsTwitch(room) ? 'black' : 'rgb(17, 19, 26)' });
-    this.JoinRoom(room.uniqueId, room.server.currenttime);
+    this.JoinRoom(room.uniqueId, room.currenttime);
   }
 
   public JoinRoom(uniqueId: string, time: number) {

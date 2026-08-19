@@ -7,10 +7,31 @@ import * as mediasoupClient from 'mediasoup-client';
 
 export type RtmpSubtitleMode = 'auto' | 'always' | 'never';
 export type RtmpAudioLanguagePreference = 'japanese' | 'english' | 'german' | 'other';
+export type RtmpSubtitleBurnMethod = 'text' | 'bitmap';
 
 export interface RtmpPlaybackPreferences {
   subtitleMode: RtmpSubtitleMode;
   audioLanguagePriority: RtmpAudioLanguagePreference[];
+  selectedAudioOrdinal?: number | null;
+  selectedSubtitleOrdinal?: number | null;
+  selectedSubtitleCodecName?: string | null;
+}
+
+export interface RtmpLocalMediaTrack {
+  ordinal: number;
+  label: string;
+  language: string;
+  title: string;
+  codecName: string;
+  isDefault: boolean;
+  isForced: boolean;
+  burnMethod?: RtmpSubtitleBurnMethod | null;
+  burnable?: boolean;
+}
+
+export interface RtmpLocalMediaProbeResult {
+  audioTracks: RtmpLocalMediaTrack[];
+  subtitleTracks: RtmpLocalMediaTrack[];
 }
 
 @Injectable({
@@ -39,6 +60,10 @@ export class WebrtcService implements OnDestroy {
   private viewerCandidateBuffer: Map<string, RTCIceCandidate[]> = new Map();
   /** Max bitrate (bps) requested by the streamer; 0 = unconstrained. */
   private localStreamMaxBitrate = 0;
+  /** Max framerate requested by the streamer; 0 = unconstrained. */
+  private localStreamMaxFrameRate = 0;
+  /** Encoder priority requested by the streamer. */
+  private localStreamContentPreference: StreamContentPreference = 'motion';
   /** True when the current live screen-share session is using the SFU path rather than P2P. */
   private liveStreamUsesSfu = false;
   /** Whether the current local stream is opt-in live or room-stage live. */
@@ -448,6 +473,67 @@ export class WebrtcService implements OnDestroy {
     return track.kind === 'video' && typeof settings.displaySurface === 'string' && settings.displaySurface.length > 0;
   }
 
+  private applyVideoTrackContentPreference(
+    track: MediaStreamTrack,
+    contentPreference: StreamContentPreference
+  ): boolean {
+    const isDisplay = this.isDisplayTrack(track);
+    try {
+      // contentHint guides the encoder: 'detail' keeps screen text sharp, while
+      // 'motion' asks the browser to preserve framerate for games/video.
+      track.contentHint = isDisplay ? contentPreference : 'motion';
+    } catch {
+      // Best-effort only.
+    }
+    return isDisplay;
+  }
+
+  private applyStreamContentPreference(stream: MediaStream, contentPreference: StreamContentPreference): void {
+    stream.getVideoTracks().forEach(track => this.applyVideoTrackContentPreference(track, contentPreference));
+  }
+
+  private findVideoCodec(
+    mimeType: string,
+    predicate?: (codec: any) => boolean
+  ): mediasoupClient.types.RtpCodecCapability | undefined {
+    return this.sfuDevice?.rtpCapabilities.codecs?.find((codec: any) => {
+      if (codec.mimeType?.toLowerCase() !== mimeType.toLowerCase()) return false;
+      return predicate ? predicate(codec) : true;
+    }) as mediasoupClient.types.RtpCodecCapability | undefined;
+  }
+
+  private findMotionCodec(): mediasoupClient.types.RtpCodecCapability | undefined {
+    return this.findVideoCodec('video/h264', (codec: any) => {
+      const profile = String(codec.parameters?.['profile-level-id'] ?? '').toLowerCase();
+      return profile.startsWith('42e0');
+    })
+      ?? this.findVideoCodec('video/h264')
+      ?? this.findVideoCodec('video/vp8');
+  }
+
+  private buildSingleVideoEncoding(
+    track: MediaStreamTrack,
+    topBitrate: number,
+    preferredResolution?: number,
+    preferredFrameRate?: number
+  ): mediasoupClient.types.RtpEncodingParameters {
+    const settings = track.getSettings();
+    const sourceHeight = typeof settings.height === 'number' && settings.height > 0
+      ? settings.height
+      : (preferredResolution && preferredResolution > 0 ? preferredResolution : 1080);
+    const targetHeight = preferredResolution && preferredResolution > 0
+      ? Math.min(preferredResolution, sourceHeight)
+      : sourceHeight;
+    const scaleResolutionDownBy = Number(Math.max(1, sourceHeight / targetHeight).toFixed(2));
+    const frameRate = preferredFrameRate && preferredFrameRate > 0 ? preferredFrameRate : undefined;
+
+    return {
+      maxBitrate: topBitrate,
+      maxFramerate: frameRate,
+      scaleResolutionDownBy
+    } as any;
+  }
+
   /**
    * Builds 3-layer VP8 simulcast encodings for a display (screen-share) track.
    * Uses the source and target resolution to calculate scale factors, giving
@@ -456,7 +542,9 @@ export class WebrtcService implements OnDestroy {
   private buildDisplayEncodings(
     track: MediaStreamTrack,
     topBitrate: number,
-    preferredResolution?: number
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
   ): {
     encodings: mediasoupClient.types.ProducerOptions['encodings'];
     sourceHeight: number;
@@ -472,12 +560,14 @@ export class WebrtcService implements OnDestroy {
     const highScale  = Math.max(1, sourceHeight / targetHeight);
     const midScale   = Math.max(highScale, highScale * 2);
     const lowScale   = Math.max(midScale,  highScale * 4);
+    const temporalMode = contentPreference === 'motion' || (preferredFrameRate ?? 0) >= 60 ? 'L1T3' : 'L1T2';
+    const frameRate = preferredFrameRate && preferredFrameRate > 0 ? preferredFrameRate : undefined;
 
     return {
       encodings: [
-        {rid: 'q', maxBitrate: Math.max(400_000,  Math.round(topBitrate / 8)), scaleResolutionDownBy: Number(lowScale.toFixed(2)),  scalabilityMode: 'L1T2'},
-        {rid: 'h', maxBitrate: Math.max(1_000_000, Math.round(topBitrate / 3)), scaleResolutionDownBy: Number(midScale.toFixed(2)),   scalabilityMode: 'L1T2'},
-        {rid: 'f', maxBitrate: topBitrate,                                       scaleResolutionDownBy: Number(highScale.toFixed(2)),  scalabilityMode: 'L1T2'},
+        {rid: 'q', maxBitrate: Math.max(400_000,  Math.round(topBitrate / 8)), scaleResolutionDownBy: Number(lowScale.toFixed(2)),  scalabilityMode: temporalMode, maxFramerate: frameRate},
+        {rid: 'h', maxBitrate: Math.max(1_000_000, Math.round(topBitrate / 3)), scaleResolutionDownBy: Number(midScale.toFixed(2)),   scalabilityMode: temporalMode, maxFramerate: frameRate},
+        {rid: 'f', maxBitrate: topBitrate,                                       scaleResolutionDownBy: Number(highScale.toFixed(2)),  scalabilityMode: temporalMode, maxFramerate: frameRate},
       ] as any,
       sourceHeight,
       targetHeight
@@ -487,24 +577,29 @@ export class WebrtcService implements OnDestroy {
   private buildVideoProducerOptions(
     track: MediaStreamTrack,
     maxBitrate?: number,
-    preferredResolution?: number
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
   ): mediasoupClient.types.ProducerOptions {
     const topBitrate = maxBitrate && maxBitrate > 0 ? maxBitrate : 6_000_000;
-    const isDisplay = this.isDisplayTrack(track);
-
-    try {
-      // contentHint guides the encoder: 'detail' keeps resolution stable under
-      // congestion (good for screen text), 'motion' keeps framerate stable (good
-      // for camera).  This replaces the need for RTCRtpSender.degradationPreference.
-      track.contentHint = isDisplay ? 'detail' : 'motion';
-    } catch {
-      // Best-effort only.
-    }
+    const isDisplay = this.applyVideoTrackContentPreference(track, contentPreference);
+    const frameRate = preferredFrameRate && preferredFrameRate > 0 ? preferredFrameRate : undefined;
 
     const produceOptions: mediasoupClient.types.ProducerOptions = {
       track,
       codecOptions: {videoGoogleStartBitrate: Math.max(1000, Math.round(topBitrate / 1000))}
     };
+
+    if (contentPreference === 'motion') {
+      const motionCodec = this.findMotionCodec();
+      if (motionCodec) {
+        produceOptions.codec = motionCodec as any;
+      }
+      produceOptions.encodings = [
+        this.buildSingleVideoEncoding(track, topBitrate, preferredResolution, preferredFrameRate)
+      ] as any;
+      return produceOptions;
+    }
 
     // Prefer VP9 K-SVC (L3T3_KEY): a single encoding covers 3 spatial × 3 temporal
     // layers.  Each viewer independently receives the layer that fits their link.
@@ -515,7 +610,7 @@ export class WebrtcService implements OnDestroy {
     );
     if (vp9Codec) {
       produceOptions.codec = vp9Codec as any;
-      produceOptions.encodings = [{scalabilityMode: 'L3T3_KEY', maxBitrate: topBitrate}] as any;
+      produceOptions.encodings = [{scalabilityMode: 'L3T3_KEY', maxBitrate: topBitrate, maxFramerate: frameRate}] as any;
       return produceOptions;
     }
 
@@ -524,16 +619,17 @@ export class WebrtcService implements OnDestroy {
     // full (f) = top bitrate @ native resolution.
     if (isDisplay) {
       if (preferredResolution && preferredResolution > 0) {
-        const displayProfile = this.buildDisplayEncodings(track, topBitrate, preferredResolution);
+        const displayProfile = this.buildDisplayEncodings(track, topBitrate, preferredResolution, preferredFrameRate, contentPreference);
         produceOptions.encodings = displayProfile.encodings as any;
       } else {
-        produceOptions.encodings = [{maxBitrate: topBitrate}];
+        produceOptions.encodings = [{maxBitrate: topBitrate, maxFramerate: frameRate}];
       }
     } else {
+      const temporalMode = frameRate && frameRate >= 60 ? 'L1T3' : 'L1T2';
       produceOptions.encodings = [
-        {rid: 'q', maxBitrate: Math.round(topBitrate / 8), scaleResolutionDownBy: 4, scalabilityMode: 'L1T2'},
-        {rid: 'h', maxBitrate: Math.round(topBitrate / 3), scaleResolutionDownBy: 2, scalabilityMode: 'L1T2'},
-        {rid: 'f', maxBitrate: topBitrate,                                            scalabilityMode: 'L1T2'},
+        {rid: 'q', maxBitrate: Math.round(topBitrate / 8), scaleResolutionDownBy: 4, scalabilityMode: temporalMode, maxFramerate: frameRate},
+        {rid: 'h', maxBitrate: Math.round(topBitrate / 3), scaleResolutionDownBy: 2, scalabilityMode: temporalMode, maxFramerate: frameRate},
+        {rid: 'f', maxBitrate: topBitrate,                                            scalabilityMode: temporalMode, maxFramerate: frameRate},
       ] as any;
     }
 
@@ -566,7 +662,14 @@ export class WebrtcService implements OnDestroy {
   /**
    * Starts streaming via the SFU.  Falls back to P2P if SFU is not available.
    */
-  public async startStreamingSfu(roomId: string, stream: MediaStream, maxBitrate?: number, preferredResolution?: number): Promise<void> {
+  public async startStreamingSfu(
+    roomId: string,
+    stream: MediaStream,
+    maxBitrate?: number,
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
+  ): Promise<void> {
     if (!token) return;
 
     await this.ensureSfuDevice();
@@ -612,7 +715,7 @@ export class WebrtcService implements OnDestroy {
     // Produce each track from the local stream.
     for (const track of stream.getTracks()) {
       const produceOptions: mediasoupClient.types.ProducerOptions = track.kind === 'video'
-        ? this.buildVideoProducerOptions(track, maxBitrate, preferredResolution)
+        ? this.buildVideoProducerOptions(track, maxBitrate, preferredResolution, preferredFrameRate, contentPreference)
         : this.buildAudioProducerOptions(track);
       const producer = await this.sfuSendTransport.produce(produceOptions);
       this.sfuProducers.set(producer.id, producer);
@@ -649,7 +752,14 @@ export class WebrtcService implements OnDestroy {
    * Starts an opt-in live screen-share over the SFU without switching the room's
    * main player or auto-joining viewers.
    */
-  private async startOptInStreamingSfu(roomId: string, stream: MediaStream, maxBitrate?: number, preferredResolution?: number): Promise<void> {
+  private async startOptInStreamingSfu(
+    roomId: string,
+    stream: MediaStream,
+    maxBitrate?: number,
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
+  ): Promise<void> {
     if (!token) return;
     const bitrate = maxBitrate ?? this.localStreamMaxBitrate;
 
@@ -660,7 +770,7 @@ export class WebrtcService implements OnDestroy {
         throw new Error('StartSfuOptInStream did not return a live room id.');
       }
 
-      await this.startSfuSendTransportOnly(liveRoomId, stream, bitrate, preferredResolution);
+      await this.startSfuSendTransportOnly(liveRoomId, stream, bitrate, preferredResolution, preferredFrameRate, contentPreference);
     } catch (err) {
       this.liveStreamUsesSfu = false;
       const liveRoomId = this.sfuRoomId;
@@ -913,14 +1023,24 @@ export class WebrtcService implements OnDestroy {
   // ================================================================
 
   /** Begin broadcasting via P2P. Use startStreamingSfu when SFU is available. */
-  public async startStreaming(roomId: string, stream: MediaStream, maxBitrate?: number, preferredResolution?: number): Promise<void> {
+  public async startStreaming(
+    roomId: string,
+    stream: MediaStream,
+    maxBitrate?: number,
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
+  ): Promise<void> {
     this.currentRoomId = roomId;
     this.localStream = stream;
+    this.applyStreamContentPreference(stream, contentPreference);
     this.localStreamMaxBitrate = maxBitrate ?? 0;
+    this.localStreamMaxFrameRate = preferredFrameRate ?? 0;
+    this.localStreamContentPreference = contentPreference;
     this.localStreamAudience = 'personal';
     const canUseSfu = await this.checkSfuAvailable();
     if (canUseSfu) {
-      await this.startOptInStreamingSfu(roomId, stream, maxBitrate, preferredResolution);
+      await this.startOptInStreamingSfu(roomId, stream, maxBitrate, preferredResolution, preferredFrameRate, contentPreference);
       return;
     }
 
@@ -933,10 +1053,20 @@ export class WebrtcService implements OnDestroy {
   }
 
   /** Begin streaming directly to the room player instead of the opt-in live list. */
-  public async startStreamingToRoom(roomId: string, stream: MediaStream, maxBitrate?: number, preferredResolution?: number): Promise<void> {
+  public async startStreamingToRoom(
+    roomId: string,
+    stream: MediaStream,
+    maxBitrate?: number,
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
+  ): Promise<void> {
     this.currentRoomId = roomId;
     this.localStream = stream;
+    this.applyStreamContentPreference(stream, contentPreference);
     this.localStreamMaxBitrate = maxBitrate ?? 0;
+    this.localStreamMaxFrameRate = preferredFrameRate ?? 0;
+    this.localStreamContentPreference = contentPreference;
     this.localStreamAudience = 'room';
     this.roomStagePreviewStream.next(stream);
     this.roomStageBroadcastActive.next(true);
@@ -944,7 +1074,7 @@ export class WebrtcService implements OnDestroy {
     try {
       const canUseSfu = await this.checkSfuAvailable();
       if (canUseSfu) {
-        await this.startStreamingSfu(roomId, stream, maxBitrate, preferredResolution);
+        await this.startStreamingSfu(roomId, stream, maxBitrate, preferredResolution, preferredFrameRate, contentPreference);
         return;
       }
 
@@ -1019,6 +1149,8 @@ export class WebrtcService implements OnDestroy {
     this.localStream?.getTracks().forEach(track => track.stop());
     this.localStream = null;
     this.localStreamMaxBitrate = 0;
+    this.localStreamMaxFrameRate = 0;
+    this.localStreamContentPreference = 'motion';
     this.liveStreamUsesSfu = false;
     this.localStreamAudience = 'none';
     this.roomStagePreviewStream.next(null);
@@ -1051,13 +1183,23 @@ export class WebrtcService implements OnDestroy {
     pc.onconnectionstatechange = () => {
       // Apply bitrate limit once negotiation is fully complete — setParameters is
       // only valid after the initial offer/answer exchange has finished.
-      if (pc.connectionState === 'connected' && this.localStreamMaxBitrate > 0) {
+      if (pc.connectionState === 'connected') {
         pc.getSenders()
           .filter(s => s.track?.kind === 'video')
           .forEach(sender => {
             const p = sender.getParameters();
             if (p.encodings?.length) {
-              p.encodings.forEach(e => { e.maxBitrate = this.localStreamMaxBitrate; });
+              p.encodings.forEach(e => {
+                if (this.localStreamMaxBitrate > 0) {
+                  e.maxBitrate = this.localStreamMaxBitrate;
+                }
+                if (this.localStreamMaxFrameRate > 0) {
+                  (e as any).maxFramerate = this.localStreamMaxFrameRate;
+                }
+              });
+              (p as any).degradationPreference = this.localStreamContentPreference === 'motion'
+                ? 'maintain-framerate'
+                : 'maintain-resolution';
               sender.setParameters(p).catch(e => console.warn('setParameters failed:', e));
             }
           });
@@ -1724,7 +1866,9 @@ export class WebrtcService implements OnDestroy {
     roomId: string,
     stream: MediaStream,
     maxBitrate?: number,
-    preferredResolution?: number
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
   ): Promise<void> {
     if (!token) return;
     await this.ensureSfuDevice();
@@ -1761,7 +1905,7 @@ export class WebrtcService implements OnDestroy {
 
     for (const track of stream.getTracks()) {
       const produceOptions: mediasoupClient.types.ProducerOptions = track.kind === 'video'
-        ? this.buildVideoProducerOptions(track, maxBitrate, preferredResolution)
+        ? this.buildVideoProducerOptions(track, maxBitrate, preferredResolution, preferredFrameRate, contentPreference)
         : this.buildAudioProducerOptions(track);
       const producer = await this.sfuSendTransport.produce(produceOptions);
       this.sfuProducers.set(producer.id, producer);
@@ -1782,12 +1926,18 @@ export class WebrtcService implements OnDestroy {
    *
    * The fileShareStarted listener handles the viewer-side SFU join.
    */
-  public async startFileShare(roomId: string, stream: MediaStream, maxBitrate?: number): Promise<void> {
+  public async startFileShare(
+    roomId: string,
+    stream: MediaStream,
+    maxBitrate?: number,
+    preferredResolution?: number,
+    preferredFrameRate: number = 60
+  ): Promise<void> {
     if (!token) return;
     const bitrate = maxBitrate ?? 8_000_000;
     this.isFileShareHost = true;
     try {
-      await this.startSfuSendTransportOnly(roomId, stream, bitrate);
+      await this.startSfuSendTransportOnly(roomId, stream, bitrate, preferredResolution, preferredFrameRate, 'motion');
       await hubConnection.invoke('StartFileShare', token, roomId);
       this.isPreparingFileShareHost = false;
       this.pendingFileShareFile.next(null);
@@ -2130,6 +2280,135 @@ export class WebrtcService implements OnDestroy {
     this.pendingRtmpFileShareFile.next(null);
   }
 
+  public async probeRtmpFileTracks(file: File): Promise<RtmpLocalMediaProbeResult> {
+    const mediaInfoFactory = (await import('mediainfo.js')).default;
+    const mediaInfo = await mediaInfoFactory({
+      format: 'object',
+      full: true,
+      locateFile: () => 'assets/mediainfo/MediaInfoModule.wasm'
+    });
+
+    try {
+      const result: any = await mediaInfo.analyzeData(file.size, (size: number, offset: number) =>
+        this.readFileChunk(file, offset, size)
+      );
+      const tracks: any[] = Array.isArray(result?.media?.track) ? result.media.track : [];
+      const audioTracks: RtmpLocalMediaTrack[] = [];
+      const subtitleTracks: RtmpLocalMediaTrack[] = [];
+
+      tracks.forEach((track: any) => {
+        const type = track?.['@type'];
+        if (type === 'Audio') {
+          audioTracks.push(this.toRtmpLocalMediaTrack(track, audioTracks.length, false));
+        } else if (this.isMediaInfoSubtitleTrack(track)) {
+          subtitleTracks.push(this.toRtmpLocalMediaTrack(track, subtitleTracks.length, true));
+        }
+      });
+
+      return {audioTracks, subtitleTracks};
+    } finally {
+      mediaInfo.close();
+    }
+  }
+
+  private readFileChunk(file: File, offset: number, size: number): Promise<Uint8Array> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(new Uint8Array(reader.result as ArrayBuffer));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(file.slice(offset, offset + size));
+    });
+  }
+
+  private toRtmpLocalMediaTrack(track: any, fallbackOrdinal: number, isSubtitle: boolean): RtmpLocalMediaTrack {
+    const ordinal = isSubtitle ? fallbackOrdinal : this.readMediaInfoOrdinal(track, fallbackOrdinal);
+    const language = this.readFirstMediaInfoValue(track, ['Language_String3', 'Language_String', 'Language']) || 'und';
+    const title = this.readFirstMediaInfoValue(track, ['Title', 'StreamName', 'Name']) || '';
+    const codecName = this.normalizeMediaInfoCodecName(
+      this.readFirstMediaInfoValue(track, ['Format', 'Format_String', 'Format_Commercial', 'CodecID', 'CodecID_String']) || ''
+    );
+    const isDefault = this.readMediaInfoFlag(track, ['Default', 'Default_String']);
+    const isForced = this.readMediaInfoFlag(track, ['Forced', 'Forced_String']);
+    const burnMethod = isSubtitle ? this.getRtmpSubtitleBurnMethod(codecName) : null;
+    const parts = [
+      `#${ordinal + 1}`,
+      language !== 'und' ? language : null,
+      codecName || null,
+      title || null,
+      isForced ? 'forced' : null,
+      isDefault ? 'default' : null,
+    ].filter(Boolean);
+
+    return {
+      ordinal,
+      language,
+      title,
+      codecName,
+      isDefault,
+      isForced,
+      burnMethod,
+      burnable: !!burnMethod,
+      label: parts.join(' · ')
+    };
+  }
+
+  private isMediaInfoSubtitleTrack(track: any): boolean {
+    if (track?.['@type'] === 'Text') return true;
+    if (track?.['@type'] !== 'Image') return false;
+
+    const codecName = this.normalizeMediaInfoCodecName(
+      this.readFirstMediaInfoValue(track, ['Format', 'Format_String', 'Format_Commercial', 'CodecID', 'CodecID_String']) || ''
+    );
+    return this.getRtmpSubtitleBurnMethod(codecName) !== null;
+  }
+
+  private readMediaInfoOrdinal(track: any, fallbackOrdinal: number): number {
+    const raw = track?.StreamKindPos ?? track?.['@typeorder'];
+    const parsed = typeof raw === 'number' ? raw : parseInt(String(raw ?? ''), 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed - 1 : fallbackOrdinal;
+  }
+
+  private readFirstMediaInfoValue(track: any, keys: string[]): string | null {
+    for (const key of keys) {
+      const value = track?.[key];
+      if (value !== undefined && value !== null && String(value).trim()) {
+        return String(value).trim();
+      }
+    }
+    return null;
+  }
+
+  private readMediaInfoFlag(track: any, keys: string[]): boolean {
+    const value = this.readFirstMediaInfoValue(track, keys)?.toLowerCase();
+    return value === 'yes' || value === 'true' || value === '1';
+  }
+
+  private normalizeMediaInfoCodecName(codecName: string): string {
+    const normalized = codecName.trim().toLowerCase();
+    const compact = normalized.replace(/[\s_\-/]/g, '');
+    if (compact.includes('pgs') || compact.includes('hdmv')) return 'hdmv_pgs_subtitle';
+    if (compact.includes('vobsub') || compact.includes('dvdsubtitle') || compact.includes('dvdsub')) return 'dvd_subtitle';
+    if (compact.includes('dvbsubtitle') || compact.includes('dvbsub')) return 'dvb_subtitle';
+    if (compact.includes('xsub')) return 'xsub';
+    if (compact.includes('ass')) return 'ass';
+    if (compact.includes('ssa')) return 'ssa';
+    if (compact.includes('webvtt') || compact.includes('vtt')) return 'webvtt';
+    if (compact.includes('movtext') || compact.includes('tx3g')) return 'mov_text';
+    if (compact.includes('subrip') || compact.includes('srt') || compact.includes('utf8')) return 'subrip';
+    if (compact.includes('text')) return 'text';
+    return normalized;
+  }
+
+  private getRtmpSubtitleBurnMethod(codecName: string): RtmpSubtitleBurnMethod | null {
+    if (['subrip', 'srt', 'ass', 'ssa', 'webvtt', 'mov_text', 'text'].includes(codecName)) {
+      return 'text';
+    }
+    if (['hdmv_pgs_subtitle', 'pgs', 'dvd_subtitle', 'dvdsub', 'vobsub', 'xsub', 'dvb_subtitle'].includes(codecName)) {
+      return 'bitmap';
+    }
+    return null;
+  }
+
   /**
    * Uploads the first chunk, tells the server to start ffmpeg (RTMP push),
    * then continues uploading in the background while the stream is live.
@@ -2295,14 +2574,24 @@ export class WebrtcService implements OnDestroy {
    *
    * A P2P fallback is retained for the rare case where the SFU is unreachable.
    */
-  public async broadcastToRoom(roomId: string, stream: MediaStream, maxBitrate?: number, preferredResolution?: number): Promise<void> {
+  public async broadcastToRoom(
+    roomId: string,
+    stream: MediaStream,
+    maxBitrate?: number,
+    preferredResolution?: number,
+    preferredFrameRate?: number,
+    contentPreference: StreamContentPreference = 'motion'
+  ): Promise<void> {
     this.localStreamMaxBitrate = maxBitrate ?? 0;
+    this.localStreamMaxFrameRate = preferredFrameRate ?? 0;
+    this.localStreamContentPreference = contentPreference;
+    this.applyStreamContentPreference(stream, contentPreference);
     const canUseSfu = await this.checkSfuAvailable();
     if (canUseSfu) {
       // Set currentRoomId so any teardown path that reads it stays consistent.
       this.currentRoomId = roomId;
       // Set up SFU producers in the opt-in live room (does NOT flip the room player).
-      await this.startOptInStreamingSfu(roomId, stream, maxBitrate, preferredResolution);
+      await this.startOptInStreamingSfu(roomId, stream, maxBitrate, preferredResolution, preferredFrameRate, contentPreference);
       // Once producers are ready, push the notification so viewers auto-join via SFU.
       if (token) {
         await hubConnection.invoke('ForceSfuBroadcast', token, roomId)
@@ -2432,6 +2721,8 @@ export enum Resolution {
   QHD = 1440,
   UHD = 2160
 }
+
+export type StreamContentPreference = 'detail' | 'motion';
 
 export interface WebRtcCandidateExchange extends RTCIceCandidate {
   viewerId: string;

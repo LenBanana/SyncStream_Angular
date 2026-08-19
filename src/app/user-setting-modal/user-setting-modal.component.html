@@ -76,6 +76,36 @@
                         <label class="custom-control-label" for="voipAudioCheck">Play sound</label>
                       </div>
                     </div>
+                    <div class="mt-3">
+                      <h3 class="pt-3">YouTube SponsorBlock</h3>
+                      <p class="text-muted mb-2">
+                        Uses SponsorBlock community segment data through the Drecktube backend proxy. Auto-skip only runs on the host so the room stays synchronized.
+                      </p>
+                      <div class="custom-control custom-checkbox pt-2">
+                        <input [(ngModel)]="BrowserSettings.playbackSettings.sponsorBlock.enabled" type="checkbox" class="custom-control-input" id="sponsorBlockEnabledCheck" (change)="ChangeSettings()">
+                        <label class="custom-control-label" for="sponsorBlockEnabledCheck">Enable SponsorBlock for YouTube</label>
+                      </div>
+                      <div class="custom-control custom-checkbox pt-2">
+                        <input [(ngModel)]="BrowserSettings.playbackSettings.sponsorBlock.showMarkers" type="checkbox" class="custom-control-input" id="sponsorBlockMarkersCheck" (change)="ChangeSettings()">
+                        <label class="custom-control-label" for="sponsorBlockMarkersCheck">Show progress bar markers</label>
+                      </div>
+                      <div class="custom-control custom-checkbox pt-2">
+                        <input [(ngModel)]="BrowserSettings.playbackSettings.sponsorBlock.showSkipNotice" type="checkbox" class="custom-control-input" id="sponsorBlockNoticeCheck" (change)="ChangeSettings()">
+                        <label class="custom-control-label" for="sponsorBlockNoticeCheck">Show skip notice with jump back action</label>
+                      </div>
+                      <label class="mt-3 mb-2 d-block">Auto-skip categories</label>
+                      <div class="row">
+                        <div class="col-md-6" *ngFor="let category of SponsorBlockCategoryOrder">
+                          <div class="custom-control custom-checkbox pt-2">
+                            <input [(ngModel)]="BrowserSettings.playbackSettings.sponsorBlock.categories[category]" type="checkbox" class="custom-control-input" [id]="'sponsorBlockCategory-' + category" (change)="ChangeSettings()">
+                            <label class="custom-control-label" [for]="'sponsorBlockCategory-' + category">{{SponsorBlockCategoryLabels[category]}}</label>
+                          </div>
+                        </div>
+                      </div>
+                      <p class="text-muted small mt-3 mb-0">
+                        SponsorBlock API/database is provided by the SponsorBlock project and used here for non-commercial room playback.
+                      </p>
+                    </div>
                   </div>
                   <div *ngIf="CurrentSettings==SettingsMenu.Stream" class="container-fluid py-3">
                     <h3>Live Stream</h3>

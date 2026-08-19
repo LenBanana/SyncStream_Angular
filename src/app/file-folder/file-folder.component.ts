@@ -4,7 +4,7 @@ import {Subscription} from 'rxjs';
 import {DownloadManagerService} from '../download-manager/download-manger-service/download-manager.service';
 import {getCookie, getRandomColor, userId} from '../global.settings';
 import {DownloadFile, FileFolder} from '../Interfaces/DownloadInfo';
-import {SharedUser, User} from '../Interfaces/User';
+import {SharedUser, UserSummary} from '../Interfaces/User';
 import {UserPrivileges} from '../user-admin-modal/user-admin-modal.component';
 import {UserAdminService} from '../user-admin-modal/user-admin-service/user-admin.service';
 import {BrowserSettings} from '../Interfaces/BrowserSettings';
@@ -38,7 +38,7 @@ export class FileFolderComponent implements OnInit, OnDestroy, OnChanges {
   userUpdate: Subscription;
   edit = false;
   editName = "";
-  Users: User[] = [];
+  Users: UserSummary[] = [];
   FilteredUsers: SharedUser[] = [];
   paginatedUsers: SharedUser[] = [];
   searchTerm: string = '';

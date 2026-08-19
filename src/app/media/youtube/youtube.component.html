@@ -1,1 +1,11 @@
-<div class="media-player" id="YTPlayer"></div>
+<div class="media-player youtube-player">
+	<div #youtubePlayerHost class="youtube-player__embed"></div>
+	<div *ngIf="SkipNoticeSegment&&IsHost" class="youtube-skip-notice">
+		<div class="youtube-skip-notice__text">
+			Skipped {{GetSkipNoticeLabel()}}
+		</div>
+		<button type="button" class="youtube-skip-notice__button" (click)="JumpBackToSkippedSegment()">
+			Jump back
+		</button>
+	</div>
+</div>

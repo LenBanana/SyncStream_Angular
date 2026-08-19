@@ -1,6 +1,6 @@
 import { Component, Input, OnDestroy, OnInit, QueryList, ViewChildren } from '@angular/core';
 import { getCookie, token, userId } from '../global.settings';
-import { User } from '../Interfaces/User';
+import { User, UserSummary } from '../Interfaces/User';
 import { SignalRService } from '../services/signal-r.service';
 import { UserAdminService } from './user-admin-service/user-admin.service';
 import { NgbdSortableHeader, SortEvent, compare } from '../Interfaces/SortableHeader';
@@ -19,8 +19,8 @@ export class UserAdminModalComponent implements OnInit, OnDestroy {
   CurrentSettings: AdminSettingsMenu = AdminSettingsMenu.User;
   AnnouncementAlertType = AlertType.Info;
   SettingsMenu = AdminSettingsMenu;
-  Users: User[] = [];
-  FilteredUsers: User[] = [];
+  Users: UserSummary[] = [];
+  FilteredUsers: UserSummary[] = [];
   DialogQuestion: string;
   DialogHeader: string;
   YesAnswer: string;

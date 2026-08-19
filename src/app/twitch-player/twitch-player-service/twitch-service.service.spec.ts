@@ -1,13 +1,25 @@
 import { TestBed } from '@angular/core/testing';
+import { BehaviorSubject } from 'rxjs';
 
-import { TwitchServiceService } from './twitch-service.service';
+import { TwitchService } from './twitch-service.service';
+import { SignalRService } from '../../services/signal-r.service';
 
-describe('TwitchServiceService', () => {
-  let service: TwitchServiceService;
+describe('TwitchService', () => {
+  let service: TwitchService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(TwitchServiceService);
+    TestBed.configureTestingModule({
+      providers: [
+        TwitchService,
+        {
+          provide: SignalRService,
+          useValue: {
+            connectionClosed: new BehaviorSubject<boolean>(null)
+          }
+        }
+      ]
+    });
+    service = TestBed.inject(TwitchService);
   });
 
   it('should be created', () => {

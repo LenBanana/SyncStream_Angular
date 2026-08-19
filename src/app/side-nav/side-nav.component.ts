@@ -530,9 +530,9 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
     this.showStreamDialog = false;
     try {
       if (config.audience === 'room') {
-        await this.webrtcService.startStreamingToRoom(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
+        await this.webrtcService.startStreamingToRoom(this.UniqueId, config.stream, config.maxBitrate, config.resolution, config.frameRate, config.contentPreference);
       } else {
-        await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate, config.resolution);
+        await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate, config.resolution, config.frameRate, config.contentPreference);
       }
       this.isStreaming = true;
       this.liveAudience = config.audience;

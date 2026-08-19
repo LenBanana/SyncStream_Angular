@@ -27,6 +27,11 @@
               "src/favicon.ico",
               "src/assets",
               {
+                "glob": "MediaInfoModule.wasm",
+                "input": "./node_modules/mediainfo.js/dist/",
+                "output": "./assets/mediainfo/"
+              },
+              {
                 "glob": "**/*",
                 "input": "./node_modules/cardsJS/cards/",
                 "output": "./assets/"
@@ -117,6 +122,11 @@
             "assets": [
               "src/favicon.ico",
               "src/assets",
+              {
+                "glob": "MediaInfoModule.wasm",
+                "input": "./node_modules/mediainfo.js/dist/",
+                "output": "./assets/mediainfo/"
+              },
               {
                 "glob": "**/*",
                 "input": "./node_modules/cardsJS/cards/",

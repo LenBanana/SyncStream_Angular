@@ -6,7 +6,7 @@ import {
   OnInit,
   Output
 } from '@angular/core';
-import {Resolution} from '../webrtc-service/webrtc.service';
+import {Resolution, StreamContentPreference} from '../webrtc-service/webrtc.service';
 import {BrowserSettings, changeSettings} from '../../../Interfaces/BrowserSettings';
 
 export type StreamAudience = 'personal' | 'room';
@@ -18,6 +18,7 @@ export interface StreamStartConfig {
   maxBitrate: number;
   resolution: Resolution;
   frameRate: number;
+  contentPreference: StreamContentPreference;
   audience: StreamAudience;
 }
 
@@ -50,19 +51,19 @@ export const QUALITY_PRESETS: QualityPreset[] = [
   },
   {
     label: 'High',
-    description: '1080p · 60 fps · 6 Mbps — smooth motion',
+    description: '1080p · 60 fps · 10 Mbps — smooth motion',
     icon: 'fa-signal',
     resolution: Resolution.FHD,
     frameRate: 60,
-    maxBitrate: 6_000_000
+    maxBitrate: 10_000_000
   },
   {
     label: 'Ultra',
-    description: '1440p · 60 fps · 10 Mbps — best quality',
+    description: '1440p · 60 fps · 18 Mbps — best quality',
     icon: 'fa-signal',
     resolution: Resolution.QHD,
     frameRate: 60,
-    maxBitrate: 10_000_000
+    maxBitrate: 18_000_000
   },
   {
     label: 'Custom',
@@ -70,7 +71,7 @@ export const QUALITY_PRESETS: QualityPreset[] = [
     icon: 'fa-sliders',
     resolution: Resolution.FHD,
     frameRate: 60,
-    maxBitrate: 6_000_000
+    maxBitrate: 10_000_000
   }
 ];
 
@@ -112,7 +113,8 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
   selectedPresetIndex = 1; // Default: Balanced
   customResolution: Resolution = Resolution.FHD;
   customFrameRate = 60;
-  customBitrateKbps = 6000;
+  customBitrateKbps = 10000;
+  contentPreference: StreamContentPreference = 'motion';
   readonly resolutionOptions = [
     {label: '720p (HD)', value: Resolution.HD},
     {label: '1080p (Full HD)', value: Resolution.FHD},
@@ -168,6 +170,7 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
     this.customResolution = s.idealResolution ?? Resolution.FHD;
     this.customFrameRate = s.idealFrameRate ?? 60;
     this.customBitrateKbps = Math.round((s.maxVideoBitrate ?? 3_000_000) / 1000);
+    this.contentPreference = s.streamContentPreference ?? 'motion';
     // Pick closest preset or fall back to Custom
     const matchIdx = QUALITY_PRESETS.slice(0, -1).findIndex(
       p => p.resolution === this.customResolution &&
@@ -393,6 +396,14 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
     }
   }
 
+  selectContentPreference(preference: StreamContentPreference): void {
+    this.contentPreference = preference;
+  }
+
+  get contentPreferenceLabel(): string {
+    return this.contentPreference === 'detail' ? 'Detail' : 'Motion';
+  }
+
   get isCustomPreset(): boolean {
     return this.selectedPresetIndex === this.presets.length - 1;
   }
@@ -500,6 +511,7 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
         s.idealResolution = preset.resolution;
         s.idealFrameRate = preset.frameRate;
         s.maxVideoBitrate = preset.maxBitrate;
+        s.streamContentPreference = this.contentPreference;
         s.shareMicrophone = this.shareMicrophone;
         s.shareSystemAudio = this.shareSystemAudio;
         s.microphoneId = this.microphoneId;
@@ -517,7 +529,7 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
       const videoTrack = finalStream.getVideoTracks()[0];
       if (videoTrack) {
         try {
-          videoTrack.contentHint = sourceType === 'display' ? 'detail' : 'motion';
+          videoTrack.contentHint = sourceType === 'display' ? this.contentPreference : 'motion';
         } catch {
           // Some browsers expose contentHint as read-only or unsupported.
         }
@@ -538,6 +550,7 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
         maxBitrate: preset.maxBitrate,
         resolution: preset.resolution,
         frameRate: preset.frameRate,
+        contentPreference: this.contentPreference,
         audience: this.resolvedAudience
       });
     } catch (err: any) {

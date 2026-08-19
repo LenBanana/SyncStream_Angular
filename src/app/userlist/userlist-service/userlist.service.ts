@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { Member } from '../../Interfaces/Member';
 import { BehaviorSubject } from 'rxjs';
 import { hubConnection, SignalRService } from '../../services/signal-r.service';
-import { Room } from '../../Interfaces/Room';
 
 @Injectable({
   providedIn: 'root'

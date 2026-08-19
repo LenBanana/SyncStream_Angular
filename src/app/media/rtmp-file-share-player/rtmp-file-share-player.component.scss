@@ -184,6 +184,72 @@
   gap: 4px;
 }
 
+.rtmp-track-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.84rem;
+}
+
+.rtmp-track-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rtmp-track-group-title {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.rtmp-track-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rtmp-track-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  border-radius: 8px;
+  border: 1px solid rgba(120, 139, 204, 0.22);
+  background: rgba(30, 37, 57, 0.72);
+  color: inherit;
+  padding: 9px 10px;
+  min-height: 40px;
+
+  &:hover:not(:disabled) {
+    border-color: #4d8cff;
+  }
+
+  &.selected {
+    border-color: #4d8cff;
+    background: rgba(24, 40, 78, 0.95);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.56;
+  }
+}
+
+.rtmp-track-main {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.84rem;
+}
+
+.rtmp-track-meta {
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.76rem;
+}
+
 @media (max-width: 767px) {
   .rtmp-choice-grid {
     grid-template-columns: 1fr;

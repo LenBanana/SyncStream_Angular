@@ -1,7 +1,6 @@
 import {Component, EventEmitter, Input, OnInit, Output} from '@angular/core';
 import {randomID} from '../helper/generic';
-import {Room} from '../Interfaces/Room';
-import {Server} from '../Interfaces/server';
+import { CreateRoomRequest } from '../Interfaces/Room';
 import {User} from '../Interfaces/User';
 import {SignalRService} from '../services/signal-r.service';
 import * as sha512 from 'js-sha512';
@@ -48,23 +47,11 @@ export class AddRoomModalComponent implements OnInit {
     const pwSha: string = pw && pw.length > 0 ? sha512.sha512(pw) : null;
     if (roomName != null && roomName.length > 0) {
       var randomId = randomID();
-      var server: Server = {
-        currenttime: 0,
-        isplaying: false,
-        members: [],
-        title: "Nothing playing",
-        currentVideo: {title: "", url: ""},
-        playlist: [],
-        gallowWord: "",
-        playingGallows: false
-      }
-      var room: Room = {
+      var room: CreateRoomRequest = {
         uniqueId: randomId,
         name: roomName,
-        server: server,
         password: pwSha,
-        deletable: !this.NewRoomPermanent,
-        isPrivileged: false
+        deletable: !this.NewRoomPermanent
       }
       this.signalRService.addRoom(room);
       this.JoinRoom.emit(randomId);

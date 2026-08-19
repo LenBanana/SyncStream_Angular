@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { hubConnection, baseUrl, SignalRService } from '../../services/signal-r.service';
 import { BehaviorSubject, from } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { User } from '../../Interfaces/User';
+import { User, UserSummary } from '../../Interfaces/User';
 import { RememberToken } from '../../Interfaces/RememberToken';
 import { AlertType } from '../../Interfaces/Dialog';
 import { ServerHealth } from '../../Interfaces/ServerHealth';
@@ -12,7 +12,7 @@ import { ServerHealth } from '../../Interfaces/ServerHealth';
 })
 export class UserAdminService {
 
-  Users: BehaviorSubject<User[]> = new BehaviorSubject(null);
+  Users: BehaviorSubject<UserSummary[]> = new BehaviorSubject(null);
   ServerHealth: BehaviorSubject<ServerHealth> = new BehaviorSubject(null);
   constructor(private http: HttpClient, private signalRService: SignalRService) {
     signalRService.connectionClosed.subscribe(isClosed => {
@@ -52,7 +52,7 @@ export class UserAdminService {
   }
 
   public addUserListener() {
-    hubConnection.on('getusers', (data: User[]) => {
+    hubConnection.on('getusers', (data: UserSummary[]) => {
       this.Users.next(data);
     });
   }

@@ -1,9 +1,9 @@
-import { Member } from "../Member";
+import { RoomMemberSummary } from "../Room";
 
 export interface ChessGame {
-  lightPlayer: Member;
+  lightPlayer: RoomMemberSummary;
   lightPlayerAi: boolean;
-  darkPlayer: Member;
+  darkPlayer: RoomMemberSummary;
   darkPlayerAi: boolean;
   uniqueId: string;
   gameFEN: string;
