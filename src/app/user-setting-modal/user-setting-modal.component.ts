@@ -1,6 +1,5 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { User } from '../Interfaces/User';
-import * as sha512 from 'js-sha512';
 import { BrowserSettings, changeSettings } from '../Interfaces/BrowserSettings';
 import { sponsorBlockCategoryLabels, sponsorBlockCategoryOrder } from '../Interfaces/SponsorBlock';
 import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
@@ -59,8 +58,9 @@ export class UserSettingModalComponent implements OnInit {
     if (this.User.password !== this.RepeatPassword || this.Password.length === 0 || this.RepeatPassword.length === 0 || this.User.password.length === 0  || this.User.username.length === 0 ) {
       return;
     }
-    const newPassword = this.User.password.length > 2 ? this.GetSha512(this.User.password) : null;
-    const currentPassword = this.GetSha512(this.Password);
+    // Both as typed. The server hashes them; see the note in the login modal.
+    const newPassword = this.User.password.length > 0 ? this.User.password : null;
+    const currentPassword = this.Password;
 
     this.authService.changeUser(this.User.username, newPassword, currentPassword).subscribe(result => {
       this.dialogService.PushDefaultDialog(
@@ -77,11 +77,6 @@ export class UserSettingModalComponent implements OnInit {
     this.User.password = "";
     this.RepeatPassword = "";
     this.Password = "";
-  }
-
-  GetSha512(pw: string) {
-    const pwSha: string = sha512.sha512(pw);
-    return pwSha;
   }
 
   CopyStreamServer() {

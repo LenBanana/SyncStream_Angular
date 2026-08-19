@@ -3,7 +3,6 @@ import { User } from '../Interfaces/User';
 import { AuthService } from '../services/auth.service';
 import { MainUser } from '../helper/Globals';
 import { randomIntFromInterval } from '../helper/generic';
-import * as sha512 from 'js-sha512';
 declare var $:any
 
 @Component({
@@ -106,7 +105,9 @@ export class LoginModalComponent implements OnInit, OnDestroy {
 
   PasswordInvalid() {
     const pw: string = this.pwLoginElement.nativeElement.value;
-    this.pwInvalid = !pw || pw.length < 6 || pw.length > 80;
+    // Matches the server's policy. It used to allow six, which the server then refused, so the only feedback
+    // was a failed request.
+    this.pwInvalid = !pw || pw.length < 8 || pw.length > 256;
     return this.pwInvalid;
   }
 
@@ -116,11 +117,11 @@ export class LoginModalComponent implements OnInit, OnDestroy {
     var regEx = new RegExp(this.regExStringUsername);
     if (!this.LoginInvalid()) {
       if (!this.PasswordInvalid()) {
-        const pwSha: string = sha512.sha512(pw);
-        if (pwSha) {
-          const user: User = { username: username, password: pwSha, id: 0, approved: 0, userprivileges: 0, streamToken: "", apiKey: ""};
-          return user;
-        }
+        // Sent as typed, over TLS. Hashing here never protected anything the transport did not already
+        // protect, and it made the stored value into the credential: the server compared what the browser sent
+        // against what the database held, so whoever read the database could send that back and be let in.
+        const user: User = { username: username, password: pw, id: 0, approved: 0, userprivileges: 0, streamToken: "", apiKey: ""};
+        return user;
       } else {
         this.pwErrorString = "Password invalid";
         this.pwError = true;

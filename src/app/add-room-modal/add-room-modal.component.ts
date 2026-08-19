@@ -3,7 +3,6 @@ import {randomID} from '../helper/generic';
 import { CreateRoomRequest } from '../Interfaces/Room';
 import {User} from '../Interfaces/User';
 import {SignalRService} from '../services/signal-r.service';
-import * as sha512 from 'js-sha512';
 import {UserPrivileges} from '../user-admin-modal/user-admin-modal.component';
 
 declare var $: any
@@ -44,13 +43,15 @@ export class AddRoomModalComponent implements OnInit {
   }
 
   public async CreateRoom(roomName: string, pw: string) {
-    const pwSha: string = pw && pw.length > 0 ? sha512.sha512(pw) : null;
+    // As typed. The server hashes it before storing, so the room's stored password is no longer a value that
+    // can be presented back to join.
+    const password: string = pw && pw.length > 0 ? pw : null;
     if (roomName != null && roomName.length > 0) {
       var randomId = randomID();
       var room: CreateRoomRequest = {
         uniqueId: randomId,
         name: roomName,
-        password: pwSha,
+        password: password,
         deletable: !this.NewRoomPermanent
       }
       this.signalRService.addRoom(room);

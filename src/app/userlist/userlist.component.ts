@@ -10,7 +10,6 @@ import { DialogService } from '../text-dialog/text-dialog-service/dialog-service
 import { WebrtcService } from '../media/webrtc/webrtc-service/webrtc.service';
 import { StreamAudience, StreamStartConfig } from '../media/webrtc/stream-start-dialog/stream-start-dialog.component';
 import { BrowserSettings, loadBrowserSettings } from '../Interfaces/BrowserSettings';
-import * as sha512 from 'js-sha512';
 import { SignalRService } from '../services/signal-r.service';
 declare var $:any
 
@@ -163,8 +162,8 @@ export class UserlistComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   AddUser() {
-    const pwSha: string =this.RoomPassword && this.RoomPassword.length > 0 ? sha512.sha512(this.RoomPassword) : null;
-    this.userService.addUser(this.Username, this.UniqueId, pwSha);
+    const password: string = this.RoomPassword && this.RoomPassword.length > 0 ? this.RoomPassword : null;
+    this.userService.addUser(this.Username, this.UniqueId, password);
   }
 
   BanUser(username: string) {
