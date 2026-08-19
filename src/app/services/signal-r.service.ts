@@ -142,6 +142,25 @@ export class SignalRService {
     }
   }
 
+  /**
+   * Drops the connection and immediately opens a new one.
+   *
+   * For signing in and out. A hub connection is given its identity once, during the handshake, and keeps it for
+   * as long as it lives: authenticating over HTTP sets the cookie but tells the open connection nothing. So after
+   * signing in, the server still saw the same anonymous caller, and joining a room refused the account's own name
+   * as "a registered account's name" because that is exactly what it was, from the point of view of a caller it
+   * still considered a guest. Reloading appeared to fix it because a reload is a new handshake.
+   *
+   * Signing out mattered more: the connection kept its privileges until the page was reloaded, so the hub would
+   * still have honoured calls that a signed-out visitor should not be able to make.
+   *
+   * The close handler also schedules a reconnect, which finds the connection already up and returns.
+   */
+  public async restartConnection() {
+    await this.stopConnection();
+    await this.connect();
+  }
+
   public async stopConnection() {
     try {
       await hubConnection.stop();

@@ -1,10 +1,11 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, of } from 'rxjs';
-import { catchError, map, tap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, from, of } from 'rxjs';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { User } from '../Interfaces/User';
 import { UserPrivileges } from '../user-admin-modal/user-admin-modal.component';
 import { resolveApiBaseUrl } from '../core/api-origin';
+import { SignalRService } from './signal-r.service';
 
 export interface AuthResult {
   ok: boolean;
@@ -28,7 +29,7 @@ export class AuthService {
 
   private readonly base = resolveApiBaseUrl() + 'api/auth/';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private signalR: SignalRService) {}
 
   /**
    * What the signed-in account is allowed to do, or NotApproved when signed out.
@@ -59,11 +60,18 @@ export class AuthService {
     );
   }
 
+  /**
+   * Signs in, then reopens the hub connection before reporting success.
+   *
+   * The reconnect is awaited rather than started and forgotten, because the caller acts on the result at once,
+   * usually by joining a room. A hub connection takes its identity from the handshake and keeps it, so until it
+   * is replaced the server still sees the same anonymous caller no matter what the cookie now says.
+   */
   login(username: string, password: string): Observable<AuthResult> {
     return this.http.post<User>(this.base + 'login', { username, password }).pipe(
-      map(user => {
+      switchMap(user => {
         this.user.next(user);
-        return { ok: true } as AuthResult;
+        return from(this.signalR.restartConnection()).pipe(map(() => ({ ok: true } as AuthResult)));
       }),
       catchError((error: HttpErrorResponse) => {
         this.user.next(null);
@@ -86,16 +94,25 @@ export class AuthService {
     );
   }
 
+  /**
+   * Signs out, and replaces the hub connection whether or not the request succeeded.
+   *
+   * Clearing the cookie does not change the identity of a connection that is already open, so without this the
+   * hub went on accepting calls with the privileges of the account that had just signed out until the page was
+   * reloaded.
+   */
   logout(): Observable<AuthResult> {
     return this.http.post(this.base + 'logout', {}).pipe(
-      map(() => {
+      switchMap(() => {
         this.user.next(null);
-        return { ok: true } as AuthResult;
+        return from(this.signalR.restartConnection()).pipe(map(() => ({ ok: true } as AuthResult)));
       }),
       catchError((error: HttpErrorResponse) => {
-        // The cookie may already be gone, in which case the user is signed out either way.
+        // The cookie may already be gone, in which case the user is signed out either way. The connection is
+        // replaced regardless, so a failed sign-out cannot leave a privileged connection open.
         this.user.next(null);
-        return of({ ok: false, message: messageFrom(error, 'Could not sign out') });
+        return from(this.signalR.restartConnection()).pipe(
+          map(() => ({ ok: false, message: messageFrom(error, 'Could not sign out') } as AuthResult)));
       })
     );
   }
