@@ -6,8 +6,19 @@
  * triggered corrections that would not have fired a moment earlier.
  */
 export const DriftLimits = {
-  /** Below this, do nothing. Roughly the noise floor of reading currentTime. */
-  holdSeconds: 0.15,
+  /**
+   * Below this, do nothing.
+   *
+   * Sized to cover measurement noise and nothing more, because the correction it gates is a rate nudge, which
+   * costs nothing: no re-buffer, no jump, and inaudible at a small delta. An earlier value of 0.15 was chosen as
+   * though every correction were expensive, which is only true of seeking. The cost of a wide deadband is that
+   * two viewers can settle at opposite edges of it and stay there, differing by twice its width with neither
+   * one being corrected, which is exactly what a room notices when two players are compared side by side.
+   *
+   * At 50ms this is under a typical frame time, so converging inside it is as close as the players can be told
+   * apart anyway.
+   */
+  holdSeconds: 0.05,
 
   /** Up to this, correct by nudging the playback rate. Beyond it, seek. */
   nudgeSeconds: 1.0,
@@ -16,10 +27,14 @@ export const DriftLimits = {
    * Tolerance for players that cannot take a fine-grained rate.
    *
    * YouTube and Vimeo are iframe providers whose setPlaybackRate only accepts coarse steps, so for them the
-   * choice is "leave it" or "seek", and seeking too eagerly is what makes mobile playback stutter. A wider
-   * band means fewer seeks at the cost of looser sync.
+   * choice is "leave it" or "seek", and seeking too eagerly is what makes mobile playback stutter. A wider band
+   * means fewer seeks at the cost of looser sync.
+   *
+   * Set to what the previous threshold-based code effectively used, rather than the wider 0.75 tried first. The
+   * quiet period below now lengthens on a run of corrections, so a player that cannot afford to seek backs
+   * itself off instead of needing a permanently loose band to protect it.
    */
-  coarseHoldSeconds: 0.75,
+  coarseHoldSeconds: 0.5,
 
   /** Largest rate change, as a fraction. 8% is inaudible once browsers correct pitch. */
   maxRateAdjust: 0.08,

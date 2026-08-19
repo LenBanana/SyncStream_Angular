@@ -20,8 +20,17 @@ describe('decideDriftAction', () => {
   };
 
   it('does nothing while the drift is within the noise floor', () => {
-    const action = decideDriftAction({ ...base, currentSeconds: 100.1 });
+    const action = decideDriftAction({ ...base, currentSeconds: 100.02 });
     expect(action.kind).toBe('hold');
+  });
+
+  it('trims a drift too small to seek for but large enough to see', () => {
+    // The deadband only has to cover measurement noise, because what it gates is a rate nudge rather than a
+    // jump. Sizing it as though corrections were expensive let two viewers settle at opposite edges of it and
+    // stay there, differing by twice its width with neither being touched.
+    const action = decideDriftAction({ ...base, currentSeconds: 99.9 });
+
+    expect(action.kind).toBe('nudge');
   });
 
   it('speeds up slightly when a little behind', () => {
@@ -98,7 +107,7 @@ describe('decideDriftAction', () => {
   it('leaves an in-step player alone even when the target reads as unbuffered', () => {
     // At the live edge of a stream the buffer routinely ends a few frames short of where the room is. Seeking
     // there to correct a gap smaller than the tolerance causes the stall the seek was supposed to prevent.
-    const action = decideDriftAction({ ...base, currentSeconds: 100.05, targetBuffered: false });
+    const action = decideDriftAction({ ...base, currentSeconds: 100.02, targetBuffered: false });
     expect(action.kind).toBe('hold');
   });
 
@@ -118,7 +127,7 @@ describe('decideDriftAction', () => {
     });
 
     it('still leaves a player alone that is already on the right frame', () => {
-      const action = decideDriftAction({ ...paused, currentSeconds: 100.05 });
+      const action = decideDriftAction({ ...paused, currentSeconds: 100.02 });
       expect(action.kind).toBe('hold');
     });
   });
