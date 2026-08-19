@@ -44,6 +44,16 @@ export class RoomsComponent implements OnInit {
   currentTime: number;
   delInterval: boolean;
   identityUpdate;
+
+  /**
+   * The name shown for a signed-out visitor, generated once.
+   *
+   * The session observable reports "signed out" more than once on a normal load, once as its initial value
+   * and again when the session restore finds nothing, so minting a fresh name per notification renamed the
+   * visitor mid-load. It also meant an expiring session could rename somebody who was already sitting in a
+   * room, and the room they are in is joined under that name.
+   */
+  private readonly guestName = 'Anon' + "#" + randomIntFromInterval(100, 10000);
   SignalR: boolean = false;
   user: User = { username: "", password: "", id: 0, approved: 0, userprivileges: 0, streamToken: "", apiKey: "" };
   logout;
@@ -120,7 +130,6 @@ export class RoomsComponent implements OnInit {
       this.fetchSettings();
     })
     this.route.paramMap.subscribe(async params => {
-      this.user.username = 'Anon' + "#" + randomIntFromInterval(100, 10000);
       await this.signalR();
       const room = params.get('UniqueId');
       this.fetchSettings();
@@ -211,7 +220,7 @@ export class RoomsComponent implements OnInit {
         this.logout = true;
       } else {
         this.user = {
-          username: 'Anon' + "#" + randomIntFromInterval(100, 10000),
+          username: this.guestName,
           password: "",
           id: 0,
           approved: profile?.approved ?? 0,
