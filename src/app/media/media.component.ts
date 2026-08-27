@@ -57,6 +57,9 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
   /** The source the sync service was last reset for. */
   private syncedSourceUrl: string | null = null;
 
+  /** What the room believes about playback, so the host can notice when it disagrees with its own player. */
+  private roomIsPlaying: boolean | null = null;
+
   /** How often the host reports its position while playing. */
   private static readonly reportIntervalMs = 1000;
   Voip: boolean = false;
@@ -156,6 +159,7 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
       }),
       this.playerService.isplaying.subscribe(play => {
         if (play != null) {
+          this.roomIsPlaying = play;
           this.isPlayingEvent.emit(play);
         }
       }),
@@ -228,9 +232,30 @@ export class MediaComponent implements OnInit, OnDestroy, AfterContentInit {
       return;
     }
 
+    const elapsedSeconds = (now - this.lastReportMs) / 1000;
+    const advanced = currentTime - this.LastTime;
+
     this.lastReportMs = now;
     this.LastTime = currentTime;
     this.playerService.SetTime(currentTime, this.UniqueId, this.playbackSync.oneWayLatencySeconds);
+
+    // The host's player is demonstrably running, so if the room still thinks nothing is playing, say so.
+    //
+    // Play and pause are announced by one-shot events, and the events can be lost. A source change suppresses
+    // them so a programmatic load is not reported as somebody pressing play, and that suppression is lifted when
+    // the player reports itself ready. In a background tab the YouTube frame defers and reorders those two, so
+    // play arrives while still suppressed, is dropped, and never comes again: the host watches while everybody
+    // else sits paused until the host presses pause and play by hand.
+    //
+    // Inferred from the position moving rather than from a report arriving, because a report can also come from
+    // a seek while paused. Only cadence reports count, and only an advance that matches roughly real time, so a
+    // jump is not mistaken for playback.
+    if (!immediate
+        && this.roomIsPlaying === false
+        && advanced > 0.05
+        && advanced <= Math.max(1, elapsedSeconds * 2)) {
+      this.playerService.PlayPause(true, this.UniqueId);
+    }
   }
 
   /** Reports the current position at once, for a seek or a play state change. */

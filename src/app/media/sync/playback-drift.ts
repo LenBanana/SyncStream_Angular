@@ -68,7 +68,27 @@ export const DriftLimits = {
    *
    * Four doublings takes the period from 2s to 32s.
    */
-  maxCooldownDoublings: 4
+  maxCooldownDoublings: 4,
+
+  /**
+   * How many settled reports it takes to forget a run of corrections.
+   *
+   * One was not enough. A connection that buffers every few seconds recovers, looks in step for a single
+   * report, and drifts out again, so the run was cleared on every cycle and the wait never grew past the
+   * shortest one. The result is a correction every couple of seconds indefinitely, which is what a viewer sees
+   * as the player pausing, loading and running over and over.
+   */
+  steadyReportsToClearBackoff: 4,
+
+  /**
+   * How little a position may advance between reports before the player counts as stalled.
+   *
+   * A player waiting on the network reports the same position each time. Correcting one is worse than leaving
+   * it, because a seek starts the buffering again, and the readyState check that catches this for a media
+   * element sees nothing for an iframe: a YouTube frame has no media element to ask, so buffering there was
+   * invisible and every stall was answered with a seek.
+   */
+  stalledAdvanceSeconds: 0.1
 } as const;
 
 export type DriftAction =

@@ -28,6 +28,12 @@ export class PlaybackSyncService {
    */
   private consecutiveSeeks = 0;
 
+  /** Consecutive settled reports, counted towards forgetting a run of corrections. */
+  private steadyReports = 0;
+
+  /** The position last seen, so a player that is not advancing can be told from one that is. */
+  private lastSeen: { position: number; atMs: number } | null = null;
+
   private readonly maxSamples = 8;
 
   /** Set while the tab is hidden, so the next correction is not held back by the quiet period. */
@@ -82,6 +88,8 @@ export class PlaybackSyncService {
   reset(): void {
     this.cooldownUntilMs = 0;
     this.consecutiveSeeks = 0;
+    this.steadyReports = 0;
+    this.lastSeen = null;
   }
 
   /**
@@ -114,7 +122,12 @@ export class PlaybackSyncService {
     }
 
     const cooldownRemainingMs = Math.max(0, this.cooldownUntilMs - nowMs);
-    const busy = target.busy();
+
+    // Stalled counts as busy: there is nothing useful to do to a player that is waiting on the network, and a
+    // seek would send it back to waiting. The player's own readiness cannot answer this for an iframe.
+    const stalled = this.hasStalled(target, sync, current, nowMs);
+    this.lastSeen = { position: current, atMs: nowMs };
+    const busy = target.busy() || stalled;
 
     const action = decideDriftAction({
       targetSeconds: wanted,
@@ -129,8 +142,17 @@ export class PlaybackSyncService {
 
     // Only a decision that actually looked at the position counts as evidence the player is keeping up. A hold
     // returned because the period had not lapsed, or because the player was mid-seek, is not.
-    if (action.kind !== 'seek' && cooldownRemainingMs === 0 && !busy) {
-      this.consecutiveSeeks = 0;
+    //
+    // And it takes several in a row. One was enough before, which meant a connection that buffers every few
+    // seconds cleared the run on every recovery and never earned a longer wait, so it was corrected again a
+    // couple of seconds later, forever.
+    if (action.kind === 'seek') {
+      this.steadyReports = 0;
+    } else if (cooldownRemainingMs === 0 && !busy) {
+      this.steadyReports++;
+      if (this.steadyReports >= DriftLimits.steadyReportsToClearBackoff) {
+        this.consecutiveSeeks = 0;
+      }
     }
 
     switch (action.kind) {
@@ -166,6 +188,35 @@ export class PlaybackSyncService {
       return Math.max(0, wanted);
     }
     return Math.min(Math.max(0, wanted), Math.max(0, duration - 0.25));
+  }
+
+  /**
+   * Whether the player is not getting anywhere.
+   *
+   * Judged from the position it reports rather than from any readiness it exposes, so it works the same for a
+   * media element and for an iframe that offers neither a buffered range nor a ready state. A player that is
+   * meant to be running and has not moved is waiting on the network.
+   */
+  private hasStalled(
+    target: PlaybackTarget, sync: TimeSync, current: number, nowMs: number): boolean {
+    if (this.lastSeen === null) {
+      return false;
+    }
+
+    // Both ends have to be running for standing still to mean anything.
+    if (!sync.isPlaying || target.paused()) {
+      return false;
+    }
+
+    // Too soon to tell: at a short interval a normally playing player has barely moved either.
+    const elapsedSeconds = (nowMs - this.lastSeen.atMs) / 1000;
+    if (elapsedSeconds < 0.5) {
+      return false;
+    }
+
+    // A seek moves the position by more than playback would, so a correction is not read as a stall.
+    const advanced = current - this.lastSeen.position;
+    return advanced >= 0 && advanced < DriftLimits.stalledAdvanceSeconds;
   }
 
   /** The quiet period to apply to the seek about to be issued, doubled once per correction in the run. */

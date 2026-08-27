@@ -137,8 +137,9 @@ describe('PlaybackSyncService', () => {
     expect(nudged).toBeGreaterThan(1);
 
     const replacement = new FakeTarget();
-    replacement.position = 99.6;
-    service.apply(replacement, sync(100), 2000);
+    // Advanced a little, so it is not read as a player standing still.
+    replacement.position = 99.7;
+    service.apply(replacement, sync(100.1), 2000);
 
     expect(replacement.rate).toBeCloseTo(nudged, 5);
   });
@@ -180,8 +181,13 @@ describe('PlaybackSyncService', () => {
     // video. Each correction in a run doubles the wait that follows it, so it degrades to an occasional
     // resync instead of jumping every couple of seconds forever.
     let now = 1000;
+    let behindAt = 10;
     const stillFarBehind = () => {
-      target.position = 10;
+      // A different position each time, so this reads as a player that is running and losing ground rather than
+      // one that has stopped: a player that is not advancing is stalled, and stalling is held rather than
+      // corrected.
+      behindAt += 10;
+      target.position = behindAt;
       service.apply(target, sync(1000), now);
     };
 
@@ -203,27 +209,93 @@ describe('PlaybackSyncService', () => {
     expect(target.seeks.length).toBe(3);
   });
 
-  it('stops backing off once the player is keeping up again', () => {
+  it('does not correct a player that is not getting anywhere', () => {
+    // The mobile case. A player waiting on the network reports the same position every time, and seeking it
+    // sends it straight back to waiting, which is what made a bad connection pause, load and run over and over.
+    // The readiness check that catches this for a media element sees nothing for an iframe, which has no media
+    // element to ask, so this is judged from the position instead.
+    let now = 1000;
+
+    // In step to begin with, which is what establishes the position to compare against.
+    target.position = 500;
+    service.apply(target, sync(500.02), now);
+    expect(target.seeks).toEqual([]);
+
+    // The room runs on while this player sits at the same position, waiting on the network.
+    now += 1000;
+    service.apply(target, sync(1000), now);
+
+    now += 1000;
+    service.apply(target, sync(2000), now);
+
+    expect(target.seeks).toEqual([]);
+  });
+
+  it('corrects again once the player starts moving', () => {
+    // Holding a stalled player must not mean never correcting it: once it is advancing, the gap is real.
+    let now = 1000;
+    target.position = 500;
+    service.apply(target, sync(500.02), now);
+
+    now += 1000;
+    target.position = 501;
+    service.apply(target, sync(1000), now);
+
+    expect(target.seeks.length).toBe(1);
+  });
+
+  it('stops backing off once the player has kept up for a while', () => {
+    let now = 1000;
+    let roomTime = 1000;
+    target.position = 10;
+    service.apply(target, sync(roomTime), now);
+    expect(target.seeks.length).toBe(1);
+
+    // In step, and staying that way. One settled report used to be enough, which meant a connection that
+    // buffers every few seconds cleared the run on every recovery and never earned a longer wait.
+    for (let report = 0; report < DriftLimits.steadyReportsToClearBackoff; report++) {
+      now += DriftLimits.seekCooldownMs + 1;
+      roomTime += 1;
+      target.position = roomTime;
+      service.apply(target, sync(roomTime), now);
+    }
+
+    expect(target.seeks.length).toBe(1);
+
+    // So the next correction waits one plain period rather than a doubled one.
+    now += 1;
+    target.position = 10;
+    service.apply(target, sync(roomTime), now);
+    expect(target.seeks.length).toBe(2);
+
+    now += DriftLimits.seekCooldownMs + 1;
+    target.position = 20;
+    service.apply(target, sync(roomTime), now);
+    expect(target.seeks.length).toBe(3);
+  });
+
+  it('does not forget a run of corrections after a single settled report', () => {
     let now = 1000;
     target.position = 10;
     service.apply(target, sync(1000), now);
     expect(target.seeks.length).toBe(1);
 
-    // In step: this is the evidence that the run is over.
+    // One report in step, which is what a connection looks like in the moment after it recovers and before it
+    // buffers again.
     now += DriftLimits.seekCooldownMs + 1;
     target.position = 1000;
     service.apply(target, sync(1000), now);
 
-    // So the next correction waits one plain period rather than a doubled one.
+    // The run stands, so the wait is still the doubled one and this is too soon.
     now += 1;
-    target.position = 10;
+    target.position = 20;
     service.apply(target, sync(1000), now);
     expect(target.seeks.length).toBe(2);
 
     now += DriftLimits.seekCooldownMs + 1;
-    target.position = 10;
+    target.position = 30;
     service.apply(target, sync(1000), now);
-    expect(target.seeks.length).toBe(3);
+    expect(target.seeks.length).toBe(2);
   });
 
   it('does not count a hold it was forced into as the player keeping up', () => {
