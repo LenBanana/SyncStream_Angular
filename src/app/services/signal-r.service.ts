@@ -29,10 +29,6 @@ export var hubConnection: signalR.HubConnection = new signalR.HubConnectionBuild
   .withUrl(baseUrl + 'server', { withCredentials: true })
   // Replaces a hand-rolled setTimeout loop. Retries at 0s, 2s, 10s, 30s, then gives up.
   .withAutomaticReconnect()
-  // A socket that drops and comes straight back resumes the same connection, missed messages included, without
-  // the reconnecting/reconnected cycle. Only that cycle gives the connection a new id, and a new id is what ends a
-  // person's broadcast, call and room seat on the server.
-  .withStatefulReconnect()
   .build();
 
 /**
