@@ -63,6 +63,14 @@ export interface ServerFileShareState {
   buffering: boolean;
 }
 
+/** A file someone is sharing through RTMP, and the stream it plays from. */
+export interface RtmpFileShareInfo {
+  streamerId: string;
+  username: string;
+  streamName: string;
+  durationSec: number | null;
+}
+
 /** Matches RoomUploadSessionResult on the server. */
 interface RoomUploadResponse {
   uploadId?: string;
@@ -145,38 +153,35 @@ export class WebrtcService implements OnDestroy {
   private _serverShareFileDuration: number | null = null;
 
   // ---------- RTMP file-share state ----------
-  /** Emits info about who is streaming via RTMP file-share; null when inactive. */
-  public rtmpFileShareActive: BehaviorSubject<{streamerId: string; username: string; streamUrl: string; durationSec?: number | null} | null> =
-    new BehaviorSubject<{streamerId: string; username: string; streamUrl: string; durationSec?: number | null} | null>(null);
-  /** True when playback is paused on the host side. */
-  public rtmpFileShareIsPaused: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
-  /** Host's current position in seconds; updated by periodic server broadcast. */
-  public rtmpFileSharePosition: BehaviorSubject<number> = new BehaviorSubject<number>(0);
-  /** True once the RTMP share may be seeked cleanly. */
-  public rtmpFileShareCanSeek: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
-  /** Fires when the host seeks; viewers should reconnect their mpegts player. */
-  public rtmpFileShareSeekSignal: Subject<number> = new Subject<number>();
-  /** Fires when the RTMP publisher is live again after a restart and clients may reconnect. */
-  public rtmpFileShareStreamReady: Subject<number> = new Subject<number>();
-  /** Emits the VOD playback URL once a completed RTMP upload has been finalized for normal playback. */
-  public rtmpFileShareVodPlayback: BehaviorSubject<{playbackUrl: string; durationSec?: number | null; contentType?: string | null} | null> =
-    new BehaviorSubject<{playbackUrl: string; durationSec?: number | null; contentType?: string | null} | null>(null);
-  /** True when this client is the host of an RTMP file-share. */
-  public isRtmpFileShareHost: boolean = false;
+  /** Who is sharing a file through RTMP; null when no such share is active. */
+  public rtmpFileShareActive = new BehaviorSubject<RtmpFileShareInfo | null>(null);
+  /** True while the sharer has paused. */
+  public rtmpFileShareIsPaused = new BehaviorSubject<boolean>(false);
+  /** Where the share is, and whether it is waiting for more of the upload. */
+  public rtmpFileShareState = new BehaviorSubject<ServerFileShareState>({positionSec: 0, buffering: false});
+  /** True once the whole file has been uploaded, which is when seeking works. */
+  public rtmpFileShareCanSeek = new BehaviorSubject<boolean>(false);
+  /** Fires when the sharer seeks, so players drop what they buffered before the jump. */
+  public rtmpFileShareSeekSignal = new Subject<number>();
+  /**
+   * Counts the share's runs that went live; 0 until the first one does. A pause, a seek, a wait for the upload
+   * and a retry each end a run, and the next is a new stream with its own timestamps, so players connect afresh
+   * whenever this changes.
+   */
+  public rtmpFileShareRun = new BehaviorSubject<number>(0);
+  /** True when this client is the one sharing the file. */
+  public isRtmpFileShareHost = false;
   /** True while this client has opened the RTMP host UI but has not finished starting. */
-  public isPreparingRtmpFileShareHost: boolean = false;
+  public isPreparingRtmpFileShareHost = false;
   /** File selected for RTMP share, waiting for the component to start the upload. */
-  public pendingRtmpFileShareFile: BehaviorSubject<File | null> = new BehaviorSubject<File | null>(null);
-  /** Upload progress (0-100) for the RTMP background upload. */
+  public pendingRtmpFileShareFile = new BehaviorSubject<File | null>(null);
+  /** Upload progress (0-100) for the RTMP share's upload. */
   public rtmpFileShareUploadProgress = new BehaviorSubject<number>(0);
-  /** True while the background chunk upload is still running after the RTMP stream is live. */
+  /** True while the rest of the file uploads after the share has started. */
   public rtmpFileShareBackgroundUploadInProgress = new BehaviorSubject<boolean>(false);
-  /** Emits an error message if the RTMP background upload fails. */
-  public rtmpFileShareUploadError = new Subject<string>();
   /** Fires when "Share File (RTMP)" is clicked; media component switches to RtmpFileShare player. */
-  public rtmpFileShareHostRequested: Subject<void> = new Subject<void>();
+  public rtmpFileShareHostRequested = new Subject<void>();
   private _rtmpShareUploadId: string | null = null;
-  private _rtmpShareFileDuration: number | null = null;
 
   // ---------- Links ----------
   private stageReceiver: SfuReceiver | null = null;
@@ -540,7 +545,7 @@ export class WebrtcService implements OnDestroy {
     const watching = this.watchRequest.value;
     if (watching) this.rewatchAfterRejoin = {...watching};
 
-    const wasSharingFile = this.sendingAs === 'file' || this.isFileShareHost;
+    const wasSharingFile = this.sendingAs === 'file' || this.isFileShareHost || this.isRtmpFileShareHost;
     void this.stopSending(this.resumeAfterRejoin === null);
     void this.closeWatch();
     void this.leaveStage();
@@ -650,67 +655,46 @@ export class WebrtcService implements OnDestroy {
       this.serverFileShareState.next({positionSec, buffering});
     });
 
-    // RTMP File Share: stream started; all room members receive this.
-    hubConnection.on('rtmpFileShareStarted', (streamerId: string, username: string, roomId: string, streamUrl: string, durationSec: number | null) => {
-      this.isPreparingRtmpFileShareHost = false;
-      this.pendingRtmpFileShareFile.next(null);
-      this.rtmpFileShareActive.next({streamerId, username, streamUrl, durationSec});
-      this.rtmpFileShareIsPaused.next(false);
-      this.rtmpFileSharePosition.next(0);
-      this.rtmpFileShareCanSeek.next(false);
-      this.rtmpFileShareVodPlayback.next(null);
-    });
+    // RTMP File Share: a member started sharing a file; everyone's player switches to it and connects once a run
+    // of it is live.
+    hubConnection.on('rtmpFileShareStarted',
+      (streamerId: string, username: string, _roomId: string, streamName: string, durationSec: number | null) => {
+        this.isPreparingRtmpFileShareHost = false;
+        this.pendingRtmpFileShareFile.next(null);
+        this.rtmpFileShareActive.next({streamerId, username, streamName, durationSec});
+        this.rtmpFileShareIsPaused.next(false);
+        this.rtmpFileShareState.next({positionSec: 0, buffering: false});
+        this.rtmpFileShareCanSeek.next(false);
+        this.rtmpFileShareRun.next(0);
+      });
 
-    // RTMP File Share: stream stopped; clear all state.
     hubConnection.on('rtmpFileShareStopped', () => {
       this.resetRtmpState();
     });
 
-    // RTMP File Share: host paused/resumed.
     hubConnection.on('rtmpFileSharePlayPause', (isPlaying: boolean, positionSec: number) => {
       this.rtmpFileShareIsPaused.next(!isPlaying);
-      this.rtmpFileSharePosition.next(positionSec);
+      this.rtmpFileShareState.next({positionSec, buffering: false});
     });
 
-    // RTMP File Share: host seeked; fire signal so viewers reconnect their player.
     hubConnection.on('rtmpFileShareSeek', (positionSec: number) => {
-      this.rtmpFileSharePosition.next(positionSec);
+      this.rtmpFileShareState.next({positionSec, buffering: false});
       this.rtmpFileShareSeekSignal.next(positionSec);
     });
 
-    // RTMP File Share: periodic position tick from the server.
-    hubConnection.on('rtmpFileSharePosition', (positionSec: number) => {
-      if (!this.rtmpFileShareIsPaused.value) {
-        this.rtmpFileSharePosition.next(positionSec);
-      }
+    hubConnection.on('rtmpFileShareState', (positionSec: number, buffering: boolean) => {
+      this.rtmpFileShareState.next({positionSec, buffering});
     });
 
     hubConnection.on('rtmpFileShareMetadata', (durationSec: number | null, canSeek: boolean) => {
       const active = this.rtmpFileShareActive.value;
-      if (active) {
-        this.rtmpFileShareActive.next({
-          ...active,
-          durationSec: durationSec ?? active.durationSec ?? null
-        });
-      }
+      if (active) this.rtmpFileShareActive.next({...active, durationSec: durationSec ?? active.durationSec});
       this.rtmpFileShareCanSeek.next(canSeek);
     });
 
     hubConnection.on('rtmpFileShareStreamReady', (positionSec: number) => {
-      this.rtmpFileSharePosition.next(positionSec);
-      this.rtmpFileShareStreamReady.next(positionSec);
-    });
-
-    hubConnection.on('rtmpFileShareVodReady', (playbackUrl: string, durationSec: number | null, contentType: string | null) => {
-      const active = this.rtmpFileShareActive.value;
-      if (active) {
-        this.rtmpFileShareActive.next({
-          ...active,
-          durationSec: durationSec ?? active.durationSec ?? null
-        });
-      }
-      this.rtmpFileShareCanSeek.next(true);
-      this.rtmpFileShareVodPlayback.next({playbackUrl, durationSec, contentType});
+      this.rtmpFileShareState.next({positionSec, buffering: false});
+      this.rtmpFileShareRun.next(this.rtmpFileShareRun.value + 1);
     });
   }
 
@@ -727,10 +711,9 @@ export class WebrtcService implements OnDestroy {
     hubConnection.off('rtmpFileShareStopped');
     hubConnection.off('rtmpFileSharePlayPause');
     hubConnection.off('rtmpFileShareSeek');
-    hubConnection.off('rtmpFileSharePosition');
+    hubConnection.off('rtmpFileShareState');
     hubConnection.off('rtmpFileShareMetadata');
     hubConnection.off('rtmpFileShareStreamReady');
-    hubConnection.off('rtmpFileShareVodReady');
   }
 
   // ================================================================
@@ -1004,43 +987,27 @@ export class WebrtcService implements OnDestroy {
   }
 
   // ================================================================
-  // RTMP File Share: host uploads file; ffmpeg pushes RTMP; viewers use mpegts.js
+  // RTMP File Share: the sharer uploads the file, the server transcodes it and pushes it to the streaming
+  // server, and everyone plays it from there with mpegts.js
   // ================================================================
 
-  get rtmpShareFileDuration(): number | null {
-    return this._rtmpShareFileDuration;
-  }
-
   private resetRtmpState(): void {
-    this.isRtmpFileShareHost = false;
-    this.isPreparingRtmpFileShareHost = false;
-    this.pendingRtmpFileShareFile.next(null);
-    this.rtmpFileShareUploadProgress.next(0);
-    this.rtmpFileShareBackgroundUploadInProgress.next(false);
-    this._rtmpShareFileDuration = null;
-    this._rtmpShareUploadId = null;
+    this.cancelPreparingRtmpFileShare();
     this.rtmpFileShareActive.next(null);
     this.rtmpFileShareIsPaused.next(false);
-    this.rtmpFileSharePosition.next(0);
-    this.rtmpFileShareCanSeek.next(false);
-    this.rtmpFileShareVodPlayback.next(null);
+    this.rtmpFileShareState.next({positionSec: 0, buffering: false});
+    this.rtmpFileShareRun.next(0);
   }
 
+  /** Drops this client's side of starting or hosting a share; the upload loop sees it and stops. */
   public cancelPreparingRtmpFileShare(): void {
     this.isRtmpFileShareHost = false;
     this.isPreparingRtmpFileShareHost = false;
     this.pendingRtmpFileShareFile.next(null);
     this.rtmpFileShareUploadProgress.next(0);
     this.rtmpFileShareBackgroundUploadInProgress.next(false);
-    this._rtmpShareFileDuration = null;
     this._rtmpShareUploadId = null;
     this.rtmpFileShareCanSeek.next(false);
-    this.rtmpFileShareVodPlayback.next(null);
-    if (!this.rtmpFileShareActive.value) {
-      this.rtmpFileShareIsPaused.next(false);
-      this.rtmpFileSharePosition.next(0);
-      this.rtmpFileShareActive.next(null);
-    }
   }
 
   public requestRtmpFileShareHostUi(file?: File): void {
@@ -1186,11 +1153,9 @@ export class WebrtcService implements OnDestroy {
   }
 
   /**
-   * Uploads the first chunk, tells the server to start ffmpeg (RTMP push),
-   * then continues uploading in the background while the stream is live.
-   * The manager retries ffmpeg automatically if it exits quickly (e.g. MP4
-   * with moov-at-end not yet uploaded), so the stream comes up once enough
-   * of the file is on disk.
+   * Shares a file through RTMP. Streaming starts as soon as the beginning of the file has arrived and the rest
+   * uploads in the background; the server waits whenever playback catches up with the upload. An MP4 or MOV
+   * with its index at the end cannot be played from its beginning alone, so it is uploaded completely first.
    */
   public async beginRtmpFileShare(
     file: File,
@@ -1198,20 +1163,32 @@ export class WebrtcService implements OnDestroy {
     playbackPreferences: RtmpPlaybackPreferences
   ): Promise<void> {
     this.rtmpFileShareUploadProgress.next(0);
-    this.probeFileDuration(file).then(duration => this._rtmpShareFileDuration = duration);
     this.rtmpFileShareCanSeek.next(false);
-    this.rtmpFileShareVodPlayback.next(null);
-
-    const {uploadId, chunkSize} = await this.startRoomUpload(file, roomId);
-    this._rtmpShareUploadId = uploadId;
 
     const progress = (offset: number) =>
       this.rtmpFileShareUploadProgress.next(Math.min(99, Math.round(offset / file.size * 100)));
-    const firstChunkEnd = Math.min(file.size, chunkSize);
-    const reached = await this.uploadRange(file, uploadId, chunkSize, 0, firstChunkEnd, progress,
-      () => this.isPreparingRtmpFileShareHost);
+    let uploadId: string;
+    let chunkSize: number;
+    let startAt: number;
+    let reached: number;
+    try {
+      const waitForWholeFile = await mp4IndexIsAtEnd(file, file.name);
+      ({uploadId, chunkSize} = await this.startRoomUpload(file, roomId));
+      this._rtmpShareUploadId = uploadId;
+      startAt = waitForWholeFile ? file.size : Math.min(file.size, chunkSize);
+      reached = await this.uploadRange(file, uploadId, chunkSize, 0, startAt, progress,
+        () => this.isPreparingRtmpFileShareHost);
+    } catch (err) {
+      const startedUpload = this._rtmpShareUploadId;
+      this.isPreparingRtmpFileShareHost = false;
+      this.pendingRtmpFileShareFile.next(null);
+      this._rtmpShareUploadId = null;
+      if (startedUpload) await this.cancelUpload(startedUpload);
+      this.showError('The file could not be uploaded', err);
+      throw err;
+    }
 
-    if (!this.isPreparingRtmpFileShareHost || reached < firstChunkEnd) {
+    if (!this.isPreparingRtmpFileShareHost || reached < startAt) {
       await this.cancelUpload(uploadId);
       this._rtmpShareUploadId = null;
       throw new Error('Share was cancelled');
@@ -1220,28 +1197,26 @@ export class WebrtcService implements OnDestroy {
     this.isRtmpFileShareHost = true;
     try {
       await hubConnection.invoke('StartRtmpFileShareFromUpload', roomId, uploadId, playbackPreferences);
-
       if (!this.isRtmpFileShareHost) {
+        // Stopped while the hub call was in flight.
         await hubConnection.invoke('StopRtmpFileShare', roomId).catch(logHubFailure);
-        this._rtmpShareUploadId = null;
         throw new Error('Share was cancelled');
       }
-
       this.isPreparingRtmpFileShareHost = false;
       this.pendingRtmpFileShareFile.next(null);
     } catch (err) {
-      if (!(err instanceof Error && err.message === 'Share was cancelled')) {
-        this.isRtmpFileShareHost = false;
-      }
+      const cancelled = err instanceof Error && err.message === 'Share was cancelled';
+      this.isRtmpFileShareHost = false;
       this.isPreparingRtmpFileShareHost = false;
       this.pendingRtmpFileShareFile.next(null);
       this._rtmpShareUploadId = null;
+      await this.cancelUpload(uploadId);
+      if (!cancelled) this.showError('The file could not be shared', err);
       throw err;
     }
 
-    // Upload remaining chunks in background; manager retries ffmpeg as needed.
     this.rtmpFileShareBackgroundUploadInProgress.next(true);
-    this.finishRtmpShareUpload(file, roomId, uploadId, chunkSize, reached, progress);
+    void this.finishRtmpShareUpload(file, roomId, uploadId, chunkSize, reached, progress);
   }
 
   private async finishRtmpShareUpload(file: File, roomId: string, uploadId: string, chunkSize: number,
@@ -1249,35 +1224,38 @@ export class WebrtcService implements OnDestroy {
     try {
       const reached = await this.uploadRange(file, uploadId, chunkSize, from, file.size, progress,
         () => this.isRtmpFileShareHost && this._rtmpShareUploadId === uploadId);
-      if (reached < file.size) return;
-      const params = new HttpParams({fromObject: {uploadId}});
-      await this.http.post(`${baseUrl}api/video/roomUpload/complete`, null, {params}).toPromise();
-      await hubConnection.invoke('MarkRtmpFileShareUploadComplete', roomId, uploadId).catch(logHubFailure);
+      if (reached < file.size) return; // the share was stopped
+      await hubConnection.invoke('MarkRtmpFileShareUploadComplete', roomId, uploadId);
       this.rtmpFileShareUploadProgress.next(100);
     } catch (err) {
       if (!this.isRtmpFileShareHost) return;
       console.error('[RtmpFileShare] Background upload failed:', err);
-      this.rtmpFileShareUploadError.next(
-        'The upload stopped before the end of the file. Viewers can watch up to where it got to.');
+      this.dialogService.PushDefaultDialog(
+        'The upload stopped before the end of the file. Everyone can watch up to where it got to.',
+        'Upload stopped', AlertType.Warning);
     } finally {
       this.rtmpFileShareBackgroundUploadInProgress.next(false);
     }
   }
 
+  /** Ends this client's RTMP share, or the start of one that is still uploading its beginning. */
   public async stopRtmpFileShare(roomId: string): Promise<void> {
+    const hosting = this.isRtmpFileShareHost && !!this.rtmpFileShareActive.value;
     this.cancelPreparingRtmpFileShare();
-    await hubConnection.invoke('StopRtmpFileShare', roomId)
-      .catch(err => console.error('StopRtmpFileShare failed:', err));
+    if (hosting) {
+      await hubConnection.invoke('StopRtmpFileShare', roomId)
+        .catch(err => this.showError('The share could not be stopped', err));
+    }
   }
 
   public async broadcastRtmpFileSharePlayPause(roomId: string, isPlaying: boolean): Promise<void> {
     await hubConnection.invoke('RtmpFileSharePlayPause', roomId, isPlaying)
-      .catch(err => console.error('RtmpFileSharePlayPause failed:', err));
+      .catch(err => this.showError('Could not change playback', err));
   }
 
   public async broadcastRtmpFileShareSeek(roomId: string, positionSec: number): Promise<void> {
     await hubConnection.invoke('RtmpFileShareSeek', roomId, positionSec)
-      .catch(err => console.error('RtmpFileShareSeek failed:', err));
+      .catch(err => this.showError('Could not seek', err));
   }
 
   // ================================================================

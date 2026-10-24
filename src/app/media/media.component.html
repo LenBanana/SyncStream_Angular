@@ -37,7 +37,7 @@
         <span><i class="fa fa-pause-circle" aria-hidden="true"></i> Nothing playing</span>
       </div>
       <app-mpegts-player *ngIf="CurrentPlayerType==PlayerType.Live"
-                         [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"></app-mpegts-player>
+                         [UniqueId]="UniqueId" [IsHost]="IsHost"></app-mpegts-player>
       <app-youtube *ngIf="CurrentPlayerType==PlayerType.YouTube"
                    [CurrentPlayerType]="CurrentPlayerType" [UniqueId]="UniqueId" [IsHost]="IsHost"></app-youtube>
       <app-videojs-player *ngIf="CurrentPlayerType==PlayerType.External"

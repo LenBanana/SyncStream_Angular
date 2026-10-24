@@ -1,4 +1,4 @@
-<div class="file-share-container position-relative vh-big bg-black">
+<div #container class="file-share-container position-relative vh-big bg-black">
 
   <div *ngIf="IsHost && showPreferenceDialog && pendingHostFile && !isLoading"
        class="position-absolute text-light rtmp-setup-overlay">
@@ -109,8 +109,8 @@
     </div>
   </div>
 
-  <!-- ── HOST: upload/loading spinner ───────────────────────────────────── -->
-  <div *ngIf="IsHost && isLoading" class="file-share-status text-center text-light">
+  <!-- Starting: the beginning of the file uploads before the stream can start. -->
+  <div *ngIf="IsHost && isLoading && !isStreamActive" class="file-share-status text-center text-light">
     <div class="spinner-border text-main-color mb-3" role="status">
       <span class="sr-only">Uploading…</span>
     </div>
@@ -125,159 +125,105 @@
     </div>
   </div>
 
-  <!-- ── HOST: load error ───────────────────────────────────────────────── -->
-  <div *ngIf="IsHost && loadError && !isStreamActive" class="file-share-status text-center">
-    <i class="fa fa-exclamation-triangle fa-2x mb-2 text-danger" aria-hidden="true"></i>
-    <p class="small text-danger mt-1">{{ loadError }}</p>
-  </div>
-
-  <!-- ── VIEWER: waiting for stream ─────────────────────────────────────── -->
-  <div *ngIf="!IsHost && !isStreamActive" class="file-share-status text-center text-light">
+  <div *ngIf="waitingFor" class="file-share-status text-center text-light">
     <div class="spinner-border text-main-color mb-3" role="status">
-      <span class="sr-only">Connecting...</span>
+      <span class="sr-only">{{ waitingFor }}</span>
     </div>
-    <p class="small">Connecting to stream…</p>
+    <p class="small">{{ waitingFor }}</p>
   </div>
 
-  <div *ngIf="isStreamActive && isAwaitingStreamData"
-       class="file-share-status text-center text-light">
-    <div class="spinner-border text-main-color mb-3" role="status">
-      <span class="sr-only">Waiting for stream...</span>
-    </div>
-    <p class="small">
-      {{ getAwaitingCopy() }}
-    </p>
-    <p *ngIf="IsHost && isBackgroundUploading" class="small text-light-50 mb-0">
-      Seeking unlocks after the upload completes and the duration is known.
-    </p>
-  </div>
-
-  <!-- ── VIDEO ELEMENT (always in DOM so ViewChild is always valid) ─────── -->
   <video
     #playerVideo
-    [class.d-none]="!isStreamActive || isAwaitingStreamData || playbackMode !== 'rtmp'"
+    [class.invisible]="!isStreamActive || !isPlaying"
     class="file-share-video w-100 h-100"
-    [attr.controls]="IsHost ? null : true"
-    autoplay
+    [volume]="volume"
+    [muted]="muted"
+    (playing)="onVideoPlaying()"
+    (waiting)="onVideoWaiting()"
     playsinline
     style="object-fit: contain; max-height: 100%; background: #000;">
   </video>
 
-  <video
-    #vodVideo
-    [class.d-none]="!isStreamActive || playbackMode !== 'vod'"
-    class="file-share-video video-js vjs-default-skin w-100 h-100"
-    controls
-    playsinline
-    style="object-fit: contain; max-height: 100%; background: #000;">
-  </video>
-
-  <!-- ── VIEWER: paused overlay ────────────────────────────────────────── -->
-  <div *ngIf="!IsHost && isStreamActive && playbackMode === 'rtmp' && isPaused"
-       class="position-absolute d-flex flex-column align-items-center justify-content-center text-light pause-overlay">
-    <i class="fa fa-pause-circle fa-3x mb-2 text-main-color" aria-hidden="true"></i>
-    <span class="small">Paused by {{ sharerName }}</span>
+  <div *ngIf="isStreamActive && isPaused"
+       class="position-absolute d-flex flex-column align-items-center justify-content-center text-light pause-overlay"
+       [style.cursor]="IsHost ? 'pointer' : null"
+       [style.pointer-events]="IsHost ? 'all' : null"
+       (click)="togglePlayPause()">
+    <ng-container *ngIf="IsHost; else pausedBySharer">
+      <i class="fa fa-play-circle fa-4x mb-2 text-main-color" aria-hidden="true"></i>
+      <span class="small">Paused, click to resume</span>
+    </ng-container>
+    <ng-template #pausedBySharer>
+      <i class="fa fa-pause-circle fa-3x mb-2 text-main-color" aria-hidden="true"></i>
+      <span class="small">Paused by {{ sharerName }}</span>
+    </ng-template>
   </div>
 
-  <!-- ── HOST CONTROLS ─────────────────────────────────────────────────── -->
-  <ng-container *ngIf="IsHost && isStreamActive && playbackMode === 'rtmp'">
+  <button *ngIf="needsUnmute && isPlaying" class="btn btn-sm btn-light position-absolute unmute-btn" (click)="unmute()">
+    <i class="fa fa-volume-up" aria-hidden="true"></i> Click for sound
+  </button>
 
-    <!-- Paused overlay (large centred play button) -->
-    <div *ngIf="hostPaused && !isAwaitingStreamData"
-         class="position-absolute d-flex flex-column align-items-center justify-content-center text-light pause-overlay"
-         style="cursor: pointer; pointer-events: all;"
-         (click)="togglePlayPause()">
-      <i class="fa fa-play-circle fa-4x mb-2 text-main-color" aria-hidden="true"></i>
-      <span class="small">Paused — click to resume</span>
-    </div>
+  <div *ngIf="isStreamActive" class="server-controls">
 
-    <!-- Media control bar -->
-    <div class="server-controls">
-
-      <!-- Seek row -->
-      <div class="seek-row">
-        <span class="time-label">{{ formatTime(hostPosition) }}</span>
-        <div class="seek-track">
-          <div class="seek-fill" [style.width.%]="seekFillPercent"></div>
-          <input type="range"
-                 class="seek-input"
-                 min="0"
-                 [max]="hostDuration ?? 100"
-                 step="0.5"
-                 [value]="hostPosition"
-               [disabled]="!hostDuration || !canSeek || isAwaitingStreamData"
-                 (input)="onSeekInput($event)"
-                 (change)="onSeekChange($event)"
-               [title]="isAwaitingStreamData ? 'Waiting for stream data before seeking becomes available' : (!canSeek ? 'Seeking becomes available after the upload finishes and the stream is seekable' : (!hostDuration ? 'Waiting for the file duration to become available' : 'Seek'))">
-        </div>
-        <span class="time-label">{{ formatTime(hostDuration) }}</span>
+    <div class="seek-row">
+      <span class="time-label">{{ formatTime(position) }}</span>
+      <div class="seek-track">
+        <div class="seek-fill" [style.width.%]="seekFillPercent"></div>
+        <input *ngIf="IsHost" type="range"
+               class="seek-input"
+               min="0"
+               [max]="duration ?? 100"
+               step="0.5"
+               [value]="position"
+               [disabled]="!duration || !canSeek"
+               (input)="onSeekInput($event)"
+               (change)="onSeekChange($event)"
+               [title]="!canSeek ? 'Seeking works once the whole file has been uploaded' : (!duration ? 'The length of the file is not known' : 'Seek')">
       </div>
-
-      <!-- Buttons row -->
-      <div class="controls-row">
-
-        <!-- Play / Pause -->
-        <button class="ctrl-btn" (click)="togglePlayPause()" [disabled]="isAwaitingStreamData" [title]="isAwaitingStreamData ? 'Waiting for stream data' : (hostPaused ? 'Resume' : 'Pause')">
-          <i class="fa fa-fw fa-lg"
-             [class.fa-play]="hostPaused"
-             [class.fa-pause]="!hostPaused"
-             aria-hidden="true"></i>
-        </button>
-
-        <!-- Mute -->
-        <button class="ctrl-btn" (click)="toggleMute()" [title]="hostMuted ? 'Unmute' : 'Mute'">
-          <i class="fa fa-fw"
-             [class.fa-volume-up]="!hostMuted && hostVolume > 0.5"
-             [class.fa-volume-down]="!hostMuted && hostVolume > 0 && hostVolume <= 0.5"
-             [class.fa-volume-off]="hostMuted || hostVolume === 0"
-             aria-hidden="true"></i>
-        </button>
-
-        <!-- Volume slider -->
-        <input type="range"
-               class="vol-slider"
-               min="0" max="1" step="0.02"
-               [value]="hostMuted ? 0 : hostVolume"
-               (input)="onVolumeInput($event)"
-               title="Volume">
-
-        <!-- Background upload badge -->
-        <span *ngIf="isBackgroundUploading" class="upload-badge" title="Seeking unavailable while uploading">
-          <i class="fa fa-cloud-upload" aria-hidden="true"></i>
-          {{ uploadProgress }}%
-        </span>
-
-        <span style="flex: 1;"></span>
-
-        <!-- Fullscreen -->
-        <button class="ctrl-btn" (click)="toggleFullscreen()" title="Fullscreen">
-          <i class="fa fa-expand" aria-hidden="true"></i>
-        </button>
-
-        <!-- Stop -->
-        <button class="ctrl-btn stop-btn" (click)="stopSharing()" [disabled]="isStopping" title="Stop sharing">
-          <i class="fa fa-stop" aria-hidden="true"></i>
-          <span class="d-none d-sm-inline ms-1"> Stop</span>
-        </button>
-
-      </div>
+      <span class="time-label">{{ formatTime(duration) }}</span>
     </div>
 
-    <!-- Upload error snackbar -->
-    <div *ngIf="loadError"
-         class="position-absolute d-flex align-items-center px-2 py-1"
-         style="bottom: 76px; right: 0; background: rgba(160,0,0,0.9); border-radius: 0.25rem 0 0 0.25rem; max-width: 320px; gap: 0.5rem;">
-      <i class="fa fa-exclamation-triangle text-light" aria-hidden="true"></i>
-      <span class="text-light" style="font-size: 0.75rem; flex: 1;">{{ loadError }}</span>
-      <button class="btn btn-sm btn-close btn-close-white" (click)="loadError = null" aria-label="Dismiss"></button>
+    <div class="controls-row">
+      <button *ngIf="IsHost" class="ctrl-btn" (click)="togglePlayPause()" [title]="isPaused ? 'Resume' : 'Pause'">
+        <i class="fa fa-fw fa-lg"
+           [class.fa-play]="isPaused"
+           [class.fa-pause]="!isPaused"
+           aria-hidden="true"></i>
+      </button>
+
+      <button class="ctrl-btn" (click)="toggleMute()" [title]="muted ? 'Unmute' : 'Mute'">
+        <i class="fa fa-fw"
+           [class.fa-volume-up]="!muted && volume > 0.5"
+           [class.fa-volume-down]="!muted && volume > 0 && volume <= 0.5"
+           [class.fa-volume-off]="muted || volume === 0"
+           aria-hidden="true"></i>
+      </button>
+
+      <input type="range"
+             class="vol-slider"
+             min="0" max="1" step="0.02"
+             [value]="muted ? 0 : volume"
+             (input)="onVolumeInput($event)"
+             title="Volume">
+
+      <span *ngIf="IsHost && isBackgroundUploading" class="upload-badge" title="Seeking works once the upload has finished">
+        <i class="fa fa-cloud-upload" aria-hidden="true"></i>
+        {{ uploadProgress }}%
+      </span>
+
+      <span *ngIf="!IsHost" class="sharer-label">{{ sharerName }} is sharing</span>
+
+      <span style="flex: 1;"></span>
+
+      <button class="ctrl-btn" (click)="toggleFullscreen()" title="Fullscreen">
+        <i class="fa fa-expand" aria-hidden="true"></i>
+      </button>
+
+      <button *ngIf="IsHost" class="ctrl-btn stop-btn" (click)="stopSharing()" [disabled]="isStopping" title="Stop sharing">
+        <i class="fa fa-stop" aria-hidden="true"></i>
+        <span class="d-none d-sm-inline ms-1"> Stop</span>
+      </button>
     </div>
-
-  </ng-container>
-
-  <div *ngIf="isStreamActive && statusBannerText"
-       class="position-absolute px-2 py-1 text-light"
-       style="top: 0; right: 0; background: rgba(0,0,0,0.55); border-radius: 0 0 0 0.35rem; font-size: 0.75rem;">
-    {{ statusBannerText }}
   </div>
 
 </div>

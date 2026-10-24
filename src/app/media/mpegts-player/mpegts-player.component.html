@@ -1,3 +1,18 @@
-<video class="media-player m-0 p-0" id="MpegtsPlayer" playsinline controls autoplay="true">
-</video>
-<div id="MpegtsLiveBtn" *ngIf="player&&player.buffered&&player.buffered.length>0" [class.btn-danger]="IsLive()" [class.btn-secondary]="!IsLive()" class="live-button btn p-1" [class.pointer]="IsHost" (click)="SeekLive()"><i class="fa fa-circle"></i> LIVE</div>
+<div class="live-player" (mousemove)="showControls()">
+  <video #video class="media-player m-0 p-0" playsinline controls
+         (playing)="onPlaying()" (waiting)="onWaiting()" (volumechange)="onVolumeChange()">
+  </video>
+  <div *ngIf="statusText" class="live-status text-light">
+    <div class="spinner-border text-main-color mb-3" role="status">
+      <span class="sr-only">{{ statusText }}</span>
+    </div>
+    <p class="small">{{ statusText }}</p>
+  </div>
+  <button *ngIf="needsUnmute && isPlaying" class="btn btn-sm btn-light unmute-btn" (click)="unmute()">
+    <i class="fa fa-volume-up" aria-hidden="true"></i> Click for sound
+  </button>
+  <div *ngIf="isPlaying" class="live-button btn p-1" [class.hide]="!controlsVisible"
+       [class.btn-danger]="isLive()" [class.btn-secondary]="!isLive()" (click)="seekLive()">
+    <i class="fa fa-circle"></i> LIVE
+  </div>
+</div>

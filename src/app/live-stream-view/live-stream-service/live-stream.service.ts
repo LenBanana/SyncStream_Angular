@@ -54,4 +54,13 @@ export class LiveStreamService {
   public GetLiveUsers() {
     hubConnection.invoke('GetLiveUsers').catch(logHubFailure);
   }
+
+  /**
+   * The URL to play an OBS stream or a room's RTMP file share from, or null when nobody is streaming it. It
+   * carries a ticket that is only good for starting a play within a couple of minutes, so ask again for every
+   * connection attempt.
+   */
+  public playUrl(roomId: string | null, streamName: string): Promise<string | null> {
+    return hubConnection.invoke<string | null>('GetLivePlayUrl', roomId, streamName);
+  }
 }

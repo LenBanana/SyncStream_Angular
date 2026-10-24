@@ -55,7 +55,6 @@ import { ServerDashboardComponent } from './user-admin-modal/server-dashboard/se
 import {MediaDeviceModalComponent} from "./media/webrtc/media-device-modal/media-device-modal.component";
 import { WebrtcVoipComponent } from './media/webrtc-voip/webrtc-voip.component';
 import { YoutubeApiComponent } from './media/youtube/youtube-api/youtube-api.component';
-import { HttpRtmpStreamComponent } from './media/http-rtmp-stream/http-rtmp-stream.component';
 import { WebrtcComponent } from './media/webrtc/webrtc.component';
 import { StreamViewerPopoutComponent } from './stream-viewer-popout/stream-viewer-popout.component';
 import { StreamStartDialogComponent } from './media/webrtc/stream-start-dialog/stream-start-dialog.component';
@@ -113,7 +112,6 @@ const DragConfig = {
     MediaDeviceModalComponent,
     WebrtcVoipComponent,
     YoutubeApiComponent,
-    HttpRtmpStreamComponent,
     WebrtcComponent,
     StreamViewerPopoutComponent,
     StreamStartDialogComponent,

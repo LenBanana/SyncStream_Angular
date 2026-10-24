@@ -24,7 +24,17 @@ export class LiveStreamDirectComponent implements OnInit, AfterViewInit {
   liveStream: string = "";
   liveChannelSub: Subscription;
   isLive = false;
+  leaveVisible = true;
+  private leaveTimer: ReturnType<typeof setTimeout> | null = null;
   ngOnInit(): void {
+    this.showLeave();
+  }
+
+  /** The leave button shows while the mouse moves, and fades two seconds after it stops. */
+  showLeave() {
+    this.leaveVisible = true;
+    if (this.leaveTimer !== null) clearTimeout(this.leaveTimer);
+    this.leaveTimer = setTimeout(() => this.leaveVisible = false, 2000);
   }
   async signalR() {
     await this.signalRService.startConnection().finally(() => {

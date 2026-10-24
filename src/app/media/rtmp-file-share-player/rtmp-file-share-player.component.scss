@@ -392,3 +392,19 @@
   padding: 0 6px;
   user-select: none;
 }
+
+.sharer-label {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.75rem;
+  padding: 0 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+
+.unmute-btn {
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+}

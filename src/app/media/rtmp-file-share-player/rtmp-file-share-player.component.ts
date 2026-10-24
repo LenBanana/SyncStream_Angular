@@ -1,7 +1,7 @@
-import { AfterViewInit, Component, ElementRef, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
-import { Subscription } from 'rxjs';
-import { filter } from 'rxjs/operators';
-import videojs from 'video.js';
+import {AfterViewInit, Component, ElementRef, Input, OnDestroy, OnInit, ViewChild} from '@angular/core';
+import {Subscription} from 'rxjs';
+import {filter} from 'rxjs/operators';
+import mpegts from 'mpegts.js';
 import {
   RtmpAudioLanguagePreference,
   RtmpLocalMediaProbeResult,
@@ -10,63 +10,27 @@ import {
   RtmpSubtitleMode,
   WebrtcService
 } from '../webrtc/webrtc-service/webrtc.service';
+import {LiveStreamService} from '../../live-stream-view/live-stream-service/live-stream.service';
 
-import mpegts from 'mpegts.js';
-import type Player from 'video.js/dist/types/player';
+/** How long a connection may take to show a frame before it is tried again. */
+const FIRST_FRAME_TIMEOUT_MS = 10000;
+/**
+ * How long playback may stall before the connection is given up and made again. A publisher that goes away does
+ * not end the connection: the streaming server keeps it open waiting for the stream to return, so the player
+ * would otherwise sit on the last frame for good.
+ */
+const STALL_TIMEOUT_MS = 8000;
+const RETRY_DELAYS_MS = [1000, 2000, 4000, 8000];
+const VOLUME_KEY = 'dreck-rtmp-fileshare-volume';
 
-type RtmpPlayerStatisticsInfo = {
-  speed?: number;
-  decodedFrames?: number;
-  droppedFrames?: number;
-  playerType?: string;
-  [key: string]: unknown;
-};
-
-type RtmpPlayerMediaInfo = {
-  width?: number;
-  height?: number;
-  fps?: number;
-  videoCodec?: string;
-  audioCodec?: string;
-  videoDataRate?: number;
-  audioDataRate?: number;
-  [key: string]: unknown;
-};
-
-type RtmpVideoFrameCallbackMetadata = {
-  expectedDisplayTime?: number;
-  mediaTime?: number;
-  presentedFrames?: number;
-  processingDuration?: number;
-};
-
-type RtmpVideoFrameSample = {
-  nowMs: number;
-  mediaTimeSec: number;
-  presentedFrames: number;
-};
-
-type RtmpFrameTimingSummary = {
-  callbackCount: number;
-  presentedFramesDelta: number;
-  lateCallbacks: number;
-  irregularMediaGaps: number;
-  maxCallbackGapMs: number;
-  maxMediaGapMs: number;
-  maxLateByMs: number;
-  totalCallbackGapMs: number;
-  totalMediaGapMs: number;
-};
-
-type RtmpVideoEventCounters = {
-  waiting: number;
-  stalled: number;
-  playing: number;
-  canplay: number;
-  seeking: number;
-  seeked: number;
-};
-
+/**
+ * Plays a file someone shares through RTMP, for the sharer and everyone else alike, and lets the sharer start,
+ * pause, seek and stop it.
+ *
+ * Every pause, seek, wait for the upload and retry on the server ends one run of ffmpeg, and the next run is a
+ * new stream whose timestamps start at zero again. A player that carried on across that would append the new
+ * stream behind what it already had and stall, so the player connects afresh for each run.
+ */
 @Component({
   selector: 'app-rtmp-file-share-player',
   templateUrl: './rtmp-file-share-player.component.html',
@@ -100,269 +64,383 @@ export class RtmpFileSharePlayerComponent implements OnInit, AfterViewInit, OnDe
   @Input() UniqueId: string = '';
   @Input() IsHost: boolean = false;
 
+  @ViewChild('container') containerRef!: ElementRef<HTMLElement>;
   @ViewChild('playerVideo') playerVideoRef!: ElementRef<HTMLVideoElement>;
-  @ViewChild('vodVideo') vodVideoRef!: ElementRef<HTMLVideoElement>;
 
-  // Shared state
-  sharerName: string = '';
-  isStreamActive: boolean = false;
-  isAwaitingStreamData: boolean = false;
-  isPaused: boolean = false;
-  loadError: string | null = null;
+  // The share, as the server describes it
+  sharerName = '';
+  isStreamActive = false;
+  isPaused = false;
+  isBuffering = false;
+  canSeek = false;
+  duration: number | null = null;
+  position = 0;
 
-  // Host upload/loading state
-  isLoading: boolean = false;
-  isUploading: boolean = false;
-  uploadProgress: number = 0;
-  isBackgroundUploading: boolean = false;
-  isStopping: boolean = false;
-  showPreferenceDialog: boolean = false;
+  // This player
+  isPlaying = false;
+  needsUnmute = false;
+  volume = 1;
+  muted = false;
+  /** True while the sharer drags the position slider. */
+  isSeeking = false;
+
+  // Starting a share
+  isLoading = false;
+  uploadProgress = 0;
+  isBackgroundUploading = false;
+  isStopping = false;
+  showPreferenceDialog = false;
   selectedSubtitleMode: RtmpSubtitleMode = 'auto';
   audioLanguagePriority: RtmpAudioLanguagePreference[] = ['japanese', 'english', 'german', 'other'];
   rtmpMediaProbe: RtmpLocalMediaProbeResult | null = null;
-  isProbingRtmpMedia: boolean = false;
+  isProbingRtmpMedia = false;
   rtmpMediaProbeError: string | null = null;
   selectedAudioOrdinal: number | null = null;
   selectedSubtitleOrdinal: number | null = null;
-
-  // Controls (host and viewer share the volume UI)
-  hostPaused: boolean = false;
-  hostVolume: number = 1;
-  hostMuted: boolean = false;
-  hostPosition: number = 0;
-  hostDuration: number | null = null;
-  canSeek: boolean = false;
-  isSeeking: boolean = false;
-  playbackMode: 'rtmp' | 'vod' = 'rtmp';
-
-  private _viewInitialized = false;
-  private _positionBase: number = 0;
-  private _positionBaseAt: number = 0;
-  private _positionInterval: any = null;
-  private _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private _awaitingStreamWatchdogTimer: ReturnType<typeof setTimeout> | null = null;
-  private _awaitingReason: 'start' | 'resume' | 'seek' | 'reconnect' | null = null;
-  private _statsLogTimer: ReturnType<typeof setInterval> | null = null;
-  private _lastStatisticsInfo: RtmpPlayerStatisticsInfo | null = null;
-  private _lastMediaInfo: RtmpPlayerMediaInfo | null = null;
-  private _lastPlaybackQualitySample: { totalFrames: number; droppedFrames: number; timestampMs: number } | null = null;
-  private _frameCallbackHandle: number | null = null;
-  private _lastVideoFrameSample: RtmpVideoFrameSample | null = null;
-  private _frameTimingSummary: RtmpFrameTimingSummary = this.createEmptyFrameTimingSummary();
-  private _videoEventCounters: RtmpVideoEventCounters = this.createEmptyVideoEventCounters();
-  private _statusBannerText: string | null = null;
-  private _statusBannerTimer: ReturnType<typeof setTimeout> | null = null;
+  pendingHostFile: File | null = null;
 
   private player: mpegts.Player | null = null;
-  private vodPlayer: Player | null = null;
-  private streamUrl: string | null = null;
-  pendingHostFile: File | null = null;
+  private streamName: string | null = null;
+  private viewReady = false;
+  /** Bumped on every connect and disconnect, so an attempt that has been overtaken ignores its own outcome. */
+  private attempt = 0;
+  private failures = 0;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
+  private firstFrameTimer: ReturnType<typeof setTimeout> | null = null;
+  private stallTimer: ReturnType<typeof setTimeout> | null = null;
+  private positionTimer: ReturnType<typeof setInterval> | null = null;
+  private positionBase = 0;
+  private positionBaseAt = Date.now();
   private subs: Subscription[] = [];
 
-  constructor(public webrtcService: WebrtcService) {}
+  constructor(public webrtcService: WebrtcService, private liveStreamService: LiveStreamService) {}
 
   ngOnInit(): void {
+    this.loadVolume();
     this.subs.push(
       this.webrtcService.rtmpFileShareActive.subscribe(info => {
         if (!info) {
-          this.isStreamActive = false;
-          this.isAwaitingStreamData = false;
-          this._awaitingReason = null;
-          this.sharerName = '';
-          this.hostDuration = null;
-          this.canSeek = false;
-          this.playbackMode = 'rtmp';
-          this.showPreferenceDialog = false;
-          this.clearStatusBanner();
-          this.stopPositionTracking();
-          this.destroyPlayer();
-          this.destroyVodPlayer();
+          this.endShare();
           return;
         }
-
-        const nextStreamUrl = this.buildAuthedUrl(info.streamUrl);
-        const sameActiveStream =
-          this.isStreamActive &&
-          this.streamUrl === nextStreamUrl &&
-          this.sharerName === info.username;
-
-        if (sameActiveStream) {
-          this.hostDuration = info.durationSec ?? this.hostDuration;
-          if (this.playbackMode !== 'vod') {
-            this.refreshHostDurationFromLocalProbe();
-          }
-          return;
-        }
-
-        this.sharerName = info.username;
-        this.streamUrl = nextStreamUrl;
-        this.hostDuration = info.durationSec ?? null;
-        this.canSeek = false;
-        this.playbackMode = 'rtmp';
-        this.refreshHostDurationFromLocalProbe();
         this.isStreamActive = true;
-        this.isAwaitingStreamData = true;
-        this._awaitingReason = 'start';
-        this.destroyVodPlayer();
-        if (this._viewInitialized) {
-          this.createPlayer(this.streamUrl);
-          if (this.IsHost) {
-            this.hostPosition = 0;
-            this._positionBase = 0;
-            this._positionBaseAt = 0;
-            this.stopPositionTracking();
-          }
+        this.sharerName = info.username;
+        this.duration = info.durationSec;
+        if (info.streamName !== this.streamName) {
+          this.streamName = info.streamName;
+          this.disconnect();
         }
       }),
-
       this.webrtcService.rtmpFileShareIsPaused.subscribe(paused => {
-        const wasPaused = this.isPaused;
         this.isPaused = paused;
-
-        if (!this._viewInitialized || !this.streamUrl || !this.isStreamActive) {
-          return;
-        }
-
-        if (paused) {
-          this.clearReconnectTimer();
-          this.isAwaitingStreamData = false;
-          this._awaitingReason = null;
-          this.destroyPlayer();
-          return;
-        }
-
-        if (wasPaused) {
-          this.isAwaitingStreamData = true;
-          this._awaitingReason = 'resume';
-          if (this._viewInitialized && this.streamUrl && !this.player) {
-            this.createPlayer(this.streamUrl);
-          }
-        }
+        if (paused) this.disconnect();
+        this.setPosition(this.position);
       }),
-
-      this.webrtcService.rtmpFileShareSeekSignal.subscribe(positionSec => {
-        if (this._viewInitialized && this.streamUrl) {
-          this.hostPosition = positionSec;
-          this.isAwaitingStreamData = true;
-          this._awaitingReason = 'seek';
-          this.destroyPlayer();
-        }
+      this.webrtcService.rtmpFileShareState.subscribe(state => {
+        // A run that ends to wait for the upload sends nothing more; the next run reconnects.
+        if (state.buffering && !this.isBuffering) this.disconnect();
+        this.isBuffering = state.buffering;
+        if (!this.isSeeking) this.setPosition(state.positionSec);
       }),
-
-      this.webrtcService.rtmpFileShareCanSeek.subscribe(canSeek => {
-        const becameSeekable = canSeek && !this.canSeek;
-        this.canSeek = canSeek;
-        if (becameSeekable && this.isStreamActive && this.playbackMode === 'rtmp' && !this.isBackgroundUploading) {
-          this.showStatusBanner('Upload complete. Normal playback is still being prepared.');
-        }
-      }),
-
-      this.webrtcService.rtmpFileShareStreamReady.subscribe(positionSec => {
-        this.hostPosition = positionSec;
-        this._positionBase = positionSec;
-        this._positionBaseAt = Date.now();
-
-        if (!this.streamUrl || !this.isStreamActive || this.isPaused) {
-          return;
-        }
-
-        if (this._viewInitialized && (!this.player || this.isAwaitingStreamData)) {
-          this.createPlayer(this.streamUrl);
-        }
-      }),
-
-      this.webrtcService.rtmpFileShareVodPlayback.subscribe(info => {
-        if (!info) {
-          if (this.playbackMode === 'vod') {
-            this.playbackMode = 'rtmp';
-            this.destroyVodPlayer();
-          }
-          return;
-        }
-
-        this.playbackMode = 'vod';
-        this.canSeek = true;
-        this.isPaused = false;
-        this.hostPaused = false;
-        this.isAwaitingStreamData = false;
-        this._awaitingReason = null;
-        this.clearReconnectTimer();
-        this.clearAwaitingStreamWatchdog();
-        this.stopPositionTracking();
-        this.destroyPlayer();
-        this.hostDuration = info.durationSec ?? this.hostDuration;
-        const playbackUrl = this.buildAuthedUrl(info.playbackUrl);
-        this.showStatusBanner('Upload complete. Switched to normal playback.');
-        setTimeout(() => this.createVodPlayer(playbackUrl, info.contentType ?? null), 0);
+      this.webrtcService.rtmpFileShareCanSeek.subscribe(canSeek => this.canSeek = canSeek),
+      // What was buffered before a jump is not wanted after it.
+      this.webrtcService.rtmpFileShareSeekSignal.subscribe(() => this.disconnect()),
+      this.webrtcService.rtmpFileShareRun.pipe(filter(run => run > 0)).subscribe(() => {
+        this.failures = 0;
+        void this.connect();
       })
     );
-
-    if (!this.IsHost) {
-      // Viewers track position from server broadcasts.
-      this.subs.push(
-        this.webrtcService.rtmpFileSharePosition.subscribe(pos => {
-          if (!this.isSeeking) this.hostPosition = pos;
-        })
-      );
-    }
 
     if (this.IsHost) {
       this.subs.push(
         this.webrtcService.pendingRtmpFileShareFile
-          .pipe(filter(f => f !== null))
+          .pipe(filter((file): file is File => file !== null))
           .subscribe(file => {
             this.pendingHostFile = file;
             this.preparePendingHostShare(file);
           }),
-        this.webrtcService.rtmpFileShareUploadProgress.subscribe(pct => {
-          this.uploadProgress = pct;
-          this.refreshHostDurationFromLocalProbe();
-        }),
-        this.webrtcService.rtmpFileShareBackgroundUploadInProgress.subscribe(active => {
-          this.isBackgroundUploading = active;
-          if (!active) {
-            this.refreshHostDurationFromLocalProbe();
-          }
-        })
+        this.webrtcService.rtmpFileShareUploadProgress.subscribe(pct => this.uploadProgress = pct),
+        this.webrtcService.rtmpFileShareBackgroundUploadInProgress.subscribe(active => this.isBackgroundUploading = active)
       );
     }
+
+    this.positionTimer = setInterval(() => this.advancePosition(), 250);
   }
 
   ngAfterViewInit(): void {
-    this._viewInitialized = true;
-
-    if (this.IsHost) {
-      this.refreshHostDurationFromLocalProbe();
-      this.preparePendingHostShare(this.pendingHostFile);
-    } else {
-      const info = this.webrtcService.rtmpFileShareActive.value;
-      if (info) {
-        this.streamUrl = this.buildAuthedUrl(info.streamUrl);
-        this.hostDuration = info.durationSec ?? null;
-        this.canSeek = this.webrtcService.rtmpFileShareCanSeek.value;
-        this.createPlayer(this.streamUrl);
-      }
-    }
+    this.viewReady = true;
+    if (this.IsHost) this.preparePendingHostShare(this.pendingHostFile);
+    if (this.webrtcService.rtmpFileShareRun.value > 0) void this.connect();
   }
 
   ngOnDestroy(): void {
-    this.subs.forEach(s => s.unsubscribe());
-    this.stopPositionTracking();
-    this.clearReconnectTimer();
-    this.clearStatusBanner();
-    this.stopDiagnosticsLogging();
-    this.destroyPlayer();
-    this.destroyVodPlayer();
+    this.subs.forEach(subscription => subscription.unsubscribe());
+    if (this.positionTimer !== null) clearInterval(this.positionTimer);
+    this.disconnect();
   }
 
-  // ── Host: start share ─────────────────────────────────────────────────────
+  // ── Playing the stream ──────────────────────────────────────────────────
+
+  private async connect(): Promise<void> {
+    this.disconnect();
+    if (!this.viewReady || !this.streamName || !this.isStreamActive || this.isPaused || this.isBuffering) return;
+
+    const attempt = this.attempt;
+    let url: string | null;
+    try {
+      url = await this.liveStreamService.playUrl(this.UniqueId, this.streamName);
+    } catch (err) {
+      if (attempt !== this.attempt) return;
+      console.warn('[RtmpFileShare] no play URL for the share', err);
+      this.retryLater();
+      return;
+    }
+    if (attempt !== this.attempt) return;
+    // The share is gone; its end reaches this player as a notice of its own.
+    if (url === null) return;
+
+    const video = this.playerVideoRef.nativeElement;
+    const player = mpegts.createPlayer({type: 'flv', isLive: true, url}, {
+      isLive: true,
+      // A shared file gains nothing from being a second closer to the server; a few seconds of buffer is what
+      // keeps a passing network hiccup from becoming a stall. Latency is only pulled back once it has grown
+      // past several seconds, which keeps viewers roughly together without skipping on every small delay.
+      enableStashBuffer: true,
+      liveBufferLatencyChasing: true,
+      liveBufferLatencyMaxLatency: 6,
+      liveBufferLatencyMinRemain: 2,
+      // A film runs for hours; without this the media buffer fills until the browser refuses more.
+      autoCleanupSourceBuffer: true,
+      lazyLoad: false
+    });
+    this.player = player;
+    player.on(mpegts.Events.ERROR, (type: string, detail: string) => {
+      console.warn('[RtmpFileShare] stream error', type, detail);
+      this.onStreamLost(attempt);
+    });
+    player.on(mpegts.Events.LOADING_COMPLETE, () => this.onStreamLost(attempt));
+    player.attachMediaElement(video);
+    player.load();
+    this.startPlayback(video);
+    this.firstFrameTimer = setTimeout(() => {
+      if (!this.isPlaying) this.onStreamLost(attempt);
+    }, FIRST_FRAME_TIMEOUT_MS);
+  }
+
+  private startPlayback(video: HTMLVideoElement): void {
+    video.play().catch((err: unknown) => {
+      if (!(err instanceof DOMException) || err.name !== 'NotAllowedError') {
+        console.warn('[RtmpFileShare] playback did not start', err);
+        return;
+      }
+      // The browser only lets a page start sound after someone interacted with it. Muted playback is always
+      // allowed, so the picture starts and a button offers the sound.
+      video.muted = true;
+      this.muted = true;
+      this.needsUnmute = true;
+      video.play().catch(mutedErr => console.warn('[RtmpFileShare] muted playback did not start either', mutedErr));
+    });
+  }
+
+  private onStreamLost(attempt: number): void {
+    if (attempt !== this.attempt) return;
+    this.disconnect();
+    // A pause, seek or wait for the upload ends the run on purpose, and its notice can arrive just after the
+    // stream does. Those cancel this retry; the next run connects by itself.
+    this.retryLater();
+  }
+
+  private retryLater(): void {
+    if (!this.isStreamActive || this.isPaused || this.isBuffering) return;
+    const delay = RETRY_DELAYS_MS[Math.min(this.failures, RETRY_DELAYS_MS.length - 1)];
+    this.failures++;
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null;
+      void this.connect();
+    }, delay);
+  }
+
+  private disconnect(): void {
+    this.attempt++;
+    this.isPlaying = false;
+    if (this.retryTimer !== null) clearTimeout(this.retryTimer);
+    if (this.firstFrameTimer !== null) clearTimeout(this.firstFrameTimer);
+    if (this.stallTimer !== null) clearTimeout(this.stallTimer);
+    this.retryTimer = null;
+    this.firstFrameTimer = null;
+    this.stallTimer = null;
+
+    const player = this.player;
+    this.player = null;
+    if (player) {
+      player.unload();
+      player.detachMediaElement();
+      player.destroy();
+    }
+  }
+
+  private endShare(): void {
+    this.disconnect();
+    this.isStreamActive = false;
+    this.isPaused = false;
+    this.isBuffering = false;
+    this.canSeek = false;
+    this.sharerName = '';
+    this.streamName = null;
+    this.duration = null;
+    this.setPosition(0);
+    this.showPreferenceDialog = false;
+    this.isLoading = false;
+  }
+
+  onVideoPlaying(): void {
+    this.isPlaying = true;
+    this.failures = 0;
+    if (this.firstFrameTimer !== null) clearTimeout(this.firstFrameTimer);
+    if (this.stallTimer !== null) clearTimeout(this.stallTimer);
+    this.firstFrameTimer = null;
+    this.stallTimer = null;
+  }
+
+  onVideoWaiting(): void {
+    this.isPlaying = false;
+    if (!this.player || this.stallTimer !== null) return;
+    const attempt = this.attempt;
+    this.stallTimer = setTimeout(() => {
+      this.stallTimer = null;
+      if (!this.isPlaying) this.onStreamLost(attempt);
+    }, STALL_TIMEOUT_MS);
+  }
+
+  /** What the player is waiting for, to show over it; null when it is playing or paused. */
+  get waitingFor(): string | null {
+    if (!this.isStreamActive) return this.IsHost ? null : 'Connecting to the share…';
+    if (this.isPaused) return null;
+    if (this.isBuffering) return 'Waiting for more of the file to upload…';
+    if (this.isPlaying) return null;
+    return this.failures >= 2 ? 'Reconnecting to the stream…' : 'Loading the stream…';
+  }
+
+  // ── Position ────────────────────────────────────────────────────────────
+
+  private setPosition(positionSec: number): void {
+    this.position = positionSec;
+    this.positionBase = positionSec;
+    this.positionBaseAt = Date.now();
+  }
+
+  /** Moves the shown position along between the server's reports, while the share plays. */
+  private advancePosition(): void {
+    if (!this.isStreamActive || this.isPaused || this.isBuffering || this.isSeeking) return;
+    const position = this.positionBase + (Date.now() - this.positionBaseAt) / 1000;
+    this.position = this.duration != null ? Math.min(position, this.duration) : position;
+  }
+
+  get seekFillPercent(): number {
+    if (!this.duration) return 0;
+    return Math.min(100, (this.position / this.duration) * 100);
+  }
+
+  formatTime(sec: number | null | undefined): string {
+    if (sec == null || !isFinite(sec) || sec < 0) return '--:--';
+    const total = Math.floor(sec);
+    const s = total % 60;
+    const m = Math.floor(total / 60) % 60;
+    const h = Math.floor(total / 3600);
+    const mm = String(m).padStart(2, '0');
+    const ss = String(s).padStart(2, '0');
+    return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+  }
+
+  // ── The sharer's controls ───────────────────────────────────────────────
+
+  togglePlayPause(): void {
+    if (!this.IsHost || !this.isStreamActive) return;
+    void this.webrtcService.broadcastRtmpFileSharePlayPause(this.UniqueId, this.isPaused);
+  }
+
+  onSeekInput(event: Event): void {
+    if (!this.IsHost) return;
+    this.isSeeking = true;
+    this.position = +(event.target as HTMLInputElement).value;
+  }
+
+  onSeekChange(event: Event): void {
+    if (!this.IsHost) return;
+    this.isSeeking = false;
+    const target = +(event.target as HTMLInputElement).value;
+    this.setPosition(target);
+    void this.webrtcService.broadcastRtmpFileShareSeek(this.UniqueId, target);
+  }
+
+  async stopSharing(): Promise<void> {
+    if (this.isStopping) return;
+    this.isStopping = true;
+    await this.webrtcService.stopRtmpFileShare(this.UniqueId);
+    this.isStopping = false;
+  }
+
+  // ── Everyone's controls ─────────────────────────────────────────────────
+
+  unmute(): void {
+    this.needsUnmute = false;
+    this.muted = false;
+    this.saveVolume();
+  }
+
+  toggleMute(): void {
+    this.muted = !this.muted;
+    this.needsUnmute = false;
+    this.saveVolume();
+  }
+
+  onVolumeInput(event: Event): void {
+    this.volume = +(event.target as HTMLInputElement).value;
+    this.muted = this.volume === 0;
+    this.needsUnmute = false;
+    this.saveVolume();
+  }
+
+  toggleFullscreen(): void {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+    } else {
+      this.containerRef.nativeElement.requestFullscreen()
+        .catch(err => console.warn('[RtmpFileShare] fullscreen was refused', err));
+    }
+  }
+
+  private loadVolume(): void {
+    let saved: {volume?: unknown; muted?: unknown} | null;
+    try {
+      const raw = localStorage.getItem(VOLUME_KEY);
+      saved = raw ? JSON.parse(raw) : null;
+    } catch (err) {
+      // Storage can be off, as in a private window, or hold something unreadable; the volume then starts at
+      // its default.
+      console.warn('[RtmpFileShare] the saved volume could not be read', err);
+      return;
+    }
+    if (typeof saved?.volume === 'number') this.volume = Math.min(1, Math.max(0, saved.volume));
+    if (typeof saved?.muted === 'boolean') this.muted = saved.muted;
+  }
+
+  private saveVolume(): void {
+    try {
+      localStorage.setItem(VOLUME_KEY, JSON.stringify({volume: this.volume, muted: this.muted}));
+    } catch (err) {
+      console.warn('[RtmpFileShare] the volume could not be saved', err);
+    }
+  }
+
+  // ── Starting a share ────────────────────────────────────────────────────
 
   private preparePendingHostShare(file: File | null): void {
-    if (!this.IsHost || !this._viewInitialized || !file || this.isLoading || this.isStreamActive) return;
+    if (!this.IsHost || !this.viewReady || !file || this.isLoading || this.isStreamActive) return;
     this.pendingHostFile = file;
     this.resetPreferenceForm();
     this.showPreferenceDialog = true;
-    this.beginLocalMediaProbe(file);
+    void this.beginLocalMediaProbe(file);
   }
 
   async confirmHostShareSettings(): Promise<void> {
@@ -455,557 +533,14 @@ export class RtmpFileSharePlayerComponent implements OnInit, AfterViewInit, OnDe
 
   private async startHostShare(file: File, playbackPreferences: RtmpPlaybackPreferences): Promise<void> {
     this.isLoading = true;
-    this.isUploading = true;
-    this.loadError = null;
-
     try {
       await this.webrtcService.beginRtmpFileShare(file, this.UniqueId, playbackPreferences);
-      // rtmpFileShareStarted hub event fires → subscription above handles createPlayer + tracking
-      this.isUploading = false;
-      this.isLoading = false;
-    } catch (err: any) {
-      if (err?.message === 'Share was cancelled') return;
-      console.error('[RtmpFileSharePlayer] startHostShare failed:', err);
-      this.loadError = 'Failed to start the file share. Please try again.';
-      this.isUploading = false;
+    } catch (err) {
+      // Already shown to the sharer by the service, unless it was a cancel.
+      console.warn('[RtmpFileSharePlayer] the share did not start:', err);
+    } finally {
       this.isLoading = false;
     }
-  }
-
-  // ── mpegts.js player ──────────────────────────────────────────────────────
-
-  private createPlayer(url: string): void {
-    this.destroyPlayer();
-    this.clearReconnectTimer();
-    this.clearAwaitingStreamWatchdog();
-    if (!this.playerVideoRef) return;
-
-    if (!mpegts.getFeatureList().mseLivePlayback) {
-      this.loadError = 'Your browser does not support MSE live playback.';
-      return;
-    }
-
-    const videoEl = this.playerVideoRef.nativeElement;
-    this.isAwaitingStreamData = true;
-    this.loadSavedVolume(videoEl);
-    videoEl.addEventListener('volumechange', this.onVolumeChange);
-    this.attachVideoDiagnostics(videoEl);
-
-    this.player = mpegts.createPlayer(
-      { type: 'flv', isLive: true, url, cors: true },
-      {
-        isLive: true,
-        enableStashBuffer: false,
-        liveBufferLatencyChasing: true,
-        liveBufferLatencyMaxLatency: 1.5,
-        liveBufferLatencyMinRemain: 0.3,
-        lazyLoad: false
-      }
-    );
-    this.player.attachMediaElement(videoEl);
-    this.player.load();
-    void Promise.resolve(this.player.play()).catch(() => {});
-    this.startFrameDiagnostics(videoEl);
-    this.scheduleAwaitingStreamWatchdog();
-
-    console.info('[RtmpFileSharePlayer] player created', {
-      role: this.IsHost ? 'host' : 'viewer',
-      roomId: this.UniqueId,
-      streamOwner: this.sharerName || null
-    });
-
-    this.player.on(mpegts.Events.MEDIA_INFO, (info: RtmpPlayerMediaInfo) => {
-      this._lastMediaInfo = info;
-      console.info('[RtmpFileSharePlayer] media info', info);
-    });
-
-    this.player.on(mpegts.Events.STATISTICS_INFO, (stats: RtmpPlayerStatisticsInfo) => {
-      this._lastStatisticsInfo = stats;
-      if ((stats.decodedFrames ?? 0) > 0) {
-        this.markStreamReady();
-      }
-    });
-
-    this.player.on(mpegts.Events.ERROR, (errorType: string, errorDetail: string, errorInfo: unknown) => {
-      console.warn('[RtmpFileSharePlayer] mpegts error', { errorType, errorDetail, errorInfo });
-      if (!this.streamUrl || !this.isStreamActive || this.isPaused) {
-        return;
-      }
-
-      this.destroyPlayer();
-      this.scheduleReconnect(1200);
-    });
-
-    this.startDiagnosticsLogging();
-  }
-
-  private destroyPlayer(): void {
-    this.stopDiagnosticsLogging();
-    this.clearAwaitingStreamWatchdog();
-    if (this.player) {
-      this.player.unload();
-      this.player.destroy();
-      this.player = null;
-    }
-    if (this.playerVideoRef) {
-      this.detachVideoDiagnostics(this.playerVideoRef.nativeElement);
-      this.playerVideoRef.nativeElement.removeEventListener('volumechange', this.onVolumeChange);
-    }
-  }
-
-  private createVodPlayer(url: string, contentType: string | null): void {
-    this.destroyVodPlayer();
-    if (!this.vodVideoRef) return;
-
-    const videoEl = this.vodVideoRef.nativeElement;
-    this.vodPlayer = videojs(videoEl, {
-      autoplay: 'play',
-      controls: true,
-      preload: 'auto',
-      enableWorker: true,
-      liveDurationInfinity: false,
-      liveui: false
-    });
-
-    this.vodPlayer.ready(() => {
-      const source = this.getVodSource(url, contentType);
-      this.vodPlayer?.src({
-        ...source,
-        title: `${this.sharerName || 'Room share'} playback`
-      });
-
-      const resumeAt = this.hostPosition;
-      if (resumeAt > 1) {
-        this.vodPlayer?.one('loadedmetadata', () => {
-          const duration = this.vodPlayer?.duration() ?? Number.POSITIVE_INFINITY;
-          if (resumeAt < duration) {
-            this.vodPlayer?.currentTime(resumeAt);
-          }
-        });
-      }
-    });
-  }
-
-  private destroyVodPlayer(): void {
-    if (this.vodPlayer) {
-      this.vodPlayer.dispose();
-      this.vodPlayer = null;
-    }
-  }
-
-  private markStreamReady(): void {
-    if (!this.isStreamActive || !this.isAwaitingStreamData) {
-      return;
-    }
-
-    this.isAwaitingStreamData = false;
-    this._awaitingReason = null;
-    this.loadError = null;
-    this.clearAwaitingStreamWatchdog();
-    if (this.IsHost && !this.hostPaused) {
-      this._positionBase = this.hostPosition;
-      this._positionBaseAt = Date.now();
-      this.startPositionTracking();
-    }
-  }
-
-  private refreshHostDurationFromLocalProbe(): void {
-    if (!this.IsHost || this.hostDuration != null) {
-      return;
-    }
-
-    const localDuration = this.webrtcService.rtmpShareFileDuration;
-    if (localDuration != null && isFinite(localDuration) && localDuration > 0) {
-      this.hostDuration = localDuration;
-    }
-  }
-
-  private scheduleReconnect(delayMs: number): void {
-    this.clearReconnectTimer();
-    this._reconnectTimer = setTimeout(() => {
-      this._reconnectTimer = null;
-      if (this.streamUrl && this.isStreamActive && !this.isPaused) {
-        this._awaitingReason = 'reconnect';
-        this.createPlayer(this.streamUrl);
-      }
-    }, delayMs);
-  }
-
-  private scheduleAwaitingStreamWatchdog(): void {
-    this.clearAwaitingStreamWatchdog();
-    this._awaitingStreamWatchdogTimer = setTimeout(() => {
-      this._awaitingStreamWatchdogTimer = null;
-
-      const shouldRetry =
-        this.isStreamActive &&
-        this.isAwaitingStreamData &&
-        !this.isPaused &&
-        !(this.IsHost && this.hostPaused) &&
-        !!this.streamUrl;
-
-      if (!shouldRetry) {
-        return;
-      }
-
-      this.loadError = this._awaitingReason === 'seek'
-        ? 'The stream is still restarting after the seek. This can happen while the transport catches up.'
-        : 'The stream is taking longer than expected to become readable. Retrying…';
-
-      console.warn('[RtmpFileSharePlayer] stream readiness timeout; retrying player attach', {
-        role: this.IsHost ? 'host' : 'viewer',
-        roomId: this.UniqueId,
-        bufferedAheadSec: this.playerVideoRef ? this.getBufferedAhead(this.playerVideoRef.nativeElement) : null
-      });
-
-      this.destroyPlayer();
-      this.scheduleReconnect(900);
-    }, 2500);
-  }
-
-  private clearAwaitingStreamWatchdog(): void {
-    if (this._awaitingStreamWatchdogTimer !== null) {
-      clearTimeout(this._awaitingStreamWatchdogTimer);
-      this._awaitingStreamWatchdogTimer = null;
-    }
-  }
-
-  private clearReconnectTimer(): void {
-    if (this._reconnectTimer !== null) {
-      clearTimeout(this._reconnectTimer);
-      this._reconnectTimer = null;
-    }
-  }
-
-  private showStatusBanner(text: string, durationMs: number = 6000): void {
-    this._statusBannerText = text;
-    if (this._statusBannerTimer !== null) {
-      clearTimeout(this._statusBannerTimer);
-    }
-    this._statusBannerTimer = setTimeout(() => {
-      this._statusBannerTimer = null;
-      this._statusBannerText = null;
-    }, durationMs);
-  }
-
-  private clearStatusBanner(): void {
-    if (this._statusBannerTimer !== null) {
-      clearTimeout(this._statusBannerTimer);
-      this._statusBannerTimer = null;
-    }
-    this._statusBannerText = null;
-  }
-
-  private startDiagnosticsLogging(): void {
-    if (this._statsLogTimer !== null) return;
-    this._statsLogTimer = setInterval(() => {
-      this.logPlaybackDiagnostics();
-    }, 5000);
-  }
-
-  private stopDiagnosticsLogging(): void {
-    if (this._statsLogTimer !== null) {
-      clearInterval(this._statsLogTimer);
-      this._statsLogTimer = null;
-    }
-    this._lastStatisticsInfo = null;
-    this._lastMediaInfo = null;
-    this._lastPlaybackQualitySample = null;
-  }
-
-  private logPlaybackDiagnostics(): void {
-    if (!this.player || !this.playerVideoRef || !this.isStreamActive) {
-      return;
-    }
-
-    const videoEl = this.playerVideoRef.nativeElement;
-    const statistics = this._lastStatisticsInfo ?? this.player.statisticsInfo as RtmpPlayerStatisticsInfo;
-    const mediaInfo = this._lastMediaInfo ?? this.player.mediaInfo as RtmpPlayerMediaInfo;
-    const bufferedAheadSec = this.getBufferedAhead(videoEl);
-    const playbackQuality = this.getPlaybackQualityDelta(videoEl);
-    const frameTiming = this.consumeFrameTimingSummary(mediaInfo?.fps ?? null);
-    const videoEvents = this.consumeVideoEventCounters();
-
-    console.groupCollapsed(`[RTMP Stats] ${new Date().toLocaleTimeString()} ${this.sharerName || this.UniqueId}`);
-    console.info('transport', {
-      speedKbps: statistics?.speed ?? null,
-      decodedFrames: statistics?.decodedFrames ?? null,
-      droppedFrames: statistics?.droppedFrames ?? null,
-      playerType: statistics?.playerType ?? null,
-      bufferedAheadSec,
-      currentTime: videoEl.currentTime,
-      readyState: videoEl.readyState,
-      paused: videoEl.paused,
-      seeking: videoEl.seeking
-    });
-    console.info('media', {
-      resolution: mediaInfo?.width && mediaInfo?.height ? `${mediaInfo.width}x${mediaInfo.height}` : null,
-      fps: mediaInfo?.fps ?? null,
-      videoCodec: mediaInfo?.videoCodec ?? null,
-      audioCodec: mediaInfo?.audioCodec ?? null,
-      videoDataRate: mediaInfo?.videoDataRate ?? null,
-      audioDataRate: mediaInfo?.audioDataRate ?? null
-    });
-    if (playbackQuality) {
-      console.info('videoPlaybackQuality', playbackQuality);
-    }
-    if (frameTiming) {
-      console.info('frameTiming', frameTiming);
-    }
-    if (videoEvents) {
-      console.info('videoEvents', videoEvents);
-    }
-    console.groupEnd();
-  }
-
-  private attachVideoDiagnostics(video: HTMLVideoElement): void {
-    video.addEventListener('waiting', this.onVideoWaiting);
-    video.addEventListener('stalled', this.onVideoStalled);
-    video.addEventListener('playing', this.onVideoPlaying);
-    video.addEventListener('canplay', this.onVideoCanPlay);
-    video.addEventListener('seeking', this.onVideoSeeking);
-    video.addEventListener('seeked', this.onVideoSeeked);
-  }
-
-  private detachVideoDiagnostics(video: HTMLVideoElement): void {
-    this.stopFrameDiagnostics(video);
-    video.removeEventListener('waiting', this.onVideoWaiting);
-    video.removeEventListener('stalled', this.onVideoStalled);
-    video.removeEventListener('playing', this.onVideoPlaying);
-    video.removeEventListener('canplay', this.onVideoCanPlay);
-    video.removeEventListener('seeking', this.onVideoSeeking);
-    video.removeEventListener('seeked', this.onVideoSeeked);
-  }
-
-  private startFrameDiagnostics(video: HTMLVideoElement): void {
-    this.stopFrameDiagnostics(video);
-    this._lastVideoFrameSample = null;
-    this._frameTimingSummary = this.createEmptyFrameTimingSummary();
-
-    const frameVideo = video as HTMLVideoElement & {
-      requestVideoFrameCallback?: (callback: (now: number, metadata: RtmpVideoFrameCallbackMetadata) => void) => number;
-    };
-
-    if (!frameVideo.requestVideoFrameCallback) {
-      return;
-    }
-
-    const onFrame = (now: number, metadata: RtmpVideoFrameCallbackMetadata): void => {
-      this.captureFrameTiming(now, metadata);
-      this._frameCallbackHandle = frameVideo.requestVideoFrameCallback?.(onFrame) ?? null;
-    };
-
-    this._frameCallbackHandle = frameVideo.requestVideoFrameCallback(onFrame);
-  }
-
-  private stopFrameDiagnostics(video: HTMLVideoElement): void {
-    const frameVideo = video as HTMLVideoElement & {
-      cancelVideoFrameCallback?: (handle: number) => void;
-    };
-
-    if (this._frameCallbackHandle !== null) {
-      frameVideo.cancelVideoFrameCallback?.(this._frameCallbackHandle);
-      this._frameCallbackHandle = null;
-    }
-
-    this._lastVideoFrameSample = null;
-    this._frameTimingSummary = this.createEmptyFrameTimingSummary();
-    this._videoEventCounters = this.createEmptyVideoEventCounters();
-  }
-
-  private captureFrameTiming(now: number, metadata: RtmpVideoFrameCallbackMetadata): void {
-    const mediaTimeSec = typeof metadata.mediaTime === 'number' ? metadata.mediaTime : null;
-    const presentedFrames = typeof metadata.presentedFrames === 'number' ? metadata.presentedFrames : null;
-
-    if (mediaTimeSec == null || presentedFrames == null) {
-      return;
-    }
-
-    if (presentedFrames > 0) {
-      this.markStreamReady();
-    }
-
-    const currentSample: RtmpVideoFrameSample = {
-      nowMs: now,
-      mediaTimeSec,
-      presentedFrames
-    };
-
-    const previous = this._lastVideoFrameSample;
-    this._lastVideoFrameSample = currentSample;
-
-    if (!previous) {
-      return;
-    }
-
-    const callbackGapMs = Math.max(0, currentSample.nowMs - previous.nowMs);
-    const mediaGapMs = Math.max(0, (currentSample.mediaTimeSec - previous.mediaTimeSec) * 1000);
-    const presentedFramesDelta = Math.max(0, currentSample.presentedFrames - previous.presentedFrames);
-    const lateByMs = typeof metadata.expectedDisplayTime === 'number'
-      ? Math.max(0, now - metadata.expectedDisplayTime)
-      : 0;
-    const expectedFrameGapMs = this._lastMediaInfo?.fps ? 1000 / this._lastMediaInfo.fps : 1000 / 24;
-
-    this._frameTimingSummary.callbackCount += 1;
-    this._frameTimingSummary.presentedFramesDelta += presentedFramesDelta;
-    this._frameTimingSummary.totalCallbackGapMs += callbackGapMs;
-    this._frameTimingSummary.totalMediaGapMs += mediaGapMs;
-    this._frameTimingSummary.maxCallbackGapMs = Math.max(this._frameTimingSummary.maxCallbackGapMs, callbackGapMs);
-    this._frameTimingSummary.maxMediaGapMs = Math.max(this._frameTimingSummary.maxMediaGapMs, mediaGapMs);
-    this._frameTimingSummary.maxLateByMs = Math.max(this._frameTimingSummary.maxLateByMs, lateByMs);
-
-    if (lateByMs > 12) {
-      this._frameTimingSummary.lateCallbacks += 1;
-    }
-
-    if (mediaGapMs > expectedFrameGapMs * 1.5) {
-      this._frameTimingSummary.irregularMediaGaps += 1;
-    }
-  }
-
-  private consumeFrameTimingSummary(fpsHint: number | null): {
-    callbackCount: number;
-    presentedFramesDelta: number;
-    avgCallbackGapMs: number | null;
-    avgMediaGapMs: number | null;
-    maxCallbackGapMs: number;
-    maxMediaGapMs: number;
-    lateCallbacks: number;
-    maxLateByMs: number;
-    irregularMediaGaps: number;
-    fpsHint: number | null;
-  } | null {
-    const summary = this._frameTimingSummary;
-    this._frameTimingSummary = this.createEmptyFrameTimingSummary();
-
-    if (summary.callbackCount === 0) {
-      return null;
-    }
-
-    return {
-      callbackCount: summary.callbackCount,
-      presentedFramesDelta: summary.presentedFramesDelta,
-      avgCallbackGapMs: summary.callbackCount > 0 ? summary.totalCallbackGapMs / summary.callbackCount : null,
-      avgMediaGapMs: summary.callbackCount > 0 ? summary.totalMediaGapMs / summary.callbackCount : null,
-      maxCallbackGapMs: summary.maxCallbackGapMs,
-      maxMediaGapMs: summary.maxMediaGapMs,
-      lateCallbacks: summary.lateCallbacks,
-      maxLateByMs: summary.maxLateByMs,
-      irregularMediaGaps: summary.irregularMediaGaps,
-      fpsHint
-    };
-  }
-
-  private consumeVideoEventCounters(): RtmpVideoEventCounters | null {
-    const counters = this._videoEventCounters;
-    this._videoEventCounters = this.createEmptyVideoEventCounters();
-
-    if (Object.values(counters).every(value => value === 0)) {
-      return null;
-    }
-
-    return counters;
-  }
-
-  private createEmptyFrameTimingSummary(): RtmpFrameTimingSummary {
-    return {
-      callbackCount: 0,
-      presentedFramesDelta: 0,
-      lateCallbacks: 0,
-      irregularMediaGaps: 0,
-      maxCallbackGapMs: 0,
-      maxMediaGapMs: 0,
-      maxLateByMs: 0,
-      totalCallbackGapMs: 0,
-      totalMediaGapMs: 0
-    };
-  }
-
-  private createEmptyVideoEventCounters(): RtmpVideoEventCounters {
-    return {
-      waiting: 0,
-      stalled: 0,
-      playing: 0,
-      canplay: 0,
-      seeking: 0,
-      seeked: 0
-    };
-  }
-
-  private buildVideoEventSnapshot(video: HTMLVideoElement): {
-    currentTime: number;
-    bufferedAheadSec: number | null;
-    readyState: number;
-    networkState: number;
-    paused: boolean;
-    seeking: boolean;
-  } {
-    return {
-      currentTime: video.currentTime,
-      bufferedAheadSec: this.getBufferedAhead(video),
-      readyState: video.readyState,
-      networkState: video.networkState,
-      paused: video.paused,
-      seeking: video.seeking
-    };
-  }
-
-  private readonly onVideoWaiting = (event: Event): void => {
-    this._videoEventCounters.waiting += 1;
-    console.warn('[RtmpFileSharePlayer] video waiting', this.buildVideoEventSnapshot(event.target as HTMLVideoElement));
-  };
-
-  private readonly onVideoStalled = (event: Event): void => {
-    this._videoEventCounters.stalled += 1;
-    console.warn('[RtmpFileSharePlayer] video stalled', this.buildVideoEventSnapshot(event.target as HTMLVideoElement));
-  };
-
-  private readonly onVideoPlaying = (): void => {
-    this._videoEventCounters.playing += 1;
-    this.markStreamReady();
-  };
-
-  private readonly onVideoCanPlay = (): void => {
-    this._videoEventCounters.canplay += 1;
-    this.markStreamReady();
-  };
-
-  private readonly onVideoSeeking = (): void => {
-    this._videoEventCounters.seeking += 1;
-  };
-
-  private readonly onVideoSeeked = (): void => {
-    this._videoEventCounters.seeked += 1;
-  };
-
-  private getBufferedAhead(video: HTMLVideoElement): number | null {
-    if (!video.buffered || video.buffered.length === 0) return null;
-    const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-    return Math.max(0, bufferedEnd - video.currentTime);
-  }
-
-  private getPlaybackQualityDelta(video: HTMLVideoElement): { totalFrames: number; droppedFrames: number; droppedDelta: number; totalDelta: number } | null {
-    const qualityFn = (video as HTMLVideoElement & {
-      getVideoPlaybackQuality?: () => { totalVideoFrames: number; droppedVideoFrames: number };
-    }).getVideoPlaybackQuality;
-
-    if (!qualityFn) return null;
-
-    const quality = qualityFn.call(video);
-    const currentSample = {
-      totalFrames: quality.totalVideoFrames,
-      droppedFrames: quality.droppedVideoFrames,
-      timestampMs: Date.now()
-    };
-
-    const previous = this._lastPlaybackQualitySample;
-    this._lastPlaybackQualitySample = currentSample;
-
-    return {
-      totalFrames: currentSample.totalFrames,
-      droppedFrames: currentSample.droppedFrames,
-      droppedDelta: previous ? currentSample.droppedFrames - previous.droppedFrames : 0,
-      totalDelta: previous ? currentSample.totalFrames - previous.totalFrames : 0
-    };
   }
 
   private resetPreferenceForm(): void {
@@ -1016,242 +551,5 @@ export class RtmpFileSharePlayerComponent implements OnInit, AfterViewInit, OnDe
     this.rtmpMediaProbeError = null;
     this.selectedAudioOrdinal = null;
     this.selectedSubtitleOrdinal = null;
-  }
-
-  // ── Host controls ─────────────────────────────────────────────────────────
-
-  togglePlayPause(): void {
-    if (this.playbackMode !== 'rtmp') return;
-    if (!this.isStreamActive) return;
-    const wasPaused = this.hostPaused;
-    this.hostPaused = !wasPaused;
-    const isNowPlaying = !this.hostPaused;
-
-    if (isNowPlaying) {
-      this._positionBase = this.hostPosition;
-      this._positionBaseAt = Date.now();
-    } else {
-      this.hostPosition = this._positionBase + (Date.now() - this._positionBaseAt) / 1000;
-      this._positionBase = this.hostPosition;
-      this.clearReconnectTimer();
-      this.isAwaitingStreamData = false;
-      this.destroyPlayer();
-    }
-
-    this.webrtcService.broadcastRtmpFileSharePlayPause(this.UniqueId, isNowPlaying)
-      .then(() => {
-        if (!isNowPlaying) {
-          return;
-        }
-
-        this.isAwaitingStreamData = true;
-        this._awaitingReason = 'resume';
-        if (this.streamUrl && !this.player) {
-          this.createPlayer(this.streamUrl);
-        }
-      })
-      .catch(err => {
-        console.error('togglePlayPause failed:', err);
-        this.hostPaused = wasPaused;
-        this._awaitingReason = null;
-
-        if (!wasPaused && this.streamUrl) {
-          this.isAwaitingStreamData = true;
-          this.createPlayer(this.streamUrl);
-        }
-      });
-  }
-
-  onSeekInput(event: Event): void {
-    if (this.playbackMode !== 'rtmp') return;
-    this.isSeeking = true;
-    this.hostPosition = +(event.target as HTMLInputElement).value;
-  }
-
-  onSeekChange(event: Event): void {
-    if (this.playbackMode !== 'rtmp') return;
-    this.isSeeking = false;
-    const pos = +(event.target as HTMLInputElement).value;
-    this.hostPosition = pos;
-    this._positionBase = pos;
-    this._positionBaseAt = Date.now();
-
-    if (this.streamUrl) {
-      this.isAwaitingStreamData = true;
-      this._awaitingReason = 'seek';
-      this.destroyPlayer();
-    }
-
-    this.webrtcService.broadcastRtmpFileShareSeek(this.UniqueId, pos)
-      .then(() => {
-        this.hostPaused = false;
-      })
-      .catch(() => {
-        this._awaitingReason = null;
-        if (this.streamUrl) {
-          this.createPlayer(this.streamUrl);
-        }
-      });
-  }
-
-  toggleMute(): void {
-    this.hostMuted = !this.hostMuted;
-    const video = this.playerVideoRef?.nativeElement;
-    if (video) video.muted = this.hostMuted;
-  }
-
-  onVolumeInput(event: Event): void {
-    const vol = +(event.target as HTMLInputElement).value;
-    this.hostVolume = vol;
-    this.hostMuted = vol === 0;
-    const video = this.playerVideoRef?.nativeElement;
-    if (video) {
-      video.volume = vol;
-      video.muted = vol === 0;
-    }
-  }
-
-  toggleFullscreen(): void {
-    const el = this.playerVideoRef?.nativeElement;
-    if (!el) return;
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
-    } else {
-      el.requestFullscreen().catch(() => {});
-    }
-  }
-
-  async stopSharing(): Promise<void> {
-    if (this.isStopping) return;
-    this.isStopping = true;
-    this.stopPositionTracking();
-    await this.webrtcService.stopRtmpFileShare(this.UniqueId);
-    this.isStopping = false;
-  }
-
-  // ── Position tracking (host) ──────────────────────────────────────────────
-
-  private startPositionTracking(): void {
-    this.stopPositionTracking();
-    this._positionInterval = setInterval(() => {
-      if (!this.hostPaused && !this.isSeeking) {
-        this.hostPosition = this._positionBase + (Date.now() - this._positionBaseAt) / 1000;
-        if (this.hostDuration != null) {
-          this.hostPosition = Math.min(this.hostPosition, this.hostDuration);
-        }
-      }
-    }, 250);
-  }
-
-  private stopPositionTracking(): void {
-    if (this._positionInterval != null) {
-      clearInterval(this._positionInterval);
-      this._positionInterval = null;
-    }
-  }
-
-  // ── Volume persistence ────────────────────────────────────────────────────
-
-  private static readonly VOLUME_KEY = 'dreck-rtmp-fileshare-volume';
-
-  private loadSavedVolume(video: HTMLVideoElement): void {
-    try {
-      const raw = localStorage.getItem(RtmpFileSharePlayerComponent.VOLUME_KEY);
-      if (!raw) return;
-      const s = JSON.parse(raw);
-      if (typeof s.volume === 'number') video.volume = Math.min(1, Math.max(0, s.volume));
-      if (typeof s.muted === 'boolean') video.muted = s.muted;
-    } catch {}
-  }
-
-  private readonly onVolumeChange = (e: Event): void => {
-    const video = e.target as HTMLVideoElement;
-    try {
-      localStorage.setItem(RtmpFileSharePlayerComponent.VOLUME_KEY,
-        JSON.stringify({ volume: video.volume, muted: video.muted }));
-    } catch {}
-  };
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-
-  /**
-   * Adds the transport parameters the live proxy expects.
-   *
-   * This used to append the session token read from a cookie, which is no longer readable and was never
-   * the right value: /api/rtmp/liveProxy forwards its whole query string upstream, so that was our
-   * session credential being handed to the streaming server. If the upstream does require a credential,
-   * liveProxy should attach it server-side from the authenticated caller rather than trusting the client
-   * to carry one.
-   */
-  private buildAuthedUrl(baseUrl: string): string {
-    if ((baseUrl.includes('/api/rtmp/liveProxy') || baseUrl.includes('live.drecktu.be')) && !/[?&]token=/.test(baseUrl)) {
-      const url = this.appendQueryParam(baseUrl, 'app', 'live');
-      return this.appendQueryParam(url, 'port', '1935');
-    }
-
-    return baseUrl;
-  }
-
-  private appendQueryParam(url: string, key: string, value: string): string {
-    if (new RegExp(`[?&]${key}=`).test(url)) {
-      return url;
-    }
-
-    const separator = url.includes('?') ? '&' : '?';
-    return `${url}${separator}${key}=${encodeURIComponent(value)}`;
-  }
-
-  private getVodSource(url: string, contentType: string | null): { src: string; type?: string } {
-    const normalizedUrl = url.toLowerCase();
-    if (normalizedUrl.includes('/hlssegment/') || normalizedUrl.includes('.m3u8')) {
-      return { src: url, type: 'application/x-mpegURL' };
-    }
-
-    if (contentType) {
-      return { src: url, type: contentType };
-    }
-
-    return { src: url };
-  }
-
-  formatTime(sec: number | null | undefined): string {
-    if (sec == null || !isFinite(sec) || sec < 0) return '--:--';
-    const total = Math.floor(sec);
-    const s = total % 60;
-    const m = Math.floor(total / 60) % 60;
-    const h = Math.floor(total / 3600);
-    const mm = String(m).padStart(2, '0');
-    const ss = String(s).padStart(2, '0');
-    return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
-  }
-
-  getAwaitingCopy(): string {
-    if (this.playbackMode === 'vod') {
-      return 'Preparing normal playback…';
-    }
-
-    switch (this._awaitingReason) {
-      case 'resume':
-        return 'Waiting for playback to resume…';
-      case 'seek':
-        return 'Seeking and waiting for the stream to restart…';
-      case 'reconnect':
-        return 'Reconnecting to the stream…';
-      default:
-        return this.IsHost ? 'Waiting for the RTMP stream to become readable…' : 'Waiting for stream data…';
-    }
-  }
-
-  get seekFillPercent(): number {
-    if (!this.hostDuration) return 0;
-    return Math.min(100, (this.hostPosition / this.hostDuration) * 100);
-  }
-
-  get isPreparingNormalPlayback(): boolean {
-    return false;
-  }
-
-  get statusBannerText(): string | null {
-    return this._statusBannerText;
   }
 }

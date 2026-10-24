@@ -1,3 +1,24 @@
+.live-player {
+  position: relative;
+}
+
+.live-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.unmute-btn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+}
+
 .live-button {
   position: absolute;
   top: 25px;
