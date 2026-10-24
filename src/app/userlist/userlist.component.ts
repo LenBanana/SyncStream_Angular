@@ -11,6 +11,7 @@ import { WebrtcService } from '../media/webrtc/webrtc-service/webrtc.service';
 import { StreamAudience, StreamStartConfig } from '../media/webrtc/stream-start-dialog/stream-start-dialog.component';
 import { BrowserSettings, loadBrowserSettings } from '../Interfaces/BrowserSettings';
 import { SignalRService } from '../services/signal-r.service';
+import { Subscription } from 'rxjs';
 declare var $:any
 
 @Component({
@@ -36,9 +37,10 @@ export class UserlistComponent implements OnInit, OnChanges, OnDestroy {
   Initial = true;
   IsHost: boolean = false;
   Members: Member[] = [];
-  /** True while the current user is broadcasting a P2P stream. */
+  /** True while the current user is streaming, to the member list or the room. */
   isStreaming: boolean = false;
   liveAudience: StreamAudience = 'personal';
+  private audienceSubscription: Subscription;
   showStreamDialog = false;
   browserSettings: BrowserSettings = this._loadSettings();
 
@@ -68,11 +70,18 @@ export class UserlistComponent implements OnInit, OnChanges, OnDestroy {
     this.memberUpdate.unsubscribe();
     this.hostUpdate.unsubscribe();
     this.connectionUpdate?.unsubscribe();
+    this.audienceSubscription?.unsubscribe();
     this.userService.NullAllSubs();
   }
 
   ngOnInit(): void {
     this.Privileges = MainUser.userprivileges;
+    // Follows the stream itself, which also ends without this button: the browser's stop-sharing bar, a lost
+    // connection, leaving the room.
+    this.audienceSubscription = this.webrtcService.localAudience.subscribe(audience => {
+      this.isStreaming = audience !== null;
+      if (audience) this.liveAudience = audience;
+    });
     // Rejoin explicitly after a dropped connection. A reconnect brings a new connection id, so the server
     // has already removed the old member; without this the user sits in a room the server does not think
     // they are in. The old code relied on a 2.5s poll whose fallback re-joined with an empty password,
@@ -195,30 +204,17 @@ export class UserlistComponent implements OnInit, OnChanges, OnDestroy {
   async onStreamDialogConfirmed(config: StreamStartConfig): Promise<void> {
     this.showStreamDialog = false;
     try {
-      if (config.audience === 'room') {
-        await this.webrtcService.startStreamingToRoom(this.UniqueId, config.stream, config.maxBitrate, config.resolution, config.frameRate, config.contentPreference);
-      } else {
-        await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate, config.resolution, config.frameRate, config.contentPreference);
-      }
-      this.isStreaming = true;
-      this.liveAudience = config.audience;
-      // Auto-stop when the browser's native screen-share dialog is closed.
-      config.stream.getVideoTracks()[0]?.addEventListener('ended', () => this.stopLive());
+      await this.webrtcService.startLive(this.UniqueId, config.capture, config.audience);
     } catch (err) {
-      console.error('goLive: startStreaming failed', err);
-      config.stream.getTracks().forEach(t => t.stop());
+      config.capture.release();
+      this.dialogService.PushDefaultDialog(err instanceof Error ? err.message : String(err),
+        'Could not go live', AlertType.Danger);
     }
   }
 
-  /** Stop the current P2P broadcast. */
+  /** Stop the current stream, wherever it is going. */
   async stopLive(): Promise<void> {
-    if (this.liveAudience === 'room') {
-      await this.webrtcService.stopStreamingToRoom(this.UniqueId);
-    } else {
-      await this.webrtcService.stopStreaming(this.UniqueId);
-    }
-    this.isStreaming = false;
-    this.liveAudience = 'personal';
+    await this.webrtcService.stopOwnStream();
   }
 
   /** Opt-in watch: open the popout viewer for a specific streaming member. */

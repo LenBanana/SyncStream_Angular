@@ -10,9 +10,12 @@ import {
 import {Subscription} from 'rxjs';
 import {filter} from 'rxjs/operators';
 import {SfuRecordingInfo, WebrtcService} from './webrtc-service/webrtc.service';
-
+import {SfuLinkState} from './sfu/sfu-transports';
 import {StreamStartConfig} from './stream-start-dialog/stream-start-dialog.component';
 import {BrowserSettings, loadBrowserSettings} from '../../Interfaces/BrowserSettings';
+import {baseUrl} from '../../services/signal-r.service';
+import {DialogService} from '../../text-dialog/text-dialog-service/dialog-service.service';
+import {AlertType} from '../../Interfaces/Dialog';
 
 @Component({
   selector: 'app-webrtc',
@@ -32,64 +35,65 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
 
   hasStream: boolean = false;
   isLoading: boolean = true;
+  /** The stage connection could not be restored; the viewer can retry. */
   connectionFailed: boolean = false;
+  /** The stage connection dropped and is being restored. */
+  reconnecting: boolean = false;
+  /** This client's own broadcast is reconnecting to the media server. */
+  broadcastReconnecting: boolean = false;
   recordingInfo: SfuRecordingInfo | null = null;
   isRecording: boolean = false;
+  /** Where the last recording of this client's broadcast can be downloaded. */
+  savedRecordingUrl: string | null = null;
   isBroadcasting: boolean = false;
   showLocalPreview: boolean = true;
 
   /** Controls visibility of the stream-start dialog. */
   showStreamDialog: boolean = false;
-  browserSettings: BrowserSettings = this._loadSettings();
+  browserSettings: BrowserSettings = loadBrowserSettings();
 
-  private sub: Subscription | null = null;
-  private recordingSub: Subscription | null = null;
-  private broadcastStateSub: Subscription | null = null;
-  private roomStagePreviewSub: Subscription | null = null;
+  private subscriptions: Subscription[] = [];
   private localPreviewVideoRef: ElementRef<HTMLVideoElement> | undefined;
   private localPreviewStream: MediaStream | null = null;
 
-  constructor(public webrtcService: WebrtcService) {}
-
-  private _loadSettings(): BrowserSettings {
-    return loadBrowserSettings();
-  }
+  constructor(public webrtcService: WebrtcService, private dialogService: DialogService) {}
 
   ngOnInit(): void {
-    // Subscribe to the incoming MediaStream from the P2P or SFU path.
-    this.sub = this.webrtcService.remoteStream
-      .pipe(filter(s => s !== null || this.hasStream))
-      .subscribe(stream => {
-        if (stream) {
-          this.hasStream = true;
-          this.isLoading = false;
-          this.connectionFailed = false;
-          this.attachStream(stream);
-        } else {
-          this.hasStream = false;
-          this.detachStream();
+    this.subscriptions.push(
+      this.webrtcService.remoteStream
+        .pipe(filter(s => s !== null || this.hasStream))
+        .subscribe(stream => {
+          if (stream) {
+            this.hasStream = true;
+            this.isLoading = false;
+            void this.attachStream(stream);
+          } else {
+            this.hasStream = false;
+            this.detachStream();
+          }
+        }),
+      this.webrtcService.stageState.subscribe(state => this.applyStageState(state)),
+      this.webrtcService.localState.subscribe(state => this.broadcastReconnecting = state === 'reconnecting'),
+      this.webrtcService.sfuRecording.subscribe(info => {
+        this.recordingInfo = info;
+        this.isRecording = info !== null;
+      }),
+      this.webrtcService.recordingSaved.subscribe(filename => {
+        // Only the broadcaster made the recording; only they are offered it.
+        if (this.isBroadcasting) {
+          this.savedRecordingUrl = `${baseUrl}api/recordings/${encodeURIComponent(filename)}`;
         }
-      });
-
-    this.recordingSub = this.webrtcService.sfuRecording.subscribe(info => {
-      this.recordingInfo = info;
-      this.isRecording = info !== null;
-    });
-
-    this.broadcastStateSub = this.webrtcService.roomStageBroadcastActive.subscribe(active => {
-      this.isBroadcasting = active;
-      if (active) {
-        this.isLoading = false;
-      }
-    });
-
-    this.roomStagePreviewSub = this.webrtcService.roomStagePreviewStream.subscribe(stream => {
-      this.localPreviewStream = stream;
-      if (stream) {
-        this.isLoading = false;
-      }
-      this.syncLocalPreview();
-    });
+      }),
+      this.webrtcService.roomStageBroadcastActive.subscribe(active => {
+        this.isBroadcasting = active;
+        if (active) this.isLoading = false;
+      }),
+      this.webrtcService.roomStagePreviewStream.subscribe(stream => {
+        this.localPreviewStream = stream;
+        if (stream) this.isLoading = false;
+        this.syncLocalPreview();
+      })
+    );
   }
 
   ngAfterViewInit(): void {
@@ -98,15 +102,12 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
     if (current) {
       this.hasStream = true;
       this.isLoading = false;
-      this.attachStream(current);
+      void this.attachStream(current);
     }
   }
 
   ngOnDestroy(): void {
-    this.sub?.unsubscribe();
-    this.recordingSub?.unsubscribe();
-    this.broadcastStateSub?.unsubscribe();
-    this.roomStagePreviewSub?.unsubscribe();
+    this.subscriptions.forEach(subscription => subscription.unsubscribe());
     this.detachStream();
     this.clearLocalPreview();
   }
@@ -119,10 +120,15 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
     return this.isBroadcasting && !this.hasStream && !this.showLocalPreview && !!this.localPreviewStream;
   }
 
+  private applyStageState(state: SfuLinkState | null): void {
+    this.reconnecting = state === 'reconnecting';
+    this.connectionFailed = state === 'failed';
+  }
+
   private async attachStream(stream: MediaStream): Promise<void> {
     if (!this.remoteVideoRef) return;
     const video = this.remoteVideoRef.nativeElement;
-    video.srcObject = stream;
+    if (video.srcObject !== stream) video.srcObject = stream;
     video.muted = false;
 
     try {
@@ -151,9 +157,9 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
     video.srcObject = null;
   }
 
-  /** Opens the stream-start dialog (replaces the raw getDisplayMedia call). */
+  /** Opens the stream-start dialog. */
   openStreamDialog(): void {
-    this.browserSettings = this._loadSettings();
+    this.browserSettings = loadBrowserSettings();
     this.showStreamDialog = true;
   }
 
@@ -166,32 +172,24 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
   async onStreamDialogConfirmed(config: StreamStartConfig): Promise<void> {
     this.showStreamDialog = false;
     if (!this.UniqueId) {
-      config.stream.getTracks().forEach(t => t.stop());
+      config.capture.release();
       return;
     }
     try {
       this.showLocalPreview = true;
+      this.savedRecordingUrl = null;
       this.isLoading = false;
-      // Stop broadcasting if the user ends the capture via the browser's built-in stop button.
-      config.stream.getVideoTracks()[0]?.addEventListener('ended', () => {
-        if (this.isBroadcasting) this.stopBroadcast();
-      });
-      await this.webrtcService.startStreamingToRoom(
-        this.UniqueId,
-        config.stream,
-        config.maxBitrate,
-        config.resolution,
-        config.frameRate,
-        config.contentPreference
-      );
+      await this.webrtcService.startStreamingToRoom(this.UniqueId, config.capture);
     } catch (err) {
+      config.capture.release();
       this.isLoading = true;
-      console.error('Failed to start broadcast:', err);
+      this.dialogService.PushDefaultDialog(err instanceof Error ? err.message : String(err),
+        'Could not broadcast', AlertType.Danger);
     }
   }
 
-  /** Start a forced P2P broadcast to all room members (Moderator+). */
-  async startBroadcast(): Promise<void> {
+  /** Broadcast this client's screen or camera to the room. */
+  startBroadcast(): void {
     this.openStreamDialog();
   }
 
@@ -208,54 +206,34 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
     this.syncLocalPreview();
   }
 
-  /** Request ICE restart when the P2P connection degrades. */
-  requestReconnect(): void {
-    if (this.UniqueId) {
-      this.webrtcService.requestIceRestart(this.UniqueId);
-    }
+  /** Rebuild the connection to the stage after it failed. */
+  retryConnection(): void {
+    void this.webrtcService.retryStage();
   }
 
   /** Toggle fullscreen on the video element. */
   toggleFullscreen(): void {
     const video = this.remoteVideoRef?.nativeElement;
     if (!video) return;
-    if (!document.fullscreenElement) {
-      video.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
+    const request = document.fullscreenElement ? document.exitFullscreen() : video.requestFullscreen();
+    request.catch(err => console.warn('[WebRTC] fullscreen change refused', err));
   }
 
-  /** Start server-side SFU recording (host only). */
+  /** Record this client's broadcast on the server. */
   async startRecording(): Promise<void> {
-    if (this.UniqueId) {
-      await this.webrtcService.startRecording(this.UniqueId);
-    }
+    if (!this.UniqueId) return;
+    this.savedRecordingUrl = null;
+    await this.webrtcService.startRecording(this.UniqueId);
   }
 
-  /** Stop server-side SFU recording (host only). */
   async stopRecording(): Promise<void> {
     if (this.UniqueId) {
       await this.webrtcService.stopRecording(this.UniqueId);
     }
   }
 
-  /** Adaptive bitrate: set the highest simulcast layer. */
-  setQualityHigh(): void {
-    const consumers = this.webrtcService.getSfuConsumerIds();
-    consumers.forEach(id => this.webrtcService.setPreferredLayers(this.UniqueId, id, 2, 2));
-  }
-
-  /** Adaptive bitrate: set medium simulcast layer. */
-  setQualityMedium(): void {
-    const consumers = this.webrtcService.getSfuConsumerIds();
-    consumers.forEach(id => this.webrtcService.setPreferredLayers(this.UniqueId, id, 1, 2));
-  }
-
-  /** Adaptive bitrate: set lowest simulcast layer (saves bandwidth). */
-  setQualityLow(): void {
-    const consumers = this.webrtcService.getSfuConsumerIds();
-    consumers.forEach(id => this.webrtcService.setPreferredLayers(this.UniqueId, id, 0, 2));
+  dismissSavedRecording(): void {
+    this.savedRecordingUrl = null;
   }
 
   private syncLocalPreview(): void {
@@ -272,9 +250,8 @@ export class WebrtcComponent implements OnInit, OnDestroy, AfterViewInit {
       video.srcObject = this.localPreviewStream;
     }
     video.muted = true;
-    video.play().catch(() => {
-      // Muted local preview should normally autoplay, but this remains best-effort.
-    });
+    // Muted playback is always allowed to autoplay; a refusal here means the element went away mid-call.
+    video.play().catch(err => console.warn('[WebRTC] local preview could not play', err));
   }
 
   private clearLocalPreview(): void {

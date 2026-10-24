@@ -43,7 +43,15 @@
   font-weight: 600;
 }
 
-.webrtc-controls {
-  opacity: 0;
-  transition: opacity 0.2s ease;
+.webrtc-recording-saved {
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(12, 16, 24, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  z-index: 2;
+}
+
+.webrtc-failed {
+  z-index: 2;
 }

@@ -72,6 +72,13 @@
       <span class="small">Paused</span>
     </div>
 
+    <!-- The server caught up with the upload and waits for more of the file -->
+    <div *ngIf="hasRemoteStream && isBuffering && !isPaused"
+         class="position-absolute d-flex flex-column align-items-center justify-content-center text-light pause-overlay">
+      <div class="spinner-border text-main-color mb-2" role="status"></div>
+      <span class="small">Buffering: waiting for more of the file to upload</span>
+    </div>
+
     <!-- Server-mode host controls -->
     <ng-container *ngIf="isServerShareMode && hasRemoteStream">
 

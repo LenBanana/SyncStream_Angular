@@ -286,6 +286,12 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
       this.webrtcService.pipActive.subscribe(active => {
         this.pipIsActive = active;
       }),
+      // Follows the stream itself, which also ends without the Stop button.
+      this.webrtcService.localAudience.subscribe(audience => {
+        this.isStreaming = audience !== null;
+        if (audience) this.liveAudience = audience;
+        this.localStream = audience ? this.localStream : null;
+      }),
       // Track both file-share paths so the Share/Stop button reflects reality.
       this.webrtcService.fileShareActive.subscribe(info => {
         this.isFileSharingActive = info !== null && this.webrtcService.isFileShareHost;
@@ -503,36 +509,24 @@ export class SideNavComponent implements OnInit, OnDestroy, AfterViewInit {
   async onStreamDialogConfirmed(config: StreamStartConfig): Promise<void> {
     this.showStreamDialog = false;
     try {
-      if (config.audience === 'room') {
-        await this.webrtcService.startStreamingToRoom(this.UniqueId, config.stream, config.maxBitrate, config.resolution, config.frameRate, config.contentPreference);
-      } else {
-        await this.webrtcService.startStreaming(this.UniqueId, config.stream, config.maxBitrate, config.resolution, config.frameRate, config.contentPreference);
-      }
-      this.isStreaming = true;
-      this.liveAudience = config.audience;
-      this.localStream = config.stream;
-      config.stream.getVideoTracks()[0]?.addEventListener('ended', () => this.stopLive());
+      this.localStream = config.capture.stream;
+      await this.webrtcService.startLive(this.UniqueId, config.capture, config.audience);
     } catch (err) {
-      console.error('goLive: startStreaming failed', err);
-      config.stream.getTracks().forEach(t => t.stop());
+      this.localStream = null;
+      config.capture.release();
+      this.dialogService.PushDefaultDialog(err instanceof Error ? err.message : String(err),
+        'Could not go live', AlertType.Danger);
     }
   }
 
+  /** Stop the current stream, wherever it is going. */
   async stopLive(): Promise<void> {
-    if (this.liveAudience === 'room') {
-      await this.webrtcService.stopStreamingToRoom(this.UniqueId);
-    } else {
-      await this.webrtcService.stopStreaming(this.UniqueId);
-    }
-    this.isStreaming = false;
-    this.liveAudience = 'personal';
-    this.localStream = null;
+    await this.webrtcService.stopOwnStream();
   }
 
-  watchStreamer(member: any): void {
+  watchStreamer(member: Member): void {
     if (!member.connectionId) return;
-    this.webrtcService.startWatching(this.UniqueId, member.connectionId, member.username)
-      .catch(err => console.error('startWatching failed', err));
+    void this.webrtcService.startWatching(this.UniqueId, member.connectionId, member.username);
   }
 
   /** Called from the side-nav "Pop back in" button — exits PiP so the popout reappears. */

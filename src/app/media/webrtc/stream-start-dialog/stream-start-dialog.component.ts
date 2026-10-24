@@ -6,19 +6,17 @@ import {
   OnInit,
   Output
 } from '@angular/core';
-import {Resolution, StreamContentPreference} from '../webrtc-service/webrtc.service';
+import {CapturedMedia, Resolution, StreamAudience, StreamContentPreference} from '../webrtc-service/webrtc.service';
 import {BrowserSettings, changeSettings} from '../../../Interfaces/BrowserSettings';
 
-export type StreamAudience = 'personal' | 'room';
+export {StreamAudience} from '../webrtc-service/webrtc.service';
 
-/** What the dialog returns when the user confirms. */
+/**
+ * What the dialog hands over when the user confirms. The capture now belongs to the receiver, which releases it
+ * once the stream ends; the dialog keeps nothing running of its own.
+ */
 export interface StreamStartConfig {
-  stream: MediaStream;
-  /** Resolved bitrate in bps (already applied as encoder constraint). */
-  maxBitrate: number;
-  resolution: Resolution;
-  frameRate: number;
-  contentPreference: StreamContentPreference;
+  capture: CapturedMedia;
   audience: StreamAudience;
 }
 
@@ -132,10 +130,8 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
   /** True when the user asked for system audio but the browser/source didn't deliver it. */
   systemAudioMissing = false;
 
-  // ---- Final assembled stream ----
+  // ---- Captured source, until it is handed over ----
   private capturedStream: MediaStream | null = null;
-  /** Kept alive for the duration of the stream so the audio mix stays active. */
-  private audioCtx: AudioContext | null = null;
 
   constructor() {}
 
@@ -145,13 +141,12 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Whatever was confirmed has been handed over already; this only releases a capture that never was.
     this._releaseAllPreviews();
     if (this.capturedStream) {
       this.capturedStream.getTracks().forEach(t => t.stop());
       this.capturedStream = null;
     }
-    this.audioCtx?.close().catch(() => {});
-    this.audioCtx = null;
   }
 
   // ===========================================================================
@@ -194,48 +189,44 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
       }
     ];
 
-    // Try to enumerate cameras
-    try {
-      await navigator.mediaDevices.getUserMedia({video: true, audio: false})
-        .then(s => s.getTracks().forEach(t => t.stop()))
-        .catch(() => {/* permission denied, skip cameras */});
-
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const cameras = devices.filter(d => d.kind === 'videoinput');
-      for (const cam of cameras) {
-        this.sourceOptions.push({
-          id: cam.deviceId,
-          label: cam.label || `Camera ${this.sourceOptions.length}`,
-          icon: 'fa-camera',
-          type: 'camera',
-          thumbnailStream: null
-        });
-      }
-
-      this.audioInputDevices = devices.filter(d => d.kind === 'audioinput');
-    } catch {
-      // permissions unavailable — proceed without camera list
-    }
+    // Cameras are listed without asking for them. Asking used to open the camera (and the permission prompt) every
+    // time the dialog opened, even to share a screen; the prompt now only appears once a camera is picked.
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cameras = devices.filter(d => d.kind === 'videoinput');
+    cameras.forEach((cam, index) => {
+      this.sourceOptions.push({
+        // Without permission the browser hides device ids; the camera is then chosen by the system default.
+        id: cam.deviceId || `__camera_${index}__`,
+        label: cam.label || `Camera ${index + 1}`,
+        icon: 'fa-camera',
+        type: 'camera',
+        thumbnailStream: null
+      });
+    });
+    this.audioInputDevices = devices.filter(d => d.kind === 'audioinput');
 
     // Auto-select first option
     this.selectedSourceId = this.sourceOptions[0]?.id ?? null;
     this.isLoading = false;
 
-    // Start thumbnail preview for camera sources
-    this._refreshThumbnailPreviews();
+    // Live thumbnails only where the camera may already be used without asking.
+    const camerasAllowed = cameras.some(cam => cam.label !== '');
+    if (camerasAllowed) await this._refreshThumbnailPreviews();
   }
 
   private async _refreshThumbnailPreviews(): Promise<void> {
     for (const opt of this.sourceOptions) {
-      if (opt.type === 'camera') {
-        try {
-          const s = await navigator.mediaDevices.getUserMedia({
-            video: {deviceId: {exact: opt.id}, width: {ideal: 320}, height: {ideal: 180}},
-            audio: false
-          });
-          this.previewStreams.set(opt.id, s);
-          opt.thumbnailStream = s;
-        } catch { /* skip */ }
+      if (opt.type !== 'camera') continue;
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({
+          video: {deviceId: {exact: opt.id}, width: {ideal: 320}, height: {ideal: 180}},
+          audio: false
+        });
+        this.previewStreams.set(opt.id, s);
+        opt.thumbnailStream = s;
+      } catch (err) {
+        // A camera in use by another application cannot be previewed; it is still offered.
+        console.warn(`Camera preview unavailable for ${opt.label}:`, err);
       }
     }
   }
@@ -330,10 +321,10 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
 
     try {
       if (option.type === 'display') {
-        // Capture the source at its native resolution — the user has not selected a
-        // quality preset yet (that is step 2). Resolution is controlled by the WebRTC
-        // encoder via bitrate (injected into the SDP offer); over-constraining the
-        // capture here only causes the browser to reject or ignore the constraints.
+        // Capture the source at its native resolution: the user has not selected a
+        // quality preset yet (that is step 2). The encoder scales to the preset when
+        // sending; over-constraining the capture here only causes the browser to reject
+        // or ignore the constraints.
         //
         // systemAudio / surfaceSwitching / selfBrowserSurface are Chromium hints that
         // make the native picker default the "Share tab audio" checkbox to checked and
@@ -353,10 +344,10 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
         this.systemAudioMissing =
           this.shareSystemAudio && this.capturedStream.getAudioTracks().length === 0;
       } else {
-        // Camera — capture at native resolution; frameRate is tightened on confirm.
+        // Camera: capture at native resolution; frameRate is tightened on confirm.
         this.capturedStream = await navigator.mediaDevices.getUserMedia({
           video: {
-            deviceId: {exact: option.id},
+            deviceId: option.id.startsWith('__camera_') ? undefined : {exact: option.id},
             width: {ideal: 1920},
             height: {ideal: 1080},
             frameRate: {ideal: 60}
@@ -452,10 +443,9 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     try {
-      let finalStream = this.capturedStream;
-
-      // Collect audio sources to mix.
-      const systemAudioTracks = finalStream.getAudioTracks();
+      const source = this.capturedStream;
+      const videoTrack = source.getVideoTracks()[0];
+      const systemAudioTracks = source.getAudioTracks();
       let micTrack: MediaStreamTrack | null = null;
 
       if (this.shareMicrophone) {
@@ -470,39 +460,10 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
         }
       }
 
-      const hasSystemAudio = systemAudioTracks.length > 0;
-      const hasMic = !!micTrack;
-
-      if (hasSystemAudio || hasMic) {
-        // Remove raw audio tracks from the stream — we'll replace them with the mix.
-        systemAudioTracks.forEach(t => finalStream.removeTrack(t));
-
-        // Mix via Web Audio so both sources are combined into one track and
-        // individual volumes are respected.  The AudioContext must stay alive
-        // for the duration of the stream; we store it in this.audioCtx.
-        this.audioCtx?.close().catch(() => {});
-        this.audioCtx = new AudioContext({sampleRate: 48000});
-        const dest = this.audioCtx.createMediaStreamDestination();
-
-        if (hasSystemAudio) {
-          const src = this.audioCtx.createMediaStreamSource(new MediaStream(systemAudioTracks));
-          const gain = this.audioCtx.createGain();
-          gain.gain.value = Math.max(0, Math.min(2, this.systemAudioVolume / 100));
-          src.connect(gain);
-          gain.connect(dest);
-        }
-
-        if (hasMic && micTrack) {
-          const src = this.audioCtx.createMediaStreamSource(new MediaStream([micTrack]));
-          const gain = this.audioCtx.createGain();
-          gain.gain.value = Math.max(0, Math.min(2, this.microphoneVolume / 100));
-          src.connect(gain);
-          gain.connect(dest);
-        }
-
-        const mixedTrack = dest.stream.getAudioTracks()[0];
-        if (mixedTrack) finalStream.addTrack(mixedTrack);
-      }
+      // Every track captured here, sent or not, so all of them can be released together.
+      const capturedTracks = [...source.getTracks(), ...(micTrack ? [micTrack] : [])];
+      const {audioTrack, mixer} = this._prepareAudio(systemAudioTracks, micTrack);
+      const finalStream = new MediaStream([videoTrack, audioTrack].filter((track): track is MediaStreamTrack => !!track));
 
       // Persist settings to BrowserSettings
       if (this.browserSettings) {
@@ -526,38 +487,66 @@ export class StreamStartDialogComponent implements OnInit, OnDestroy {
       // Enforce the user's chosen resolution/frameRate on the captured track now
       // that the preset is known. applyConstraints is safe on a live track; some
       // browsers may ignore parts of it for display capture, so this is best-effort.
-      const videoTrack = finalStream.getVideoTracks()[0];
       if (videoTrack) {
-        try {
-          videoTrack.contentHint = sourceType === 'display' ? this.contentPreference : 'motion';
-        } catch {
-          // Some browsers expose contentHint as read-only or unsupported.
-        }
-
+        // contentHint steers the encoder: 'detail' keeps screen text sharp, 'motion' keeps the frame rate.
+        videoTrack.contentHint = sourceType === 'display' ? this.contentPreference : 'motion';
         await videoTrack
           .applyConstraints(this._buildVideoConstraints(preset, sourceType))
           .catch(e => console.warn('applyConstraints (video quality) failed:', e));
-
       }
 
-      // Null both refs BEFORE emitting so ngOnDestroy → _releaseAllPreviews()
-      // does not stop the tracks we just handed to the caller.
+      // Handed over: from here the receiver owns these tracks and the mixer, so ngOnDestroy must not touch them.
       this.capturedStream = null;
       this.previewStream = null;
 
       this.confirmed.emit({
-        stream: finalStream,
-        maxBitrate: preset.maxBitrate,
-        resolution: preset.resolution,
-        frameRate: preset.frameRate,
-        contentPreference: this.contentPreference,
+        capture: {
+          stream: finalStream,
+          encoding: {
+            maxBitrate: preset.maxBitrate,
+            maxHeight: preset.resolution,
+            frameRate: preset.frameRate,
+            contentPreference: this.contentPreference
+          },
+          release: () => {
+            capturedTracks.forEach(track => track.stop());
+            mixer?.close().catch(err => console.warn('Closing the audio mixer failed:', err));
+          }
+        },
         audience: this.resolvedAudience
       });
-    } catch (err: any) {
-      this.errorMessage = `Failed to start stream: ${err?.message ?? 'Unknown error'}`;
+    } catch (err) {
+      this.errorMessage = `Failed to start stream: ${err instanceof Error ? err.message : String(err)}`;
     }
 
     this.isLoading = false;
+  }
+
+  /**
+   * The audio to send: the one source as it is when that is all there is at full volume, or a mix of the sources
+   * with their volumes. A mix runs in an AudioContext that has to stay open for as long as the stream is sent;
+   * closing it silences the mixed track without ending it, which is how a stream used to go silent the moment this
+   * dialog closed.
+   */
+  private _prepareAudio(systemAudioTracks: MediaStreamTrack[], micTrack: MediaStreamTrack | null):
+    {audioTrack: MediaStreamTrack | null; mixer: AudioContext | null} {
+    const systemTrack = systemAudioTracks[0] ?? null;
+    if (!systemTrack && !micTrack) return {audioTrack: null, mixer: null};
+    if (systemTrack && !micTrack && this.systemAudioVolume === 100) return {audioTrack: systemTrack, mixer: null};
+    if (micTrack && !systemTrack && this.microphoneVolume === 100) return {audioTrack: micTrack, mixer: null};
+
+    const mixer = new AudioContext({sampleRate: 48000});
+    const dest = mixer.createMediaStreamDestination();
+    const addSource = (track: MediaStreamTrack, volumePercent: number) => {
+      const src = mixer.createMediaStreamSource(new MediaStream([track]));
+      const gain = mixer.createGain();
+      gain.gain.value = Math.max(0, Math.min(2, volumePercent / 100));
+      src.connect(gain);
+      gain.connect(dest);
+    };
+    if (systemTrack) addSource(systemTrack, this.systemAudioVolume);
+    if (micTrack) addSource(micTrack, this.microphoneVolume);
+    return {audioTrack: dest.stream.getAudioTracks()[0] ?? null, mixer};
   }
 
   // ===========================================================================

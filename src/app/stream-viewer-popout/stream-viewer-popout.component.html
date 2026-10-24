@@ -48,6 +48,15 @@
     <div *ngIf="!hasVideoTrack && hasAudioTrack" class="popout-audio-badge">
       Audio-only stream
     </div>
+
+    <div *ngIf="linkState === 'reconnecting'" class="popout-audio-badge">
+      <i class="fa fa-refresh fa-spin mr-1" aria-hidden="true"></i>Reconnecting…
+    </div>
+
+    <button *ngIf="linkState === 'failed'" type="button" class="popout-play-overlay" (click)="retry()">
+      <i class="fa fa-refresh" aria-hidden="true"></i>
+      <span>Connection lost. Retry</span>
+    </button>
   </div>
 
   <!-- Resize handle (bottom-right corner) — hidden when minimized -->

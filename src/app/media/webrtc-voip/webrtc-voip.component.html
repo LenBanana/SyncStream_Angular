@@ -1,63 +1,64 @@
 <!-- Video Call Modal -->
-<ng-template #participantTemplate let-name="name" let-stream="stream" let-speaking="speaking" let-muted="muted">
+<ng-template #participantTemplate let-participant="participant" let-isLocal="isLocal" let-name="name">
   <div class="row text-center d-flex border-dark rounded p-3 m-0 shadow mb-2">
     <div class="input-group" style="flex-wrap: nowrap">
       <div class="input-group-prepend">
         <div class="btn btn-outline-secondary img-placeholder flex-shrink-0 text-light"
-             [class.active-border]="speaking"
+             [class.active-border]="participant.isSpeaking"
              [style.background-color]="getRandomColor(name)">{{ name.charAt(0).toUpperCase() }}</div>
       </div>
-      <div class="input-group-prepend" *ngIf="!stream">
-        <button class="btn btn-outline-secondary" (click)="openSettings()">
+      <div class="input-group-prepend" *ngIf="isLocal">
+        <button class="btn btn-outline-secondary" (click)="openSettings()" title="Devices">
           <i class="fa fa-cog"></i></button>
       </div>
       <div class="input-group-prepend flex-grow-1">
         <div
           class="btn btn-dark btn-outline-secondary text-light input-group-text pt-2 pl-2 text-left font-weight-bold w-100 border-right-0">{{name}}</div>
       </div>
-      <div class="input-group-append" *ngIf="!stream">
-        <button class="btn btn-outline-secondary" (click)="toggleAudio()">
-          <i class="fa" [class.fa-microphone]="!localParticipant.isMuted"
-             [class.fa-microphone-slash]="localParticipant.isMuted"
-             [class.text-danger]="localParticipant.isMuted"
-             [class.text-success]="!localParticipant.isMuted"></i>
+      <div class="input-group-append" *ngIf="isLocal">
+        <button class="btn btn-outline-secondary" (click)="toggleAudio()" [title]="participant.isMuted ? 'Unmute' : 'Mute'">
+          <i class="fa" [class.fa-microphone]="!participant.isMuted"
+             [class.fa-microphone-slash]="participant.isMuted"
+             [class.text-danger]="participant.isMuted"
+             [class.text-success]="!participant.isMuted"></i>
         </button>
-        <button class="btn btn-outline-secondary" (click)="toggleVideo('webcam')">
-          <i class="fa fa-video-camera" [class.text-primary]="!localParticipant.isVideoMuted"></i>
+        <button class="btn btn-outline-secondary" (click)="toggleVideo('webcam')" title="Camera">
+          <i class="fa fa-video-camera" [class.text-primary]="!participant.isVideoMuted"></i>
         </button>
-        <button class="btn btn-outline-secondary" (click)="toggleVideo('screen')">
-          <i class="fa fa-desktop" [class.text-primary]="!localParticipant.isScreenMuted"></i>
+        <button class="btn btn-outline-secondary" (click)="toggleVideo('screen')" title="Share screen">
+          <i class="fa fa-desktop" [class.text-primary]="!participant.isScreenMuted"></i>
         </button>
-      </div>
-      <div class="input-group-append" *ngIf="stream">
-        <button class="btn btn-outline-secondary" [class.text-danger]="muted||isPeerMuted(stream)"
-                (click)="!muted&&togglePeerMute(stream)">
-          <i class="fa" [class.fa-microphone]="!muted&&!isPeerMuted(stream)"
-             [class.fa-microphone-slash]="muted||isPeerMuted(stream)"></i>
+        <button class="btn btn-outline-danger" (click)="leaveCall()" title="Leave the call">
+          <i class="fa fa-phone"></i>
         </button>
       </div>
-      <div class="input-group-append" *ngIf="(stream ? hasVideoTrack(stream) : hasVideoTrack(getLocalStream()))">
-        <button class="btn btn-outline-secondary" (click)="popOutVideo(webVideoPlayerParent, webVideoPlayer)">
+      <div class="input-group-append" *ngIf="!isLocal">
+        <button class="btn btn-outline-secondary" [class.text-danger]="participant.isMuted || participant.isLocallyMuted"
+                [title]="participant.isMuted ? 'Muted' : (participant.isLocallyMuted ? 'Unmute for me' : 'Mute for me')"
+                (click)="!participant.isMuted && togglePeerMute(participant)">
+          <i class="fa" [class.fa-microphone]="!participant.isMuted && !participant.isLocallyMuted"
+             [class.fa-microphone-slash]="participant.isMuted || participant.isLocallyMuted"></i>
+        </button>
+      </div>
+      <div class="input-group-append" *ngIf="hasVideo(participant)">
+        <button class="btn btn-outline-secondary" (click)="popOutVideo(webVideoPlayerParent, webVideoPlayer)" title="Pop out">
           <i class="fa fa-external-link-alt"></i>
         </button>
       </div>
     </div>
     <div class="col-12 mt-2" #webVideoPlayerParent>
+      <!-- Video only: voices play through the call itself, so they keep playing while this window is closed. -->
       <video #webVideoPlayer
-             [class.visually-hidden]="(stream ? !hasVideoTrack(stream) : !hasVideoTrack(getLocalStream()))"
-             [srcObject]="stream || getLocalStream()"
-             autoplay [muted]="stream ? null : 'muted'" class="video rounded">
+             [class.visually-hidden]="!hasVideo(participant)"
+             [srcObject]="participant.stream"
+             autoplay muted playsinline class="video rounded">
       </video>
-      <!-- Placeholder for video -->
-      <div *ngIf="false" class="video-placeholder">
-        <i class="fa fa-video-camera"></i>
-      </div>
     </div>
   </div>
 </ng-template>
 
 
-<div class="modal fade" data-backdrop="false" id="videoCallModal" (window:beforeunload)="leaveRoom()">
+<div class="modal fade" data-backdrop="false" id="videoCallModal">
   <div class="modal-dialog modal-dialog-centered modal-xxl">
     <div class="modal-content text-light rounded shadow-none" style="background-color: rgba(0, 0, 0, 0.5)">
       <div class="modal-header text-center">
@@ -70,14 +71,17 @@
         <div class="row">
           <div class="col-md-4 col-sm-12 user-list-container border-right border-dark bg-transparent" *ngIf="localParticipant">
             <div class="row">
-              <div class="col-12">
-                <ng-container
-                  *ngTemplateOutlet="participantTemplate; context: {name: localParticipant.participantName, stream: undefined, speaking: localParticipant.isSpeaking, muted: localParticipant.isMuted}"></ng-container>
+              <div class="col-12" *ngIf="(voipState | async) === 'reconnecting'">
+                <span class="badge badge-warning mb-2"><i class="fa fa-refresh fa-spin mr-1"></i>Reconnecting…</span>
               </div>
               <div class="col-12">
-                <ng-container *ngFor="let participant of remoteParticipants">
+                <ng-container
+                  *ngTemplateOutlet="participantTemplate; context: {participant: localParticipant, isLocal: true, name: Username || 'You'}"></ng-container>
+              </div>
+              <div class="col-12">
+                <ng-container *ngFor="let participant of remoteParticipants; trackBy: trackParticipant">
                   <ng-container
-                    *ngTemplateOutlet="participantTemplate; context: {name: participant.participantName, stream: participant.stream, speaking: participant.isSpeaking, muted: participant.isMuted}"></ng-container>
+                    *ngTemplateOutlet="participantTemplate; context: {participant: participant, isLocal: false, name: participant.participantName}"></ng-container>
                 </ng-container>
               </div>
             </div>

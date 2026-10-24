@@ -1,8 +1,9 @@
 import {
-  Component, OnInit, OnDestroy, ViewChild, ElementRef, Input, HostListener
+  Component, OnInit, OnDestroy, ViewChild, ElementRef, Input
 } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { WebrtcService } from '../media/webrtc/webrtc-service/webrtc.service';
+import { SfuLinkState } from '../media/webrtc/sfu/sfu-transports';
 
 const STORAGE_KEY = 'dreck-popout-state';
 const MIN_WIDTH    = 280;
@@ -54,10 +55,12 @@ export class StreamViewerPopoutComponent implements OnInit, OnDestroy {
   playbackStartedMuted = false;
   hasAudioTrack = false;
   hasVideoTrack = false;
+  linkState: SfuLinkState | null = null;
 
   private videoRef: ElementRef<HTMLVideoElement> | undefined;
   private watchSub  : Subscription;
   private streamSub : Subscription;
+  private stateSub  : Subscription;
   private currentStream: MediaStream | null = null;
   private readonly videoLoadedMetadataHandler = () => {
     const video = this.videoRef?.nativeElement;
@@ -136,17 +139,25 @@ export class StreamViewerPopoutComponent implements OnInit, OnDestroy {
       this.currentStream = stream;
       this.syncVideoElement();
     });
+
+    this.stateSub = this.webrtcService.popoutState.subscribe(state => this.linkState = state);
   }
 
   ngOnDestroy(): void {
     this.watchSub?.unsubscribe();
     this.streamSub?.unsubscribe();
+    this.stateSub?.unsubscribe();
+    this.stopPointerTracking();
     this.unbindVideoElementEvents();
     this.videoRef?.nativeElement?.removeEventListener('leavepictureinpicture', this.pipLeaveHandler);
   }
 
   close(): void {
     this.webrtcService.stopWatching();
+  }
+
+  retry(): void {
+    void this.webrtcService.retryWatching();
   }
 
   async resumePlaybackWithAudio(): Promise<void> {
@@ -325,6 +336,7 @@ export class StreamViewerPopoutComponent implements OnInit, OnDestroy {
     this.dragging    = true;
     this.dragOffsetX = event.clientX - this.posX;
     this.dragOffsetY = event.clientY - this.posY;
+    this.startPointerTracking();
     event.preventDefault();
   }
 
@@ -336,14 +348,26 @@ export class StreamViewerPopoutComponent implements OnInit, OnDestroy {
     this.resizeStartY      = event.clientY;
     this.resizeStartWidth  = this.popoutWidth;
     this.resizeStartHeight = this.popoutHeight;
+    this.startPointerTracking();
     event.preventDefault();
     event.stopPropagation();
   }
 
   // ---- Shared mouse handlers ----
 
-  @HostListener('document:mousemove', ['$event'])
-  onMouseMove(event: MouseEvent): void {
+  // Listened to only while dragging or resizing. A permanent document listener ran change detection for the whole
+  // app on every mouse movement anywhere on the page, popout open or not.
+  private startPointerTracking(): void {
+    document.addEventListener('mousemove', this.onMouseMove);
+    document.addEventListener('mouseup', this.onMouseUp);
+  }
+
+  private stopPointerTracking(): void {
+    document.removeEventListener('mousemove', this.onMouseMove);
+    document.removeEventListener('mouseup', this.onMouseUp);
+  }
+
+  private readonly onMouseMove = (event: MouseEvent): void => {
     if (this.dragging) {
       this.posX = Math.max(0, event.clientX - this.dragOffsetX);
       this.posY = Math.max(0, event.clientY - this.dragOffsetY);
@@ -352,16 +376,16 @@ export class StreamViewerPopoutComponent implements OnInit, OnDestroy {
       this.popoutWidth  = Math.max(MIN_WIDTH,  this.resizeStartWidth  + (event.clientX - this.resizeStartX));
       this.popoutHeight = Math.max(MIN_HEIGHT, this.resizeStartHeight + (event.clientY - this.resizeStartY));
     }
-  }
+  };
 
-  @HostListener('document:mouseup')
-  onMouseUp(): void {
+  private readonly onMouseUp = (): void => {
     if (this.dragging || this.resizing) {
       this.saveState();
     }
     this.dragging = false;
     this.resizing = false;
-  }
+    this.stopPointerTracking();
+  };
 
   // ---- Persistence ----
 

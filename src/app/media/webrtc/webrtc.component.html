@@ -11,16 +11,25 @@
 
   <!-- Broadcast controls (host / moderator only, visible when NOT already streaming) -->
   <div *ngIf="IsHost && !isBroadcasting" class="position-absolute top-0 right-0 m-2">
-    <button class="btn btn-sm btn-primary" (click)="startBroadcast()" title="Force-broadcast your screen to everyone in the room">
+    <button class="btn btn-sm btn-primary" (click)="startBroadcast()" title="Broadcast your screen or camera to everyone in the room">
       <i class="fa fa-broadcast-tower"></i> Broadcast
     </button>
   </div>
 
-  <!-- Broadcast active indicator + stop button (host only) -->
-  <div *ngIf="IsHost && isBroadcasting" class="position-absolute top-0 right-0 m-2 d-flex align-items-center">
-    <span class="badge badge-primary mr-2">
+  <!-- The broadcaster's own controls -->
+  <div *ngIf="isBroadcasting" class="position-absolute top-0 right-0 m-2 d-flex align-items-center">
+    <span *ngIf="!broadcastReconnecting" class="badge badge-primary mr-2">
       <i class="fa fa-circle blink"></i> Broadcasting…
     </span>
+    <span *ngIf="broadcastReconnecting" class="badge badge-warning mr-2">
+      <i class="fa fa-refresh fa-spin"></i> Reconnecting…
+    </span>
+    <button *ngIf="!isRecording" class="btn btn-sm btn-outline-danger mr-2" (click)="startRecording()" title="Record your broadcast on the server">
+      <i class="fa fa-circle"></i> Record
+    </button>
+    <button *ngIf="isRecording" class="btn btn-sm btn-danger mr-2" (click)="stopRecording()" title="Stop recording">
+      <i class="fa fa-stop"></i> Stop recording
+    </button>
     <button class="btn btn-sm btn-outline-light mr-2" (click)="toggleLocalPreview()"
             [title]="showLocalPreview ? 'Hide local preview' : 'Show local preview'">
       <i class="fa" [class.fa-eye-slash]="showLocalPreview" [class.fa-eye]="!showLocalPreview"></i>
@@ -28,6 +37,18 @@
     </button>
     <button class="btn btn-sm btn-outline-light" (click)="stopBroadcast()" title="Stop broadcast">
       <i class="fa fa-stop"></i> Stop
+    </button>
+  </div>
+
+  <!-- A finished recording, for the broadcaster to download -->
+  <div *ngIf="savedRecordingUrl" class="position-absolute bottom-0 left-0 m-2 webrtc-recording-saved d-flex align-items-center">
+    <i class="fa fa-check-circle text-success mr-2"></i>
+    <span class="small mr-2">Recording saved.</span>
+    <a class="btn btn-sm btn-outline-light mr-2" [href]="savedRecordingUrl" download>
+      <i class="fa fa-download"></i> Download
+    </a>
+    <button class="btn btn-sm btn-link text-light p-0" (click)="dismissSavedRecording()" title="Dismiss">
+      <i class="fa fa-times"></i>
     </button>
   </div>
 
@@ -48,11 +69,16 @@
     </button>
   </div>
 
+  <!-- The stage connection dropped and is being restored -->
+  <div *ngIf="reconnecting && hasStream" class="position-absolute top-0 left-0 m-2">
+    <span class="badge badge-warning"><i class="fa fa-refresh fa-spin mr-1"></i>Reconnecting…</span>
+  </div>
+
   <!-- Connection failure prompt -->
-  <div *ngIf="connectionFailed" class="text-center text-light">
+  <div *ngIf="connectionFailed" class="text-center text-light webrtc-failed">
     <i class="fa fa-exclamation-triangle fa-2x text-warning mb-2"></i>
-    <p>Connection lost.</p>
-    <button class="btn btn-sm btn-outline-light" (click)="requestReconnect()">
+    <p>The connection to the stream was lost.</p>
+    <button class="btn btn-sm btn-outline-light" (click)="retryConnection()">
       <i class="fa fa-refresh"></i> Retry
     </button>
   </div>
@@ -60,7 +86,7 @@
   <!-- Remote video stream -->
   <video
     #remoteVideo
-    [class.d-none]="!hasStream"
+    [class.d-none]="!hasStream || connectionFailed"
     controls
     class="webrtc-video w-100 h-100"
     autoplay
@@ -84,37 +110,6 @@
     <span class="badge badge-danger d-flex align-items-center">
       <i class="fa fa-circle text-danger blink mr-1"></i> REC
     </span>
-  </div>
-
-  <!-- Overlay controls (shown when stream is active) -->
-  <div *ngIf="hasStream" class="webrtc-controls position-absolute bottom-0 right-0 p-2 d-flex align-items-center d-none">
-
-    <!-- Quality selector (viewer: adaptive bitrate)
-    <div class="btn-group btn-group-sm mr-2" role="group" aria-label="Stream quality">
-      <button class="btn btn-outline-secondary" (click)="setQualityLow()" title="Low quality (saves bandwidth)">
-        <i class="fa fa-signal" style="opacity:0.4"></i>
-      </button>
-      <button class="btn btn-outline-secondary" (click)="setQualityMedium()" title="Medium quality">
-        <i class="fa fa-signal" style="opacity:0.7"></i>
-      </button>
-      <button class="btn btn-outline-secondary" (click)="setQualityHigh()" title="High quality">
-        <i class="fa fa-signal"></i>
-      </button>
-    </div> -->
-
-    <!-- Recording controls (host only) -->
-    <ng-container *ngIf="IsHost">
-      <button *ngIf="!isRecording" class="btn btn-sm btn-outline-danger mr-2" (click)="startRecording()" title="Start recording">
-        <i class="fa fa-circle"></i> Record
-      </button>
-      <button *ngIf="isRecording" class="btn btn-sm btn-danger mr-2" (click)="stopRecording()" title="Stop recording">
-        <i class="fa fa-stop"></i> Stop recording
-      </button>
-    </ng-container>
-
-    <button class="btn btn-sm btn-outline-secondary" (click)="toggleFullscreen()" title="Fullscreen">
-      <i class="fa fa-expand"></i>
-    </button>
   </div>
 
 </div>

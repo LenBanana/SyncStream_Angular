@@ -39,6 +39,8 @@ export class FileSharePlayerComponent implements OnInit, AfterViewInit, OnDestro
   loadError: string | null = null;
   /** Viewer: stream is buffering / not yet arrived. */
   isPaused: boolean = false;
+  /** A file the server streams is waiting for more of its upload. */
+  isBuffering: boolean = false;
   hasRemoteStream: boolean = false;
   isStopping: boolean = false;
   /** Host: true while uploading the file to the server for the ffmpeg path. */
@@ -86,6 +88,15 @@ export class FileSharePlayerComponent implements OnInit, AfterViewInit, OnDestro
       }),
       this.webrtcService.fileShareIsPaused.subscribe(paused => {
         this.isPaused = paused;
+      }),
+      this.webrtcService.serverFileShareState.subscribe(state => {
+        this.isBuffering = state?.buffering ?? false;
+        // The server knows where the file actually is; the host's own clock drifts while it buffers.
+        if (state && this.isServerShareMode && !this.serverHostSeeking && !this.serverHostPaused) {
+          this.serverHostPosition = state.positionSec;
+          this._positionBase = state.positionSec;
+          this._positionBaseAt = Date.now();
+        }
       })
     );
 
@@ -267,15 +278,15 @@ export class FileSharePlayerComponent implements OnInit, AfterViewInit, OnDestro
 
     // Set up the SFU transport and notify the server / room.
     try {
-      const preferredResolution = videoEl.videoHeight || undefined;
       await this.webrtcService.startFileShare(
         this.UniqueId,
         captureStream,
         this.inferFileShareBitrate(videoEl),
-        preferredResolution,
+        videoEl.videoHeight || 0,
         60
       );
     } catch (err) {
+      // The service has already told the person why.
       console.error('FileSharePlayer: startFileShare failed.', err);
       this.resetHostPickerState(videoEl);
       return;
@@ -448,7 +459,7 @@ export class FileSharePlayerComponent implements OnInit, AfterViewInit, OnDestro
   private startPositionTracking(): void {
     this.stopPositionTracking();
     this._positionInterval = setInterval(() => {
-      if (!this.serverHostPaused && !this.serverHostSeeking) {
+      if (!this.serverHostPaused && !this.serverHostSeeking && !this.isBuffering) {
         this.serverHostPosition = this._positionBase + (Date.now() - this._positionBaseAt) / 1000;
         if (this.serverHostDuration != null) {
           this.serverHostPosition = Math.min(this.serverHostPosition, this.serverHostDuration);
@@ -552,25 +563,6 @@ export class FileSharePlayerComponent implements OnInit, AfterViewInit, OnDestro
     video.srcObject = null;
   }
 
-  // ── Viewer: quality controls ──────────────────────────────────────────────
-
-  setQualityLow(): void {
-    for (const id of this.webrtcService.getSfuConsumerIds()) {
-      this.webrtcService.setPreferredLayers(this.UniqueId, id, 0, 0).catch(() => {});
-    }
-  }
-
-  setQualityMedium(): void {
-    for (const id of this.webrtcService.getSfuConsumerIds()) {
-      this.webrtcService.setPreferredLayers(this.UniqueId, id, 1, 2).catch(() => {});
-    }
-  }
-
-  setQualityHigh(): void {
-    for (const id of this.webrtcService.getSfuConsumerIds()) {
-      this.webrtcService.setPreferredLayers(this.UniqueId, id, 2, 2).catch(() => {});
-    }
-  }
 
   toggleFullscreen(): void {
     const el = this.IsHost

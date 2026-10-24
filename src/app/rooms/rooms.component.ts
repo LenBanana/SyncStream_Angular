@@ -282,8 +282,9 @@ export class RoomsComponent implements OnInit {
 
   public LeaveRoom() {
     $('#join-animation-placeholder').removeClass('none').addClass('leave-room');
-    // Stop any active P2P stream or viewer session before leaving.
-    this.webrtcService.leaveRoom(this.currentRoom);
+    // Tidies the local side of whatever was being streamed, shared or watched. The server ends the same things
+    // itself when it sees the member leave, so this does not have to finish first.
+    void this.webrtcService.leaveRoom(this.currentRoom);
     this.userService.removeUser(this.currentRoom);
     this.loc.go('/');
     this.currentRoom = undefined;
