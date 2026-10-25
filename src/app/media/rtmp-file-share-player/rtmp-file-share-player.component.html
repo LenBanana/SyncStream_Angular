@@ -115,6 +115,7 @@
       <span class="sr-only">Uploading…</span>
     </div>
     <p class="small">Uploading… {{ uploadProgress }}%</p>
+    <p *ngIf="subtitleProgress !== null" class="small">Reading subtitles… {{ subtitleProgress }}%</p>
     <div class="progress mt-2" style="width: 220px; margin: 0 auto;">
       <div class="progress-bar bg-main-color"
            role="progressbar"

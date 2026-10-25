@@ -87,6 +87,8 @@ export class RtmpFileSharePlayerComponent implements OnInit, AfterViewInit, OnDe
   // Starting a share
   isLoading = false;
   uploadProgress = 0;
+  /** How far reading the file's subtitles has got, 0 to 100; null when they are not being read. */
+  subtitleProgress: number | null = null;
   isBackgroundUploading = false;
   isStopping = false;
   showPreferenceDialog = false;
@@ -160,6 +162,8 @@ export class RtmpFileSharePlayerComponent implements OnInit, AfterViewInit, OnDe
             this.preparePendingHostShare(file);
           }),
         this.webrtcService.rtmpFileShareUploadProgress.subscribe(pct => this.uploadProgress = pct),
+        this.webrtcService.rtmpFileShareSubtitleProgress.subscribe(fraction =>
+          this.subtitleProgress = fraction === null ? null : Math.round(fraction * 100)),
         this.webrtcService.rtmpFileShareBackgroundUploadInProgress.subscribe(active => this.isBackgroundUploading = active)
       );
     }

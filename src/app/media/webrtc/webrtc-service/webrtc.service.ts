@@ -11,6 +11,7 @@ import {AlertType} from '../../../Interfaces/Dialog';
 import {UserlistService} from '../../../userlist/userlist-service/userlist.service';
 import {UserUpdate} from '../../../Interfaces/UserUpdate';
 import {mp4IndexIsAtEnd} from './mp4-index';
+import {MkvSubtitles, readMkvSubtitles, SubtitleSidecar} from './mkv-subtitles';
 
 export {StreamContentPreference} from '../sfu/sfu-encodings';
 
@@ -179,6 +180,8 @@ export class WebrtcService implements OnDestroy {
   public rtmpFileShareUploadProgress = new BehaviorSubject<number>(0);
   /** True while the rest of the file uploads after the share has started. */
   public rtmpFileShareBackgroundUploadInProgress = new BehaviorSubject<boolean>(false);
+  /** How far reading the file's text subtitles has got, from 0 to 1; null when they are not being read. */
+  public rtmpFileShareSubtitleProgress = new BehaviorSubject<number | null>(null);
   /** Fires when "Share File (RTMP)" is clicked; media component switches to RtmpFileShare player. */
   public rtmpFileShareHostRequested = new Subject<void>();
   private _rtmpShareUploadId: string | null = null;
@@ -1006,6 +1009,7 @@ export class WebrtcService implements OnDestroy {
     this.pendingRtmpFileShareFile.next(null);
     this.rtmpFileShareUploadProgress.next(0);
     this.rtmpFileShareBackgroundUploadInProgress.next(false);
+    this.rtmpFileShareSubtitleProgress.next(null);
     this._rtmpShareUploadId = null;
     this.rtmpFileShareCanSeek.next(false);
   }
@@ -1156,6 +1160,9 @@ export class WebrtcService implements OnDestroy {
    * Shares a file through RTMP. Streaming starts as soon as the beginning of the file has arrived and the rest
    * uploads in the background; the server waits whenever playback catches up with the upload. An MP4 or MOV
    * with its index at the end cannot be played from its beginning alone, so it is uploaded completely first.
+   *
+   * Text subtitles to burn in are read out of the file here and sent ahead of the share, with the fonts the file
+   * carries: the server would otherwise find only the lines in the part uploaded when it starts streaming.
    */
   public async beginRtmpFileShare(
     file: File,
@@ -1171,13 +1178,27 @@ export class WebrtcService implements OnDestroy {
     let chunkSize: number;
     let startAt: number;
     let reached: number;
+    const keepGoing = () => this.isPreparingRtmpFileShareHost;
     try {
       const waitForWholeFile = await mp4IndexIsAtEnd(file, file.name);
+      const subtitles = this.burnsTextSubtitles(playbackPreferences)
+        ? this.readSubtitles(file, keepGoing)
+        : Promise.resolve(null);
       ({uploadId, chunkSize} = await this.startRoomUpload(file, roomId));
       this._rtmpShareUploadId = uploadId;
-      startAt = waitForWholeFile ? file.size : Math.min(file.size, chunkSize);
-      reached = await this.uploadRange(file, uploadId, chunkSize, 0, startAt, progress,
-        () => this.isPreparingRtmpFileShareHost);
+
+      const firstPart = waitForWholeFile ? file.size : Math.min(file.size, chunkSize);
+      const [uploaded, extracted] = await Promise.all([
+        this.uploadRange(file, uploadId, chunkSize, 0, firstPart, progress, keepGoing), subtitles]);
+      // ffmpeg cannot open the file before its header, fonts included, has arrived, and that can run past the
+      // first chunk: a release with large fonts used to fail its first start every time.
+      startAt = Math.min(file.size, Math.max(firstPart, extracted?.headerEnd ?? 0));
+      reached = uploaded === firstPart && uploaded < startAt
+        ? await this.uploadRange(file, uploadId, chunkSize, uploaded, startAt, progress, keepGoing)
+        : uploaded;
+      if (reached >= startAt && extracted && extracted.sidecars.length > 0) {
+        await this.uploadSidecars(uploadId, extracted.sidecars);
+      }
     } catch (err) {
       const startedUpload = this._rtmpShareUploadId;
       this.isPreparingRtmpFileShareHost = false;
@@ -1217,6 +1238,60 @@ export class WebrtcService implements OnDestroy {
 
     this.rtmpFileShareBackgroundUploadInProgress.next(true);
     void this.finishRtmpShareUpload(file, roomId, uploadId, chunkSize, reached, progress);
+  }
+
+  /** Whether the preferences can lead to burning a text subtitle track in, which the server needs sent ahead. */
+  private burnsTextSubtitles(preferences: RtmpPlaybackPreferences): boolean {
+    if (preferences.subtitleMode === 'never') return false;
+    if (preferences.selectedSubtitleOrdinal == null) return true;
+    return this.getRtmpSubtitleBurnMethod(preferences.selectedSubtitleCodecName ?? '') === 'text';
+  }
+
+  /**
+   * The file's text subtitles, or null when it has none or is not Matroska. A file that cannot be read for them
+   * is still shared; the sharer is told the subtitles will be missing.
+   */
+  private async readSubtitles(file: File, keepGoing: () => boolean): Promise<MkvSubtitles | null> {
+    this.rtmpFileShareSubtitleProgress.next(0);
+    try {
+      return await readMkvSubtitles(file, {
+        onProgress: fraction => this.rtmpFileShareSubtitleProgress.next(fraction),
+        keepGoing
+      });
+    } catch (err) {
+      console.error('[RtmpFileShare] reading the subtitles failed', err);
+      this.dialogService.PushDefaultDialog(
+        'The subtitles could not be read from the file, so the share starts without burned-in subtitles.',
+        'Subtitles missing', AlertType.Warning);
+      return null;
+    } finally {
+      this.rtmpFileShareSubtitleProgress.next(null);
+    }
+  }
+
+  /**
+   * Sends the subtitles and fonts read out of the file, for the server to burn in. One that does not get through
+   * costs that subtitle track or the look of a font, not the share, so the sharer is told and the share goes on.
+   */
+  private async uploadSidecars(uploadId: string, sidecars: SubtitleSidecar[]): Promise<void> {
+    const failed: string[] = [];
+    for (const sidecar of sidecars) {
+      const params = new HttpParams({fromObject: {uploadId, name: sidecar.name}});
+      try {
+        await this.http.put(`${baseUrl}api/video/roomUpload/sidecar`, sidecar.data, {
+          params,
+          headers: {'Content-Type': 'application/octet-stream'}
+        }).toPromise();
+      } catch (err) {
+        console.error(`[RtmpFileShare] sending ${sidecar.name} failed`, err);
+        failed.push(sidecar.name);
+      }
+    }
+    if (failed.length > 0) {
+      this.dialogService.PushDefaultDialog(
+        `Some subtitles or fonts could not be sent (${failed.join(', ')}), so they may be missing or look different.`,
+        'Subtitles incomplete', AlertType.Warning);
+    }
   }
 
   private async finishRtmpShareUpload(file: File, roomId: string, uploadId: string, chunkSize: number,
